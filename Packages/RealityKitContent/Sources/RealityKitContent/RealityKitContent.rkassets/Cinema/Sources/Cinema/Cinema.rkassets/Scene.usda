@@ -1,0 +1,653 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "Reality Composer Pro Version 1.0 (409.60.6)"
+    }
+    defaultPrim = "Root"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "Root"
+{
+    reorder nameChildren = ["VR_Cinema_Low_poly_2021_1MB", "Vintage_Movie_Camera", "Speaker_left_2", "Speaker_left_3", "Speaker_left"]
+    float3 xformOp:translate = (0, 0.07309818, 0)
+    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+    def "VR_Cinema_Low_poly_2021_1MB" (
+        references = @VR_Cinema_Low_poly_2021_1MB.usdz@
+    )
+    {
+        reorder nameChildren = ["Vintage_Movie_Camera", "Speaker_right_2", "Speaker_right_3", "Speaker_front", "Speaker_back", "Speaker_left_2", "Speaker_left_3", "Speaker_left", "Speaker_right_1", "Materials", "Meshes"]
+        quatf xformOp:orient = (0.99999994, 0, 0, 0)
+        float3 xformOp:scale = (0.01, 0.01, 0.01)
+        float3 xformOp:translate = (-2.1124427, 0.14850998, 0.22642887)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+        over "Materials"
+        {
+            over "lambert149"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+            }
+
+            over "lambert147"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+                float2 ui:nodegraph:realitykit:subgraphOutputs:pos = (0, 109.5)
+                float2 ui:nodegraph:realitykit:subgraphOutputs:size = (182, 99)
+            }
+
+            over "lambert179"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+            }
+
+            over "lambert148"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+            }
+
+            over "lambert167"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+            }
+
+            over "lambert178"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+            }
+
+            over "lambert168"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+            }
+
+            over "lambert180"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+            }
+
+            over "lambert183"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+            }
+
+            over "lambert172"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+            }
+        }
+
+        over "Meshes"
+        {
+            over "Sketchfab_model"
+            {
+                over "_c0492f05f164194982df82efe2d78b5_fbx"
+                {
+                    over "RootNode"
+                    {
+                        over "pCube654"
+                        {
+                            over "polySurface11214"
+                            {
+                                over "polySurface11218" (
+                                    active = false
+                                )
+                                {
+                                }
+
+                                over "polySurface11217"
+                                {
+                                    over "polySurface11217_lambert181_0"
+                                    {
+                                        over "polySurface11217_lambert181_0"
+                                        {
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        over "polySurface11216" (
+                            active = false
+                        )
+                        {
+                        }
+                    }
+                }
+            }
+        }
+
+        def Cube "Speaker_left_2" (
+            active = true
+            prepend apiSchemas = ["MaterialBindingAPI"]
+            customData = {
+                float3 rotationEulerHint = (0, 1.5707963, 0)
+            }
+        )
+        {
+            rel material:binding = </Root/VR_Cinema_Low_poly_2021_1MB/Materials/lambert147> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            double size = 0.5
+            quatf xformOp:orient = (0.7071067, 0, 0.70710677, 0)
+            float3 xformOp:scale = (99.99997, 199.99997, 99.99997)
+            float3 xformOp:translate = (1154.0583, 635.79614, 390.57022)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Material "DefaultMaterial"
+            {
+                token outputs:surface.connect = </Root/VR_Cinema_Low_poly_2021_1MB/Speaker_left_2/DefaultMaterial/DefaultSurfaceShader.outputs:surface>
+
+                def Shader "DefaultSurfaceShader"
+                {
+                    uniform token info:id = "UsdPreviewSurface"
+                    color3f inputs:diffuseColor = (1, 1, 1)
+                    float inputs:roughness = 0.75
+                    token outputs:surface
+                }
+            }
+
+            def RealityKitComponent "SpatialAudio"
+            {
+                float directivityFocus = 0
+                float directLevel = -11.460378
+                float gain = -7.2
+                uniform token info:id = "RealityKit.SpatialAudio"
+                float reverbLevel = -12.698646
+            }
+        }
+
+        def Cube "Speaker_left_3" (
+            active = true
+            prepend apiSchemas = ["MaterialBindingAPI"]
+            customData = {
+                float3 rotationEulerHint = (0, 1.5707963, 0)
+            }
+        )
+        {
+            rel material:binding = </Root/VR_Cinema_Low_poly_2021_1MB/Materials/lambert147> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            double size = 0.5
+            quatf xformOp:orient = (0.70710677, 0, 0.7071067, 0)
+            float3 xformOp:scale = (99.99996, 199.99998, 99.99996)
+            float3 xformOp:translate = (1154.0793, 740.04913, 1053.5491)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Material "DefaultMaterial"
+            {
+                token outputs:surface.connect = </Root/VR_Cinema_Low_poly_2021_1MB/Speaker_left_3/DefaultMaterial/DefaultSurfaceShader.outputs:surface>
+
+                def Shader "DefaultSurfaceShader"
+                {
+                    uniform token info:id = "UsdPreviewSurface"
+                    color3f inputs:diffuseColor = (1, 1, 1)
+                    float inputs:roughness = 0.75
+                    token outputs:surface
+                }
+            }
+
+            def RealityKitComponent "SpatialAudio"
+            {
+                float directivityFocus = 0
+                float directLevel = -11.460378
+                float gain = -7.2
+                uniform token info:id = "RealityKit.SpatialAudio"
+                float reverbLevel = -12.698646
+            }
+        }
+
+        def Cube "Speaker_left" (
+            active = true
+            prepend apiSchemas = ["MaterialBindingAPI"]
+            customData = {
+                float3 rotationEulerHint = (0, 1.5707963, 0)
+            }
+        )
+        {
+            reorder nameChildren = ["DefaultMaterial", "SpatialAudio", "Vintage_Movie_Camera"]
+            rel material:binding = </Root/VR_Cinema_Low_poly_2021_1MB/Materials/lambert147> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            double size = 0.5
+            quatf xformOp:orient = (0.70710677, 0, 0.70710677, 0)
+            float3 xformOp:scale = (99.99999, 199.99998, 99.99999)
+            float3 xformOp:translate = (1154.0793, 515.1966, -398.29398)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Material "DefaultMaterial"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+                token outputs:surface.connect = </Root/VR_Cinema_Low_poly_2021_1MB/Speaker_left/DefaultMaterial/DefaultSurfaceShader.outputs:surface>
+
+                def Shader "DefaultSurfaceShader"
+                {
+                    uniform token info:id = "UsdPreviewSurface"
+                    color3f inputs:diffuseColor = (1, 1, 1)
+                    float inputs:roughness = 0.75
+                    token outputs:surface
+                }
+            }
+
+            def RealityKitComponent "SpatialAudio"
+            {
+                float directivityFocus = 0
+                float directLevel = -17.026983
+                uniform token info:id = "RealityKit.SpatialAudio"
+            }
+        }
+
+        def Cube "Speaker_right_1" (
+            active = true
+            prepend apiSchemas = ["MaterialBindingAPI"]
+            customData = {
+                float3 rotationEulerHint = (0, -1.5707963, 0)
+            }
+        )
+        {
+            reorder nameChildren = ["DefaultMaterial", "SpatialAudio", "Vintage_Movie_Camera"]
+            rel material:binding = </Root/VR_Cinema_Low_poly_2021_1MB/Materials/lambert147> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            double size = 0.5
+            quatf xformOp:orient = (0.70710677, 0, -0.70710677, 0)
+            float3 xformOp:scale = (99.99997, 199.99994, 99.99997)
+            float3 xformOp:translate = (-1153.5586, 581.6343, -440.61166)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Material "DefaultMaterial"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+                token outputs:surface.connect = </Root/VR_Cinema_Low_poly_2021_1MB/Speaker_right_1/DefaultMaterial/DefaultSurfaceShader.outputs:surface>
+
+                def Shader "DefaultSurfaceShader"
+                {
+                    uniform token info:id = "UsdPreviewSurface"
+                    color3f inputs:diffuseColor = (1, 1, 1)
+                    float inputs:roughness = 0.75
+                    token outputs:surface
+                }
+            }
+
+            def RealityKitComponent "SpatialAudio"
+            {
+                float directivityFocus = 0
+                float directLevel = -17.026983
+                uniform token info:id = "RealityKit.SpatialAudio"
+            }
+        }
+
+        def "Vintage_Movie_Camera" (
+            active = true
+            prepend apiSchemas = ["MaterialBindingAPI"]
+            customData = {
+                float3 rotationEulerHint = (0, 1.5707963, 0)
+            }
+            references = @VintageMovieCamera.usdz@
+        )
+        {
+            rel material:binding = None (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            quatf xformOp:orient = (0.70710677, 0, 0.70710677, 0)
+            float3 xformOp:scale = (199.99998, 199.99998, 199.99998)
+            float3 xformOp:translate = (5.972946, 551.8072, 1459.677)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            over "geom"
+            {
+                float3 xformOp:translate = (0, 0, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                over "realistic"
+                {
+                    over "geo"
+                    {
+                        float3 xformOp:translate = (0, 0.062285904, 0)
+                        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                        over "lod0"
+                        {
+                            over "camera_movie_vintage_base_realistic_lod0"
+                            {
+                            }
+                        }
+                    }
+
+                    over "materials"
+                    {
+                        over "usdpreviewsurface3sg"
+                        {
+                            string inputs:camera_movie_vintage_realistic_ao_1:varname (
+                                customData = {
+                                    dictionary realitykit = {
+                                        float2 positionInSubgraph = (193.5, 1089)
+                                        float2 sizeInSubgraph = (250, 53)
+                                    }
+                                }
+                            )
+                            string inputs:camera_movie_vintage_realistic_bc_1:varname (
+                                customData = {
+                                    dictionary realitykit = {
+                                        float2 positionInSubgraph = (503.5, 1089)
+                                        float2 sizeInSubgraph = (250, 53)
+                                    }
+                                }
+                            )
+                            string inputs:camera_movie_vintage_realistic_m_1:varname (
+                                customData = {
+                                    dictionary realitykit = {
+                                        float2 positionInSubgraph = (813.5, 1089)
+                                        float2 sizeInSubgraph = (250, 53)
+                                    }
+                                }
+                            )
+                            string inputs:camera_movie_vintage_realistic_n_1:varname (
+                                customData = {
+                                    dictionary realitykit = {
+                                        float2 positionInSubgraph = (1123.5, 1089)
+                                        float2 sizeInSubgraph = (250, 53)
+                                    }
+                                }
+                            )
+                            string inputs:camera_movie_vintage_realistic_r_1:varname (
+                                customData = {
+                                    dictionary realitykit = {
+                                        float2 positionInSubgraph = (1433.5, 1089)
+                                        float2 sizeInSubgraph = (250, 53)
+                                    }
+                                }
+                            )
+                            token outputs:realitykit:vertex
+                            float2 ui:nodegraph:realitykit:subgraphOutputs:pos = (1536, 365)
+                            float2 ui:nodegraph:realitykit:subgraphOutputs:size = (181.5, 99)
+
+                            over "camera_movie_vintage_realistic_mtlx"
+                            {
+                                float2 ui:nodegraph:node:pos = (1260, 365)
+                                float2 ui:nodegraph:node:size = (250, 199)
+                            }
+
+                            over "camera_movie_vintage_realistic_n_1_mtlx"
+                            {
+                                float2 ui:nodegraph:node:pos = (330, 358.5)
+                                float2 ui:nodegraph:node:size = (250, 199)
+                            }
+
+                            over "Lookup_st"
+                            {
+                                float2 ui:nodegraph:node:pos = (-496.99948, 515.0072)
+                                float2 ui:nodegraph:node:size = (145, 127)
+                                int ui:nodegraph:node:stackingOrder = 2
+                            }
+
+                            over "camera_movie_vintage_realistic_n_1_mtlx_scale"
+                            {
+                                float2 ui:nodegraph:node:pos = (640, 297)
+                                float2 ui:nodegraph:node:size = (60, 36)
+                            }
+
+                            over "camera_movie_vintage_realistic_n_1_mtlx_offset"
+                            {
+                                float2 ui:nodegraph:node:pos = (950, 297)
+                                float2 ui:nodegraph:node:size = (61.5, 36.5)
+                            }
+
+                            over "camera_movie_vintage_realistic_m_1_mtlx"
+                            {
+                                float2 ui:nodegraph:node:pos = (640, 733.5)
+                                float2 ui:nodegraph:node:size = (250, 199)
+                            }
+
+                            over "camera_movie_vintage_realistic_bc_1_mtlx"
+                            {
+                                float2 ui:nodegraph:node:pos = (950, 903)
+                                float2 ui:nodegraph:node:size = (250, 199)
+                            }
+
+                            over "camera_movie_vintage_realistic_ao_1_mtlx"
+                            {
+                                float2 ui:nodegraph:node:pos = (640, 474.5)
+                                float2 ui:nodegraph:node:size = (250, 199)
+                            }
+
+                            over "camera_movie_vintage_realistic_r_1_mtlx"
+                            {
+                                float2 ui:nodegraph:node:pos = (330, 99.5)
+                                float2 ui:nodegraph:node:size = (250, 199)
+                            }
+                        }
+                    }
+                }
+            }
+
+            def RealityKitComponent "ImageBasedLight"
+            {
+                bool enableRotation = 0
+                uniform token info:id = "RealityKit.ImageBasedLight"
+                float intensityExponent = -0.23762798
+                bool isGlobalIBL = 0
+            }
+        }
+
+        def Cube "Speaker_right_2" (
+            active = true
+            prepend apiSchemas = ["MaterialBindingAPI"]
+            customData = {
+                float3 rotationEulerHint = (0, -1.5707963, 0)
+            }
+        )
+        {
+            reorder nameChildren = ["DefaultMaterial", "SpatialAudio", "Vintage_Movie_Camera"]
+            rel material:binding = </Root/VR_Cinema_Low_poly_2021_1MB/Materials/lambert147> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            double size = 0.5
+            quatf xformOp:orient = (0.70710677, 0, -0.70710677, 0)
+            float3 xformOp:scale = (99.99995, 199.9999, 99.99995)
+            float3 xformOp:translate = (-1153.5321, 673.3584, 206.42007)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Material "DefaultMaterial"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+                token outputs:surface.connect = </Root/VR_Cinema_Low_poly_2021_1MB/Speaker_right_2/DefaultMaterial/DefaultSurfaceShader.outputs:surface>
+
+                def Shader "DefaultSurfaceShader"
+                {
+                    uniform token info:id = "UsdPreviewSurface"
+                    color3f inputs:diffuseColor = (1, 1, 1)
+                    float inputs:roughness = 0.75
+                    token outputs:surface
+                }
+            }
+
+            def RealityKitComponent "SpatialAudio"
+            {
+                float directivityFocus = 0
+                float directLevel = -17.026983
+                uniform token info:id = "RealityKit.SpatialAudio"
+            }
+        }
+
+        def Cube "Speaker_right_3" (
+            active = true
+            prepend apiSchemas = ["MaterialBindingAPI"]
+            customData = {
+                float3 rotationEulerHint = (0, -1.5707963, 0)
+            }
+        )
+        {
+            reorder nameChildren = ["DefaultMaterial", "SpatialAudio", "Vintage_Movie_Camera"]
+            rel material:binding = </Root/VR_Cinema_Low_poly_2021_1MB/Materials/lambert147> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            double size = 0.5
+            quatf xformOp:orient = (0.7071067, 0, -0.70710677, 0)
+            float3 xformOp:scale = (99.99992, 199.99985, 99.99992)
+            float3 xformOp:translate = (-1153.5094, 756.7553, 847.5978)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Material "DefaultMaterial"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+                token outputs:surface.connect = </Root/VR_Cinema_Low_poly_2021_1MB/Speaker_right_3/DefaultMaterial/DefaultSurfaceShader.outputs:surface>
+
+                def Shader "DefaultSurfaceShader"
+                {
+                    uniform token info:id = "UsdPreviewSurface"
+                    color3f inputs:diffuseColor = (1, 1, 1)
+                    float inputs:roughness = 0.75
+                    token outputs:surface
+                }
+            }
+
+            def RealityKitComponent "SpatialAudio"
+            {
+                float directivityFocus = 0
+                float directLevel = -17.026983
+                uniform token info:id = "RealityKit.SpatialAudio"
+            }
+        }
+
+        def Cube "Speaker_front" (
+            active = true
+            prepend apiSchemas = ["MaterialBindingAPI"]
+            customData = {
+                float3 rotationEulerHint = (0, -1.5707963, 0)
+            }
+        )
+        {
+            reorder nameChildren = ["DefaultMaterial", "SpatialAudio", "Vintage_Movie_Camera"]
+            rel material:binding = </Root/VR_Cinema_Low_poly_2021_1MB/Materials/lambert147> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            double size = 0.5
+            quatf xformOp:orient = (0.70710677, 0, -0.70710677, 0)
+            float3 xformOp:scale = (99.99995, 199.9999, 99.99995)
+            float3 xformOp:translate = (7.5164175, 581.58813, -1048.6074)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Material "DefaultMaterial"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+                token outputs:surface.connect = </Root/VR_Cinema_Low_poly_2021_1MB/Speaker_front/DefaultMaterial/DefaultSurfaceShader.outputs:surface>
+
+                def Shader "DefaultSurfaceShader"
+                {
+                    uniform token info:id = "UsdPreviewSurface"
+                    color3f inputs:diffuseColor = (1, 1, 1)
+                    float inputs:roughness = 0.75
+                    token outputs:surface
+                }
+            }
+
+            def RealityKitComponent "SpatialAudio"
+            {
+                float directivityFocus = 0
+                float directLevel = -17.026983
+                uniform token info:id = "RealityKit.SpatialAudio"
+            }
+        }
+
+        def Cube "Speaker_back" (
+            active = true
+            prepend apiSchemas = ["MaterialBindingAPI"]
+            customData = {
+                float3 rotationEulerHint = (0, -1.5707963, 0)
+            }
+        )
+        {
+            reorder nameChildren = ["DefaultMaterial", "SpatialAudio", "Vintage_Movie_Camera"]
+            rel material:binding = </Root/VR_Cinema_Low_poly_2021_1MB/Materials/lambert147> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            double size = 0.5
+            quatf xformOp:orient = (0.7071067, 0, -0.70710677, 0)
+            float3 xformOp:scale = (99.99992, 199.99985, 99.99992)
+            float3 xformOp:translate = (624.4757, 850.7654, 1374.8462)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Material "DefaultMaterial"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+                token outputs:surface.connect = </Root/VR_Cinema_Low_poly_2021_1MB/Speaker_back/DefaultMaterial/DefaultSurfaceShader.outputs:surface>
+
+                def Shader "DefaultSurfaceShader"
+                {
+                    uniform token info:id = "UsdPreviewSurface"
+                    color3f inputs:diffuseColor = (1, 1, 1)
+                    float inputs:roughness = 0.75
+                    token outputs:surface
+                }
+            }
+
+            def RealityKitComponent "SpatialAudio"
+            {
+                float directivityFocus = 0
+                float directLevel = -17.026983
+                uniform token info:id = "RealityKit.SpatialAudio"
+            }
+        }
+
+        def Cube "Speaker_back_1" (
+            active = true
+            prepend apiSchemas = ["MaterialBindingAPI"]
+            customData = {
+                float3 rotationEulerHint = (0, -1.5707963, 0)
+            }
+        )
+        {
+            reorder nameChildren = ["DefaultMaterial", "SpatialAudio", "Vintage_Movie_Camera"]
+            rel material:binding = </Root/VR_Cinema_Low_poly_2021_1MB/Materials/lambert147> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            double size = 0.5
+            quatf xformOp:orient = (0.70710677, 0, -0.7071067, 0)
+            float3 xformOp:scale = (99.9999, 199.9998, 99.9999)
+            float3 xformOp:translate = (-722.6617, 824.3765, 1368.1953)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Material "DefaultMaterial"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+                token outputs:surface.connect = </Root/VR_Cinema_Low_poly_2021_1MB/Speaker_back_1/DefaultMaterial/DefaultSurfaceShader.outputs:surface>
+
+                def Shader "DefaultSurfaceShader"
+                {
+                    uniform token info:id = "UsdPreviewSurface"
+                    color3f inputs:diffuseColor = (1, 1, 1)
+                    float inputs:roughness = 0.75
+                    token outputs:surface
+                }
+            }
+
+            def RealityKitComponent "SpatialAudio"
+            {
+                float directivityFocus = 0
+                float directLevel = -17.026983
+                uniform token info:id = "RealityKit.SpatialAudio"
+            }
+        }
+    }
+}
+

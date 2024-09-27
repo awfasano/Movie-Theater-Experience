@@ -15,6 +15,42 @@
 		C4115EDF2B994AFA007AD9B0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C4115EDE2B994AFA007AD9B0 /* Assets.xcassets */; };
 		C4115EE22B994AFA007AD9B0 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C4115EE12B994AFA007AD9B0 /* Preview Assets.xcassets */; };
 		C4115EED2B994AFA007AD9B0 /* Movie_Theater_ExperienceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4115EEC2B994AFA007AD9B0 /* Movie_Theater_ExperienceTests.swift */; };
+		C445CD002C9CC26700D8EFD8 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = C445CCFF2C9CC26600D8EFD8 /* GoogleService-Info.plist */; };
+		C445CD072C9CE37A00D8EFD8 /* Signaling.swift in Sources */ = {isa = PBXBuildFile; fileRef = C445CD062C9CE37A00D8EFD8 /* Signaling.swift */; };
+		C4869A9B2B9AF04A00BE09C8 /* FirebaseAnalyticsSwift in Frameworks */ = {isa = PBXBuildFile; productRef = C4869A9A2B9AF04A00BE09C8 /* FirebaseAnalyticsSwift */; };
+		C4869A9D2B9AF04A00BE09C8 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = C4869A9C2B9AF04A00BE09C8 /* FirebaseAuth */; };
+		C4869A9F2B9AF04A00BE09C8 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = C4869A9E2B9AF04A00BE09C8 /* FirebaseCrashlytics */; };
+		C4869AA12B9AF04A00BE09C8 /* FirebaseDatabaseSwift in Frameworks */ = {isa = PBXBuildFile; productRef = C4869AA02B9AF04A00BE09C8 /* FirebaseDatabaseSwift */; };
+		C4869AA32B9AF04A00BE09C8 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = C4869AA22B9AF04A00BE09C8 /* FirebaseFirestore */; };
+		C4869AA52B9AF04A00BE09C8 /* FirebaseFirestoreSwift in Frameworks */ = {isa = PBXBuildFile; productRef = C4869AA42B9AF04A00BE09C8 /* FirebaseFirestoreSwift */; };
+		C4869AA72B9AF04A00BE09C8 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = C4869AA62B9AF04A00BE09C8 /* FirebaseFunctions */; };
+		C4869AA92B9AF04B00BE09C8 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = C4869AA82B9AF04B00BE09C8 /* FirebaseMessaging */; };
+		C4869AAB2B9AF04B00BE09C8 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = C4869AAA2B9AF04B00BE09C8 /* FirebaseStorage */; };
+		C487D0E52BA5762100579C71 /* SeatMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C487D0E42BA5762100579C71 /* SeatMapView.swift */; };
+		C487D0E72BA57BE000579C71 /* SeatSelectionModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C487D0E62BA57BE000579C71 /* SeatSelectionModel.swift */; };
+		C49134412B9B072900A824DF /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134402B9B072900A824DF /* ChatMessage.swift */; };
+		C49134432B9C1EA600A824DF /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134422B9C1EA600A824DF /* ChatView.swift */; };
+		C49134452B9C1F6B00A824DF /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134442B9C1F6B00A824DF /* ChatViewModel.swift */; };
+		C49134472B9C303600A824DF /* ChatBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134462B9C303600A824DF /* ChatBubble.swift */; };
+		C491344B2B9C4B4800A824DF /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C491344A2B9C4B4800A824DF /* Extensions.swift */; };
+		C4AF48492C9E65CE006FE6C8 /* TheatreEntityWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AF48482C9E65CE006FE6C8 /* TheatreEntityWrapper.swift */; };
+		C4AF484D2C9E65F8006FE6C8 /* ViewingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AF484C2C9E65F8006FE6C8 /* ViewingMode.swift */; };
+		C4AF48A92C9E6D61006FE6C8 /* ToggleImmersiveSpaceButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AF48A82C9E6D61006FE6C8 /* ToggleImmersiveSpaceButton.swift */; };
+		C4AF48AB2C9E7288006FE6C8 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AF48AA2C9E7288006FE6C8 /* AppModel.swift */; };
+		C4AF48AE2C9E81C9006FE6C8 /* webrtc.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = C4AF48AD2C9E81C9006FE6C8 /* webrtc.xcframework */; };
+		C4AF48AF2C9E81C9006FE6C8 /* webrtc.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = C4AF48AD2C9E81C9006FE6C8 /* webrtc.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		C4BFD5B92CA5F628007D20BE /* CalendarEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4BFD5B82CA5F628007D20BE /* CalendarEvent.swift */; };
+		C4BFD5BC2CA5F645007D20BE /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4BFD5BB2CA5F645007D20BE /* CalendarView.swift */; };
+		C4BFD5BE2CA5F664007D20BE /* EventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4BFD5BD2CA5F664007D20BE /* EventView.swift */; };
+		C4C439FA2CA348AE001AC733 /* MovieWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C439F92CA348AE001AC733 /* MovieWindow.swift */; };
+		C4C439FC2CA34915001AC733 /* WebRTCManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C439FB2CA34915001AC733 /* WebRTCManager.swift */; };
+		C4C439FE2CA34CE9001AC733 /* NavBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C439FD2CA34CE9001AC733 /* NavBarView.swift */; };
+		C4C43A012CA362BE001AC733 /* AVPlayerVideoCapturer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C43A002CA362BE001AC733 /* AVPlayerVideoCapturer.swift */; };
+		C4C43A042CA364BB001AC733 /* VideoPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C43A032CA364BB001AC733 /* VideoPicker.swift */; };
+		C4C8116B2BB0BAA6000C0388 /* spiderman.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = C45C71582BAE82960009493B /* spiderman.mp4 */; };
+		C4DAB7ED2B9FE98800852029 /* ExpandingTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DAB7EC2B9FE98800852029 /* ExpandingTextView.swift */; };
+		C4DAB7EF2B9FF77500852029 /* CustomTextInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DAB7EE2B9FF77500852029 /* CustomTextInput.swift */; };
+		C4DAB7F42BA1609B00852029 /* EmojiButtonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DAB7F32BA1609B00852029 /* EmojiButtonView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -26,6 +62,20 @@
 			remoteInfo = "Movie Theater Experience";
 		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C46B9A302C9E25E0007BDF45 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				C4AF48AF2C9E81C9006FE6C8 /* webrtc.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		C4115ECF2B994AF9007AD9B0 /* Movie Theater Experience.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Movie Theater Experience.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -39,6 +89,32 @@
 		C4115EE32B994AFA007AD9B0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C4115EE82B994AFA007AD9B0 /* Movie Theater ExperienceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Movie Theater ExperienceTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C4115EEC2B994AFA007AD9B0 /* Movie_Theater_ExperienceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Movie_Theater_ExperienceTests.swift; sourceTree = "<group>"; };
+		C445CCFF2C9CC26600D8EFD8 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		C445CD062C9CE37A00D8EFD8 /* Signaling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Signaling.swift; sourceTree = "<group>"; };
+		C45C71582BAE82960009493B /* spiderman.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = spiderman.mp4; path = Chat/spiderman.mp4; sourceTree = "<group>"; };
+		C487D0E42BA5762100579C71 /* SeatMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeatMapView.swift; sourceTree = "<group>"; };
+		C487D0E62BA57BE000579C71 /* SeatSelectionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeatSelectionModel.swift; sourceTree = "<group>"; };
+		C49134402B9B072900A824DF /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
+		C49134422B9C1EA600A824DF /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		C49134442B9C1F6B00A824DF /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
+		C49134462B9C303600A824DF /* ChatBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatBubble.swift; sourceTree = "<group>"; };
+		C491344A2B9C4B4800A824DF /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		C4AF48482C9E65CE006FE6C8 /* TheatreEntityWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TheatreEntityWrapper.swift; sourceTree = "<group>"; };
+		C4AF484C2C9E65F8006FE6C8 /* ViewingMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewingMode.swift; sourceTree = "<group>"; };
+		C4AF48A82C9E6D61006FE6C8 /* ToggleImmersiveSpaceButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToggleImmersiveSpaceButton.swift; sourceTree = "<group>"; };
+		C4AF48AA2C9E7288006FE6C8 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		C4AF48AD2C9E81C9006FE6C8 /* webrtc.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = webrtc.xcframework; path = ../webrtc_visionpro_workspace/webrtc.xcframework; sourceTree = "<group>"; };
+		C4BFD5B82CA5F628007D20BE /* CalendarEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarEvent.swift; sourceTree = "<group>"; };
+		C4BFD5BB2CA5F645007D20BE /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarView.swift; sourceTree = "<group>"; };
+		C4BFD5BD2CA5F664007D20BE /* EventView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventView.swift; sourceTree = "<group>"; };
+		C4C439F92CA348AE001AC733 /* MovieWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovieWindow.swift; sourceTree = "<group>"; };
+		C4C439FB2CA34915001AC733 /* WebRTCManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebRTCManager.swift; sourceTree = "<group>"; };
+		C4C439FD2CA34CE9001AC733 /* NavBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavBarView.swift; sourceTree = "<group>"; };
+		C4C43A002CA362BE001AC733 /* AVPlayerVideoCapturer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AVPlayerVideoCapturer.swift; sourceTree = "<group>"; };
+		C4C43A032CA364BB001AC733 /* VideoPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPicker.swift; sourceTree = "<group>"; };
+		C4DAB7EC2B9FE98800852029 /* ExpandingTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpandingTextView.swift; sourceTree = "<group>"; };
+		C4DAB7EE2B9FF77500852029 /* CustomTextInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTextInput.swift; sourceTree = "<group>"; };
+		C4DAB7F32BA1609B00852029 /* EmojiButtonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiButtonView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -46,7 +122,17 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C4869AA92B9AF04B00BE09C8 /* FirebaseMessaging in Frameworks */,
+				C4869AA12B9AF04A00BE09C8 /* FirebaseDatabaseSwift in Frameworks */,
+				C4869A9B2B9AF04A00BE09C8 /* FirebaseAnalyticsSwift in Frameworks */,
+				C4869AAB2B9AF04B00BE09C8 /* FirebaseStorage in Frameworks */,
+				C4AF48AE2C9E81C9006FE6C8 /* webrtc.xcframework in Frameworks */,
+				C4869A9F2B9AF04A00BE09C8 /* FirebaseCrashlytics in Frameworks */,
+				C4869AA72B9AF04A00BE09C8 /* FirebaseFunctions in Frameworks */,
+				C4869AA52B9AF04A00BE09C8 /* FirebaseFirestoreSwift in Frameworks */,
+				C4869A9D2B9AF04A00BE09C8 /* FirebaseAuth in Frameworks */,
 				C4115ED52B994AF9007AD9B0 /* RealityKitContent in Frameworks */,
+				C4869AA32B9AF04A00BE09C8 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -66,6 +152,7 @@
 				C4115ED12B994AF9007AD9B0 /* Movie Theater Experience */,
 				C4115ED22B994AF9007AD9B0 /* Packages */,
 				C4115EEB2B994AFA007AD9B0 /* Movie Theater ExperienceTests */,
+				C4AF48AC2C9E81C8006FE6C8 /* Frameworks */,
 				C4115ED02B994AF9007AD9B0 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -82,11 +169,23 @@
 		C4115ED12B994AF9007AD9B0 /* Movie Theater Experience */ = {
 			isa = PBXGroup;
 			children = (
+				C4BFD5BA2CA5F63E007D20BE /* Calendar */,
+				C4C43A832CA49CF8001AC733 /* Model */,
+				C4C43A022CA364B0001AC733 /* Movie Picker */,
 				C4115ED62B994AF9007AD9B0 /* Movie_Theater_ExperienceApp.swift */,
+				C4AF48A82C9E6D61006FE6C8 /* ToggleImmersiveSpaceButton.swift */,
+				C4AF48AA2C9E7288006FE6C8 /* AppModel.swift */,
+				C4C439FD2CA34CE9001AC733 /* NavBarView.swift */,
 				C4115ED82B994AF9007AD9B0 /* ContentView.swift */,
-				C4115EDA2B994AF9007AD9B0 /* ImmersiveView.swift */,
-				C4115EDC2B994AF9007AD9B0 /* ImageBasedLighting.skybox */,
+				C45C71582BAE82960009493B /* spiderman.mp4 */,
+				C4C439FF2CA3540D001AC733 /* Emoji View */,
+				C4FACA272BAE0BF800A08729 /* Seat Map */,
+				C4B5CD152BA26E8C00F524EC /* Chat */,
+				C445CD032C9CE34D00D8EFD8 /* Streaming */,
+				C4FACA292BAE0D6500A08729 /* Immersive */,
+				C4FACA282BAE0D5600A08729 /* Utilities */,
 				C4115EDE2B994AFA007AD9B0 /* Assets.xcassets */,
+				C445CCFF2C9CC26600D8EFD8 /* GoogleService-Info.plist */,
 				C4115EE32B994AFA007AD9B0 /* Info.plist */,
 				C4115EE02B994AFA007AD9B0 /* Preview Content */,
 			);
@@ -117,6 +216,99 @@
 			path = "Movie Theater ExperienceTests";
 			sourceTree = "<group>";
 		};
+		C445CD032C9CE34D00D8EFD8 /* Streaming */ = {
+			isa = PBXGroup;
+			children = (
+				C445CD062C9CE37A00D8EFD8 /* Signaling.swift */,
+				C4C43A002CA362BE001AC733 /* AVPlayerVideoCapturer.swift */,
+				C4C439FB2CA34915001AC733 /* WebRTCManager.swift */,
+			);
+			path = Streaming;
+			sourceTree = "<group>";
+		};
+		C4AF48AC2C9E81C8006FE6C8 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				C4AF48AD2C9E81C9006FE6C8 /* webrtc.xcframework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		C4B5CD152BA26E8C00F524EC /* Chat */ = {
+			isa = PBXGroup;
+			children = (
+				C4DAB7EE2B9FF77500852029 /* CustomTextInput.swift */,
+				C4DAB7EC2B9FE98800852029 /* ExpandingTextView.swift */,
+				C49134402B9B072900A824DF /* ChatMessage.swift */,
+				C49134442B9C1F6B00A824DF /* ChatViewModel.swift */,
+				C49134422B9C1EA600A824DF /* ChatView.swift */,
+				C49134462B9C303600A824DF /* ChatBubble.swift */,
+			);
+			path = Chat;
+			sourceTree = "<group>";
+		};
+		C4BFD5BA2CA5F63E007D20BE /* Calendar */ = {
+			isa = PBXGroup;
+			children = (
+				C4BFD5BB2CA5F645007D20BE /* CalendarView.swift */,
+			);
+			path = Calendar;
+			sourceTree = "<group>";
+		};
+		C4C439FF2CA3540D001AC733 /* Emoji View */ = {
+			isa = PBXGroup;
+			children = (
+				C4DAB7F32BA1609B00852029 /* EmojiButtonView.swift */,
+			);
+			path = "Emoji View";
+			sourceTree = "<group>";
+		};
+		C4C43A022CA364B0001AC733 /* Movie Picker */ = {
+			isa = PBXGroup;
+			children = (
+				C4C43A032CA364BB001AC733 /* VideoPicker.swift */,
+			);
+			path = "Movie Picker";
+			sourceTree = "<group>";
+		};
+		C4C43A832CA49CF8001AC733 /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				C4BFD5BD2CA5F664007D20BE /* EventView.swift */,
+				C4BFD5B82CA5F628007D20BE /* CalendarEvent.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+		C4FACA272BAE0BF800A08729 /* Seat Map */ = {
+			isa = PBXGroup;
+			children = (
+				C487D0E62BA57BE000579C71 /* SeatSelectionModel.swift */,
+				C487D0E42BA5762100579C71 /* SeatMapView.swift */,
+			);
+			path = "Seat Map";
+			sourceTree = "<group>";
+		};
+		C4FACA282BAE0D5600A08729 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				C491344A2B9C4B4800A824DF /* Extensions.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		C4FACA292BAE0D6500A08729 /* Immersive */ = {
+			isa = PBXGroup;
+			children = (
+				C4C439F92CA348AE001AC733 /* MovieWindow.swift */,
+				C4115EDA2B994AF9007AD9B0 /* ImmersiveView.swift */,
+				C4AF48482C9E65CE006FE6C8 /* TheatreEntityWrapper.swift */,
+				C4AF484C2C9E65F8006FE6C8 /* ViewingMode.swift */,
+				C4115EDC2B994AF9007AD9B0 /* ImageBasedLighting.skybox */,
+			);
+			path = Immersive;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -127,6 +319,7 @@
 				C4115ECB2B994AF9007AD9B0 /* Sources */,
 				C4115ECC2B994AF9007AD9B0 /* Frameworks */,
 				C4115ECD2B994AF9007AD9B0 /* Resources */,
+				C46B9A302C9E25E0007BDF45 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -135,6 +328,15 @@
 			name = "Movie Theater Experience";
 			packageProductDependencies = (
 				C4115ED42B994AF9007AD9B0 /* RealityKitContent */,
+				C4869A9A2B9AF04A00BE09C8 /* FirebaseAnalyticsSwift */,
+				C4869A9C2B9AF04A00BE09C8 /* FirebaseAuth */,
+				C4869A9E2B9AF04A00BE09C8 /* FirebaseCrashlytics */,
+				C4869AA02B9AF04A00BE09C8 /* FirebaseDatabaseSwift */,
+				C4869AA22B9AF04A00BE09C8 /* FirebaseFirestore */,
+				C4869AA42B9AF04A00BE09C8 /* FirebaseFirestoreSwift */,
+				C4869AA62B9AF04A00BE09C8 /* FirebaseFunctions */,
+				C4869AA82B9AF04B00BE09C8 /* FirebaseMessaging */,
+				C4869AAA2B9AF04B00BE09C8 /* FirebaseStorage */,
 			);
 			productName = "Movie Theater Experience";
 			productReference = C4115ECF2B994AF9007AD9B0 /* Movie Theater Experience.app */;
@@ -186,6 +388,9 @@
 				Base,
 			);
 			mainGroup = C4115EC62B994AF9007AD9B0;
+			packageReferences = (
+				C4869A992B9AF04A00BE09C8 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			productRefGroup = C4115ED02B994AF9007AD9B0 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -202,6 +407,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				C4115EDF2B994AFA007AD9B0 /* Assets.xcassets in Resources */,
+				C4C8116B2BB0BAA6000C0388 /* spiderman.mp4 in Resources */,
+				C445CD002C9CC26700D8EFD8 /* GoogleService-Info.plist in Resources */,
 				C4115EE22B994AFA007AD9B0 /* Preview Assets.xcassets in Resources */,
 				C4115EDD2B994AF9007AD9B0 /* ImageBasedLighting.skybox in Resources */,
 			);
@@ -222,8 +429,31 @@
 			buildActionMask = 2147483647;
 			files = (
 				C4115ED92B994AF9007AD9B0 /* ContentView.swift in Sources */,
+				C4C43A012CA362BE001AC733 /* AVPlayerVideoCapturer.swift in Sources */,
+				C49134412B9B072900A824DF /* ChatMessage.swift in Sources */,
+				C49134432B9C1EA600A824DF /* ChatView.swift in Sources */,
+				C4C439FA2CA348AE001AC733 /* MovieWindow.swift in Sources */,
+				C4BFD5BC2CA5F645007D20BE /* CalendarView.swift in Sources */,
+				C4C439FE2CA34CE9001AC733 /* NavBarView.swift in Sources */,
+				C487D0E52BA5762100579C71 /* SeatMapView.swift in Sources */,
+				C491344B2B9C4B4800A824DF /* Extensions.swift in Sources */,
+				C4AF48492C9E65CE006FE6C8 /* TheatreEntityWrapper.swift in Sources */,
+				C4DAB7EF2B9FF77500852029 /* CustomTextInput.swift in Sources */,
+				C4BFD5B92CA5F628007D20BE /* CalendarEvent.swift in Sources */,
+				C4C439FC2CA34915001AC733 /* WebRTCManager.swift in Sources */,
+				C4C43A042CA364BB001AC733 /* VideoPicker.swift in Sources */,
+				C445CD072C9CE37A00D8EFD8 /* Signaling.swift in Sources */,
+				C4BFD5BE2CA5F664007D20BE /* EventView.swift in Sources */,
 				C4115ED72B994AF9007AD9B0 /* Movie_Theater_ExperienceApp.swift in Sources */,
+				C49134452B9C1F6B00A824DF /* ChatViewModel.swift in Sources */,
+				C4AF484D2C9E65F8006FE6C8 /* ViewingMode.swift in Sources */,
 				C4115EDB2B994AF9007AD9B0 /* ImmersiveView.swift in Sources */,
+				C4DAB7ED2B9FE98800852029 /* ExpandingTextView.swift in Sources */,
+				C4AF48AB2C9E7288006FE6C8 /* AppModel.swift in Sources */,
+				C4AF48A92C9E6D61006FE6C8 /* ToggleImmersiveSpaceButton.swift in Sources */,
+				C487D0E72BA57BE000579C71 /* SeatSelectionModel.swift in Sources */,
+				C49134472B9C303600A824DF /* ChatBubble.swift in Sources */,
+				C4DAB7F42BA1609B00852029 /* EmojiButtonView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -372,9 +602,14 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"Movie Theater Experience/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = P2HHS9CUR6;
 				ENABLE_PREVIEWS = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/webrtc_visionpro_workspace/src/out/simxros-arm64-release",
+					"$(PROJECT_DIR)/webrtc_visionpro_workspace/src/out/xros-arm64-release",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "$(TARGET_NAME)/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -398,9 +633,14 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"Movie Theater Experience/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = P2HHS9CUR6;
 				ENABLE_PREVIEWS = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/webrtc_visionpro_workspace/src/out/simxros-arm64-release",
+					"$(PROJECT_DIR)/webrtc_visionpro_workspace/src/out/xros-arm64-release",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "$(TARGET_NAME)/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -491,10 +731,66 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		C4869A992B9AF04A00BE09C8 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 10.22.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		C4115ED42B994AF9007AD9B0 /* RealityKitContent */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = RealityKitContent;
+		};
+		C4869A9A2B9AF04A00BE09C8 /* FirebaseAnalyticsSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C4869A992B9AF04A00BE09C8 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsSwift;
+		};
+		C4869A9C2B9AF04A00BE09C8 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C4869A992B9AF04A00BE09C8 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		C4869A9E2B9AF04A00BE09C8 /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C4869A992B9AF04A00BE09C8 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
+		};
+		C4869AA02B9AF04A00BE09C8 /* FirebaseDatabaseSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C4869A992B9AF04A00BE09C8 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseDatabaseSwift;
+		};
+		C4869AA22B9AF04A00BE09C8 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C4869A992B9AF04A00BE09C8 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		C4869AA42B9AF04A00BE09C8 /* FirebaseFirestoreSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C4869A992B9AF04A00BE09C8 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestoreSwift;
+		};
+		C4869AA62B9AF04A00BE09C8 /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C4869A992B9AF04A00BE09C8 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFunctions;
+		};
+		C4869AA82B9AF04B00BE09C8 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C4869A992B9AF04A00BE09C8 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+		C4869AAA2B9AF04B00BE09C8 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C4869A992B9AF04A00BE09C8 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

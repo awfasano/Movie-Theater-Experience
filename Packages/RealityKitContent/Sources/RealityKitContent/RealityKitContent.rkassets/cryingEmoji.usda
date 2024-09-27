@@ -1,0 +1,102 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "Reality Composer Pro Version 1.0 (409.60.6)"
+    }
+    defaultPrim = "Root"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "Root"
+{
+    def "Free_Social_SmileyEmoji_Pack_1" (
+        active = true
+        prepend references = @Free_Social_SmileyEmoji_Pack_1.usdz@
+    )
+    {
+        float3 xformOp:scale = (0.01, 0.01, 0.01)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+        over "Materials"
+        {
+            over "peau"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+                float2 ui:nodegraph:realitykit:subgraphOutputs:pos = (0, 109.5)
+                float2 ui:nodegraph:realitykit:subgraphOutputs:size = (181.5, 99)
+            }
+
+            over "oeils"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+            }
+
+            over "dents"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+            }
+
+            over "noir"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+            }
+
+            over "gris"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+            }
+
+            over "Material_001"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+            }
+
+            over "rose"
+            {
+                token outputs:mtlx:surface
+                token outputs:realitykit:vertex
+            }
+
+            def Material "peau_1" (
+                prepend references = </Root/Free_Social_SmileyEmoji_Pack_1/Materials/peau>
+            )
+            {
+                token outputs:surface.connect = </Root/Free_Social_SmileyEmoji_Pack_1/Materials/peau_1/pbr_shader.outputs:surface>
+
+                def Shader "pbr_shader"
+                {
+                    uniform token info:id = "UsdPreviewSurface"
+                    color3f inputs:diffuseColor = (1, 0.673395, 0.154462)
+                    color3f inputs:emissiveColor = (0, 0, 0)
+                    float inputs:metallic = 0
+                    normal3f inputs:normal = (1, 1, 1)
+                    float inputs:occlusion = 1
+                    float inputs:roughness = 0.8239417
+                    token outputs:surface
+                }
+            }
+        }
+
+        over "Meshes"
+        {
+            over "Sketchfab_model"
+            {
+                over "c1637ed2876a404b9cbd1d229ee3b83a_fbx"
+                {
+                    quatf xformOp:orient = (0.70710677, 0.70710677, 0, 0)
+                    float3 xformOp:scale = (1, 1, 1)
+                    float3 xformOp:translate = (22.891975, 16.97174, 2.1533835e-7)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+                }
+            }
+        }
+    }
+}
+

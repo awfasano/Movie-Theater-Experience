@@ -1,0 +1,52 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "Reality Composer Pro Version 1.0 (409.60.6)"
+    }
+    defaultPrim = "Root"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "Root"
+{
+    def RealityKitComponent "VFXEmitter"
+    {
+        uniform token info:id = "RealityKit.VFXEmitter"
+
+        def RealityKitStruct "currentState"
+        {
+            token birthDirection = "Local"
+            token birthLocation = "Volume"
+            int64 burstCount = 5
+            double emissionDuration = 2
+            token emitterShape = "Box"
+            bool isSpawningEnabled = 1
+            float particleSpeed = 0.2
+            float3 shapeSize = (0.3, 0.3, 0.3)
+
+            def RealityKitStruct "mainEmitter"
+            {
+                float birthRate = 5
+                float4 endColorA = (0.0013006331, 0.032195132, 1, 1)
+                token opacityOverLife = "GradualFadeInOut"
+                asset particleImage = @Cinema/Sources/Cinema/Cinema.rkassets/Untitled design (5).png@
+                double particleLifeSpan = 5
+                float particleMass = 1
+                float particleSize = 0.1
+                float4 startColorA = (0.6229244, 0.8831898, 0.37974292, 1)
+                float4 startColorB = (1, 1, 1, 1)
+                bool useEndColor = 0
+                bool useEndColorRange = 0
+                bool useStartColorRange = 1
+            }
+
+            def RealityKitStruct "spawnedEmitter"
+            {
+                asset particleImage = @Cinema/Sources/Cinema/Cinema.rkassets/Untitled design (1).png@
+                float particleSize = 0.1
+            }
+        }
+    }
+}
+

@@ -1,0 +1,97 @@
+{
+  "1190F95C-227D-44C0-82CA-21BEBB343632" : {
+    "objectMetadataList" : [
+      [
+        "1190F95C-227D-44C0-82CA-21BEBB343632",
+        "Root"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "1190F95C-227D-44C0-82CA-21BEBB343632",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "1190F95C-227D-44C0-82CA-21BEBB343632",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Vintage_Movie_Camera",
+        "geom",
+        "realistic"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "1190F95C-227D-44C0-82CA-21BEBB343632",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Vintage_Movie_Camera",
+        "geom"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "1190F95C-227D-44C0-82CA-21BEBB343632",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Vintage_Movie_Camera",
+        "geom",
+        "realistic",
+        "materials",
+        "usdpreviewsurface3sg"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "1190F95C-227D-44C0-82CA-21BEBB343632",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Meshes",
+        "Sketchfab_model",
+        "_c0492f05f164194982df82efe2d78b5_fbx",
+        "RootNode",
+        "polySurface11216"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "1190F95C-227D-44C0-82CA-21BEBB343632",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Vintage_Movie_Camera"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "1190F95C-227D-44C0-82CA-21BEBB343632",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Vintage_Movie_Camera",
+        "geom",
+        "realistic",
+        "materials"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      }
+    ]
+  }
+}
