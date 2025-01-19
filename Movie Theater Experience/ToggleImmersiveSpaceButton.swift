@@ -1,60 +1,51 @@
 import SwiftUI
 
 struct ToggleImmersiveSpaceButton: View {
-
     @Environment(AppModel.self) private var appModel
-
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
     @Environment(\.openImmersiveSpace) private var openImmersiveSpace
     @Environment(\.openWindow) var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
-
-
+    
     var body: some View {
         Button {
             Task { @MainActor in
                 switch appModel.immersiveSpaceState {
                     case .open:
                         appModel.immersiveSpaceState = .inTransition
-                        dismissWindow(id: "navBar")
-
-
+                        // Don't dismiss the nav bar, just handle the movie window
                         await dismissImmersiveSpace()
-                        // Don't set immersiveSpaceState to .closed because there
-                        // are multiple paths to ImmersiveView.onDisappear().
-                        // Only set .closed in ImmersiveView.onDisappear().
+                        
+                        // Check if we should show the movie window
+                        if !appModel.isMovieWindowOpen, let _ = appModel.selectedVideoURL {
+                            appModel.isMovieWindowOpen = true
+                            openWindow(id: "movieWindow")
+                        }
+                        // State will be set to .closed in ImmersiveView.onDisappear()
 
                     case .closed:
                         appModel.immersiveSpaceState = .inTransition
-                        openWindow(id: "navBar")
-
-
+                        
                         switch await openImmersiveSpace(id: appModel.immersiveSpaceID) {
                             case .opened:
-                                // Don't set immersiveSpaceState to .open because there
-                                // may be multiple paths to ImmersiveView.onAppear().
-                                // Only set .open in ImmersiveView.onAppear().
+                                // State will be set to .open in ImmersiveView.onAppear()
                                 break
-
+                            
                             case .userCancelled, .error:
-                                // On error, we need to mark the immersive space
-                                // as closed because it failed to open.
                                 fallthrough
                             @unknown default:
-                                // On unknown response, assume space did not open.
-
                                 appModel.immersiveSpaceState = .closed
                         }
-
+                        
                     case .inTransition:
-                        // This case should not ever happen because button is disabled for this case.
+                        // Button is disabled in this state
                         break
                 }
             }
         } label: {
             Text(appModel.immersiveSpaceState == .open ? "Hide Immersive Space" : "Show Immersive Space")
         }
-        .disabled(appModel.immersiveSpaceState == .inTransition)
+        .disabled(!appModel.canTransitionImmersiveSpace())
         .animation(.none, value: 0)
         .fontWeight(.semibold)
     }

@@ -1,5 +1,5 @@
 # Uncomment the next line to define a global platform for your project
-platform :visionos, '1.0'
+platform :visionos, '2.0'
 
 
 target 'Movie Theater Experience' do
@@ -10,6 +10,4 @@ target 'Movie Theater Experience' do
 	pod 'FirebaseAnalytics'
 	pod 'FirebaseAuth'
 	pod 'FirebaseCore'
-  	pod 'GoogleWebRTC'
-
 end

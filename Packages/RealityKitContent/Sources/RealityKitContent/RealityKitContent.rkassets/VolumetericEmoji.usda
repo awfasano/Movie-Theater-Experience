@@ -30,7 +30,7 @@ def Xform "Root"
                 float birthRate = 5
                 float4 endColorA = (0.0013006331, 0.032195132, 1, 1)
                 token opacityOverLife = "GradualFadeInOut"
-                asset particleImage = @Cinema/Sources/Cinema/Cinema.rkassets/Untitled design (5).png@
+                asset particleImage = @@
                 double particleLifeSpan = 5
                 float particleMass = 1
                 float particleSize = 0.1

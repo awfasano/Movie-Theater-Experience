@@ -34,3 +34,43 @@ extension float4x4 {
     }
 }
 
+
+extension Date {
+    var startOfMonth: Date {
+        Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: self))!
+    }
+
+    var monthAndYear: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM yyyy"
+        return formatter.string(from: self)
+    }
+
+    var weekdaySymbol: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "E"
+        return formatter.string(from: self)
+    }
+
+    var day: Int {
+        Calendar.current.component(.day, from: self)
+    }
+
+    var hourAndMinute: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: self)
+    }
+
+    func daysInMonth() -> [Date] {
+        let range = Calendar.current.range(of: .day, in: .month, for: self)!
+        let components = Calendar.current.dateComponents([.year, .month], from: self)
+        return range.compactMap { day -> Date? in
+            var dateComponents = components
+            dateComponents.day = day
+            return Calendar.current.date(from: dateComponents)
+        }
+    }
+}
+
+

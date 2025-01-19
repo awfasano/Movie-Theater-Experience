@@ -6,3 +6,10 @@
 //
 
 import Foundation
+
+class TheatreVisibilityManager: ObservableObject {
+    static let shared = TheatreVisibilityManager()
+    @Published var isTheatreVisible = true
+    
+    private init() {}
+}

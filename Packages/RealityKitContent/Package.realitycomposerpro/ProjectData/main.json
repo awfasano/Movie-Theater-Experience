@@ -4,14 +4,16 @@
     "\/RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/Immersive.usda" : "65F6F990-A780-4474-B78B-572E0E4E273D",
     "\/RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/Scene.usda" : "0A9B4653-B11E-4D6A-850E-C6FCB621626C",
     "\/RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/Untitled Scene.usda" : "D560BB77-AAF3-4BDE-B7C4-989332A4688B",
-    "RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/cryingEmoji.usda" : "FC972296-46CD-4531-A559-78862AEC169D",
-    "RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/emojiEmitters.usda" : "6792DD5D-BE2C-45E0-BABA-845B0FE2E137",
+    "RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/Cinema\/Sources\/Cinema\/Cinema.rkassets\/Scene.usda" : "65F9782B-E0DA-471E-9079-E6DF645F920C",
     "RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/GridMaterial.usda" : "66168B71-AB05-424E-8B6C-D33D6E61B08F",
     "RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/Immersive.usda" : "AF09ED6F-1707-48FD-8720-65B998362C09",
     "RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/Scene.usda" : "D66134B1-3681-4A8E-AFE5-29F257229F3B",
-    "RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/seatEmitter.usda" : "FF195136-F79D-420C-AE0F-4983F8580A03",
     "RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/Untitled Scene.usda" : "F66895E9-6873-4B78-B97E-F008B35C59D9",
     "RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/Untitled%20Scene.usda" : "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
-    "RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/VolumetericEmoji.usda" : "F39F9C7B-1E0A-4117-8752-46700B2647B5"
+    "RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/VolumetericEmoji.usda" : "F39F9C7B-1E0A-4117-8752-46700B2647B5",
+    "RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/cryingEmoji.usda" : "FC972296-46CD-4531-A559-78862AEC169D",
+    "RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/emojiEmitters.usda" : "6792DD5D-BE2C-45E0-BABA-845B0FE2E137",
+    "RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/projectorEmitter.usda" : "F7F7D153-00C9-4EC6-920E-44D3E99C72F3",
+    "RealityKitContent\/Sources\/RealityKitContent\/RealityKitContent.rkassets\/seatEmitter.usda" : "FF195136-F79D-420C-AE0F-4983F8580A03"
   }
 }

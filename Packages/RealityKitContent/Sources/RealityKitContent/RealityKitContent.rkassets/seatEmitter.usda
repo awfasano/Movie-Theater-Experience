@@ -20,7 +20,7 @@ def Xform "Root"
             token birthLocation = "Surface"
             int64 burstCount = 1
             float3 emissionDirection = (0, 1, 0)
-            double emissionDuration = 1
+            double emissionDuration = 4
             double emissionDurationVariation = 0
             token emitterShape = "Point"
             double idleDuration = 0
@@ -28,7 +28,7 @@ def Xform "Root"
             bool isLocal = 0
             bool isLocalFields = 0
             bool isSpawningEnabled = 0
-            bool loops = 1
+            bool loops = 0
             float particleSpeed = 1.4
             float particleSpeedVariation = 0.1
             float3 shapeSize = (0.05, 1, 0.05)
@@ -44,9 +44,9 @@ def Xform "Root"
                 float3 acceleration = (0, -0.1, 0)
                 token animationRepeatMode = "Looping"
                 token billboardMode = "Billboard"
-                float birthRate = 1.2
+                float birthRate = 4
                 float birthRateVariation = 1
-                token blendMode = "Additive"
+                token blendMode = "Alpha"
                 float colorEvolutionPower = 1
                 int64 columnCount = 0
                 float dampingFactor = 3.2
@@ -61,7 +61,7 @@ def Xform "Root"
                 float noiseAnimationSpeed = 0
                 float noiseScale = 1
                 float noiseStrength = 0
-                token opacityOverLife = "GradualFadeInOut"
+                token opacityOverLife = "EaseFadeOut"
                 float particleAngle = 0
                 float particleAngleVariation = 0
                 float particleAngularVelocity = 0
@@ -80,7 +80,7 @@ def Xform "Root"
                 float sizeMultiplierAtEndOfLifespanPower = 1
                 token sortOrder = "IncreasingDepth"
                 float spreadingAngle = 0.1
-                float4 startColorA = (0.5548886, 0.8855363, 0.76830995, 1)
+                float4 startColorA = (0.7669241, 0.85153824, 0.8784032, 1)
                 float4 startColorB = (1, 1, 1, 1)
                 float stretchFactor = 0
                 bool useEndColor = 0

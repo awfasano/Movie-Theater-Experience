@@ -3,7 +3,7 @@ import FirebaseCore
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
-                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+                  didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         FirebaseApp.configure()
         return true
     }
@@ -18,45 +18,58 @@ struct Movie_Theater_ExperienceApp: App {
     @Environment(\.openWindow) var openWindow
 
     var body: some Scene {
-        WindowGroup("Content View", id: "contentView") {
-            ContentView()
-                .environment(appModel)
+        WindowGroup("Tab Bar", id: "tabBar") {
+            if #available(visionOS 2.0, *) {
+                TabBarWindow()
+                    .environment(appModel)
+                    .environmentObject(sharedSelection)
+                    .environmentObject(theatreEntityWrapper)
+            }
         }
+        .defaultSize(width: 1000, height: 600)
 
         ImmersiveSpace(id: appModel.immersiveSpaceID) {
-            ImmersiveView()
-                .environment(appModel)
-                .environmentObject(sharedSelection)
-                .environmentObject(theatreEntityWrapper)
-                .onAppear {
-                    appModel.immersiveSpaceState = .open
-                }
-                .onDisappear {
-                    appModel.immersiveSpaceState = .closed
-                }
+            if #available(visionOS 2.0, *) {
+                ImmersiveView()
+                    .environment(appModel)
+                    .environmentObject(sharedSelection)
+                    .environmentObject(theatreEntityWrapper)
+                    .onAppear {
+                        appModel.immersiveSpaceState = .open
+                    }
+                    .onDisappear {
+                        appModel.immersiveSpaceState = .closed
+                    }
+            }
         }
         .immersionStyle(selection: .constant(.full), in: .full)
 
-        // Existing WindowGroups
         WindowGroup("Seat Map", id: "seatMap") {
             SeatMapView()
                 .environmentObject(sharedSelection)
                 .environmentObject(theatreEntityWrapper)
         }
+
         WindowGroup("Emoji Window", id: "emojiWindow") {
-            EmojiButtonView()
-                .background(Color.clear)
+            if let event = appModel.currentEvent {
+                EmojiButtonView(eventId: event.id ?? "", date: event.date)
+                    .background(Color.clear)
+            }
         }
         .defaultSize(width: 300, height: 100)
         .windowStyle(.plain)
 
         WindowGroup(id: "chatWindow") {
-            ChatView(viewModel: ChatViewModel(chatId: "uBTRnFJxunu2B2V4qIPK"))
+            if let event = appModel.currentEvent {
+                ChatView(viewModel: ChatViewModel(
+                    eventId: event.id ?? "",
+                    date: event.date
+                ))
+            }
         }
         .defaultSize(width: 400, height: 600)
         .windowStyle(.plain)
 
-        // Nav Bar WindowGroup
         WindowGroup("Nav Bar", id: "navBar") {
             NavBarView()
                 .environment(appModel)
@@ -65,5 +78,12 @@ struct Movie_Theater_ExperienceApp: App {
         }
         .windowStyle(.plain)
         .defaultSize(width: 600, height: 50)
+        
+        WindowGroup("Movie Window", id: "movieWindow") {
+            MovieWindow()
+                .environment(appModel)
+        }
+        .defaultSize(width: 500, height: 350)
+        .windowStyle(.plain)
     }
 }

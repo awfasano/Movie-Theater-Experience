@@ -17,11 +17,7 @@
         "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
         "Root",
         "Free_Social_SmileyEmoji_Pack_1",
-        "Meshes",
-        "Sketchfab_model",
-        "c1637ed2876a404b9cbd1d229ee3b83a_fbx",
-        "RootNode",
-        "Cylinder_130"
+        "Materials"
       ],
       {
         "isExpanded" : true,
@@ -29,42 +25,7 @@
       },
       [
         "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
-        "Root",
-        "Free_Social_SmileyEmoji_Pack_1",
-        "Meshes",
-        "Sketchfab_model",
-        "c1637ed2876a404b9cbd1d229ee3b83a_fbx",
-        "RootNode"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
-        "Root",
-        "cryingEmoji"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
-        "Root",
-        "cryingEmoji",
-        "Free_Social_SmileyEmoji_Pack_1",
-        "Meshes"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
-        "Root",
-        "Free_Social_SmileyEmoji_Pack_1",
-        "Meshes"
+        "Root"
       ],
       {
         "isExpanded" : true,
@@ -88,40 +49,12 @@
       [
         "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
         "Root",
-        "Free_Social_SmileyEmoji_Pack_3",
-        "Meshes"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
-        "Root",
-        "Free_Social_SmileyEmoji_Pack_3",
-        "Materials"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
-        "Root"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
-        "Root",
         "Free_Social_SmileyEmoji_Pack_1",
         "Meshes",
         "Sketchfab_model",
         "c1637ed2876a404b9cbd1d229ee3b83a_fbx",
         "RootNode",
-        "Cylinder_129"
+        "Cylinder_130"
       ],
       {
         "isExpanded" : true,
@@ -130,10 +63,7 @@
       [
         "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
         "Root",
-        "Free_Social_SmileyEmoji_Pack_1",
-        "Meshes",
-        "Sketchfab_model",
-        "c1637ed2876a404b9cbd1d229ee3b83a_fbx"
+        "Free_Social_SmileyEmoji_Pack_1"
       ],
       {
         "isExpanded" : true,
@@ -142,19 +72,7 @@
       [
         "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
         "Root",
-        "Free_Social_SmileyEmoji_Pack_1",
-        "Materials"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
-        "Root",
-        "Free_Social_SmileyEmoji_Pack_1",
-        "Meshes",
-        "Sketchfab_model"
+        "Free_Social_SmileyEmoji_Pack_3"
       ],
       {
         "isExpanded" : true,
@@ -178,6 +96,41 @@
       [
         "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
         "Root",
+        "Free_Social_SmileyEmoji_Pack_3",
+        "Materials"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
+        "Root",
+        "Free_Social_SmileyEmoji_Pack_1",
+        "Meshes",
+        "Sketchfab_model",
+        "c1637ed2876a404b9cbd1d229ee3b83a_fbx",
+        "RootNode",
+        "Cylinder_129"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
+        "Root",
+        "cryingEmoji",
+        "Free_Social_SmileyEmoji_Pack_1",
+        "Meshes"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
+        "Root",
         "cryingEmoji",
         "Free_Social_SmileyEmoji_Pack_1"
       ],
@@ -188,7 +141,8 @@
       [
         "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
         "Root",
-        "Free_Social_SmileyEmoji_Pack_3"
+        "Free_Social_SmileyEmoji_Pack_1",
+        "Meshes"
       ],
       {
         "isExpanded" : true,
@@ -197,7 +151,53 @@
       [
         "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
         "Root",
-        "Free_Social_SmileyEmoji_Pack_1"
+        "Free_Social_SmileyEmoji_Pack_1",
+        "Meshes",
+        "Sketchfab_model",
+        "c1637ed2876a404b9cbd1d229ee3b83a_fbx"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
+        "Root",
+        "Free_Social_SmileyEmoji_Pack_1",
+        "Meshes",
+        "Sketchfab_model",
+        "c1637ed2876a404b9cbd1d229ee3b83a_fbx",
+        "RootNode"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
+        "Root",
+        "Free_Social_SmileyEmoji_Pack_1",
+        "Meshes",
+        "Sketchfab_model"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
+        "Root",
+        "Free_Social_SmileyEmoji_Pack_3",
+        "Meshes"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "2D9B5A60-7CE1-4E1C-8913-BD933F0BB887",
+        "Root",
+        "cryingEmoji"
       ],
       {
         "isExpanded" : true,
@@ -209,6 +209,262 @@
     "objectMetadataList" : [
       [
         "65F6F990-A780-4474-B78B-572E0E4E273D",
+        "Root"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      }
+    ]
+  },
+  "65F9782B-E0DA-471E-9079-E6DF645F920C" : {
+    "objectMetadataList" : [
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "seats"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Meshes",
+        "Sketchfab_model"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "seats",
+        "row_5"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "seats",
+        "row_9"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "seats",
+        "row_3"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Meshes"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "seats",
+        "row_11"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "seats",
+        "row_2"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "seats",
+        "row_8"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Meshes",
+        "Sketchfab_model",
+        "_c0492f05f164194982df82efe2d78b5_fbx",
+        "RootNode",
+        "polySurface11206"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "seats",
+        "row_1"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Meshes",
+        "Sketchfab_model",
+        "_c0492f05f164194982df82efe2d78b5_fbx",
+        "RootNode",
+        "polySurface11206",
+        "polySurface11206_lambert166_0"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Meshes",
+        "Sketchfab_model",
+        "_c0492f05f164194982df82efe2d78b5_fbx",
+        "RootNode",
+        "polySurface11205"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "seats",
+        "row_6"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "seats",
+        "row_10"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Meshes",
+        "Sketchfab_model",
+        "_c0492f05f164194982df82efe2d78b5_fbx",
+        "RootNode"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Meshes",
+        "Sketchfab_model",
+        "_c0492f05f164194982df82efe2d78b5_fbx"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Meshes",
+        "Sketchfab_model",
+        "_c0492f05f164194982df82efe2d78b5_fbx",
+        "RootNode",
+        "polySurface11205",
+        "polySurface11205_lambert184_0"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "seats",
+        "row_4"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "65F9782B-E0DA-471E-9079-E6DF645F920C",
+        "Root",
+        "seats",
+        "row_7"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      }
+    ]
+  },
+  "66168B71-AB05-424E-8B6C-D33D6E61B08F" : {
+    "objectMetadataList" : [
+      [
+        "66168B71-AB05-424E-8B6C-D33D6E61B08F",
         "Root"
       ],
       {
@@ -229,165 +485,14 @@
       }
     ]
   },
-  "66168B71-AB05-424E-8B6C-D33D6E61B08F" : {
-    "objectMetadataList" : [
-      [
-        "66168B71-AB05-424E-8B6C-D33D6E61B08F",
-        "Root"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      }
-    ]
-  },
   "AF09ED6F-1707-48FD-8720-65B998362C09" : {
     "objectMetadataList" : [
       [
         "AF09ED6F-1707-48FD-8720-65B998362C09",
         "Root",
-        "Scene",
-        "Group",
-        "Cube_27"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "AF09ED6F-1707-48FD-8720-65B998362C09",
         "Root",
-        "seats",
-        "row_1"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "AF09ED6F-1707-48FD-8720-65B998362C09",
-        "Root",
-        "Scene",
         "VR_Cinema_Low_poly_2021_1MB",
-        "Meshes",
-        "Sketchfab_model",
-        "_c0492f05f164194982df82efe2d78b5_fbx",
-        "RootNode",
-        "polySurface11206"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "AF09ED6F-1707-48FD-8720-65B998362C09",
-        "Root",
-        "Scene",
-        "VR_Cinema_Low_poly_2021_1MB",
-        "Meshes"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "AF09ED6F-1707-48FD-8720-65B998362C09",
-        "Root",
-        "Scene"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "AF09ED6F-1707-48FD-8720-65B998362C09",
-        "Root",
-        "Scene",
-        "VR_Cinema_Low_poly_2021_1MB",
-        "Meshes",
-        "Sketchfab_model",
-        "_c0492f05f164194982df82efe2d78b5_fbx",
-        "RootNode"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "AF09ED6F-1707-48FD-8720-65B998362C09",
-        "Root",
-        "Scene",
-        "Group",
-        "Cube_36"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "AF09ED6F-1707-48FD-8720-65B998362C09",
-        "Root",
-        "Scene",
-        "VR_Cinema_Low_poly_2021_1MB",
-        "Meshes",
-        "Sketchfab_model",
-        "_c0492f05f164194982df82efe2d78b5_fbx",
-        "RootNode",
-        "polySurface11184",
-        "polySurface11184_lambert147_0"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "AF09ED6F-1707-48FD-8720-65B998362C09",
-        "Root",
-        "seats"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "AF09ED6F-1707-48FD-8720-65B998362C09",
-        "Root",
-        "Scene",
-        "VR_Cinema_Low_poly_2021_1MB",
-        "Meshes",
-        "Sketchfab_model",
-        "_c0492f05f164194982df82efe2d78b5_fbx",
-        "RootNode",
-        "polySurface11206",
-        "polySurface11206_lambert166_0"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "AF09ED6F-1707-48FD-8720-65B998362C09",
-        "Root",
-        "Scene",
-        "VR_Cinema_Low_poly_2021_1MB",
-        "Meshes",
-        "Sketchfab_model",
-        "_c0492f05f164194982df82efe2d78b5_fbx",
-        "RootNode",
-        "polySurface11184"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "AF09ED6F-1707-48FD-8720-65B998362C09",
-        "Root",
-        "Scene",
-        "VR_Cinema_Low_poly_2021_1MB",
-        "Meshes",
-        "Sketchfab_model",
-        "_c0492f05f164194982df82efe2d78b5_fbx"
+        "Speaker_left"
       ],
       {
         "isExpanded" : true,
@@ -397,39 +502,7 @@
         "AF09ED6F-1707-48FD-8720-65B998362C09",
         "Root",
         "Group",
-        "row_1"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "AF09ED6F-1707-48FD-8720-65B998362C09",
-        "Root",
-        "Scene",
-        "Group"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "AF09ED6F-1707-48FD-8720-65B998362C09",
-        "Root",
-        "Scene",
-        "VR_Cinema_Low_poly_2021_1MB",
-        "Meshes",
-        "Sketchfab_model"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "AF09ED6F-1707-48FD-8720-65B998362C09",
-        "Root",
-        "Scene",
-        "VR_Cinema_Low_poly_2021_1MB"
+        "Group_6"
       ],
       {
         "isExpanded" : true,
@@ -448,37 +521,24 @@
       [
         "AF09ED6F-1707-48FD-8720-65B998362C09",
         "Root",
-        "Group",
-        "Group_6"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "AF09ED6F-1707-48FD-8720-65B998362C09",
-        "Root"
-      ],
-      {
-        "isExpanded" : true,
-        "isLocked" : false
-      },
-      [
-        "AF09ED6F-1707-48FD-8720-65B998362C09",
-        "Root",
         "Scene",
-        "Group",
-        "Cube_35"
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Meshes",
+        "Sketchfab_model",
+        "_c0492f05f164194982df82efe2d78b5_fbx",
+        "RootNode",
+        "polySurface11206"
       ],
       {
-        "isExpanded" : true,
+        "disallowsFraming" : false,
+        "isExpanded" : false,
         "isLocked" : false
       },
       [
         "AF09ED6F-1707-48FD-8720-65B998362C09",
         "Root",
-        "seats",
-        "row_3"
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB"
       ],
       {
         "isExpanded" : true,
@@ -497,6 +557,17 @@
       [
         "AF09ED6F-1707-48FD-8720-65B998362C09",
         "Root",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Speaker_back"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "AF09ED6F-1707-48FD-8720-65B998362C09",
+        "Root",
         "Group",
         "Group_7"
       ],
@@ -507,8 +578,139 @@
       [
         "AF09ED6F-1707-48FD-8720-65B998362C09",
         "Root",
+        "Scene"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "AF09ED6F-1707-48FD-8720-65B998362C09",
+        "Root",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Speaker_left_2"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "AF09ED6F-1707-48FD-8720-65B998362C09",
+        "Root",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Speaker_right_3"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "AF09ED6F-1707-48FD-8720-65B998362C09",
+        "Root"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "AF09ED6F-1707-48FD-8720-65B998362C09",
+        "Root",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Speaker_right_2"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "AF09ED6F-1707-48FD-8720-65B998362C09",
+        "Root",
+        "Scene",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Meshes",
+        "Sketchfab_model",
+        "_c0492f05f164194982df82efe2d78b5_fbx",
+        "RootNode",
+        "polySurface11205",
+        "polySurface11205_lambert184_0",
+        "polySurface11205_lambert184_0"
+      ],
+      {
+        "disallowsFraming" : false,
+        "isExpanded" : false,
+        "isLocked" : false
+      },
+      [
+        "AF09ED6F-1707-48FD-8720-65B998362C09",
+        "Root",
+        "Scene",
+        "VR_Cinema_Low_poly_2021_1MB"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "AF09ED6F-1707-48FD-8720-65B998362C09",
+        "Root",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Speaker_left_3"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "AF09ED6F-1707-48FD-8720-65B998362C09",
+        "Root",
+        "Scene",
+        "seats"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "AF09ED6F-1707-48FD-8720-65B998362C09",
+        "Root",
         "Group",
         "Group_8"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "AF09ED6F-1707-48FD-8720-65B998362C09",
+        "Root",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Speaker_right_1"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "AF09ED6F-1707-48FD-8720-65B998362C09",
+        "Root",
+        "Group",
+        "row_1"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "AF09ED6F-1707-48FD-8720-65B998362C09",
+        "Root",
+        "Root",
+        "VR_Cinema_Low_poly_2021_1MB",
+        "Speaker_back_1"
       ],
       {
         "isExpanded" : true,
@@ -546,9 +748,7 @@
     "objectMetadataList" : [
       [
         "D66134B1-3681-4A8E-AFE5-29F257229F3B",
-        "Root",
-        "GridMaterial",
-        "GridMaterial"
+        "Root"
       ],
       {
         "isExpanded" : true,
@@ -556,7 +756,9 @@
       },
       [
         "D66134B1-3681-4A8E-AFE5-29F257229F3B",
-        "Root"
+        "Root",
+        "GridMaterial",
+        "GridMaterial"
       ],
       {
         "isExpanded" : true,

@@ -1,0 +1,44 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "Reality Composer Pro Version 2.0 (448.0.16.0.3)"
+    }
+    defaultPrim = "Root"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "Root"
+{
+    float3 xformOp:scale = (5, 5, 5)
+    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+    def RealityKitComponent "VFXEmitter"
+    {
+        uniform token info:id = "RealityKit.VFXEmitter"
+
+        def RealityKitStruct "currentState"
+        {
+            token birthDirection = "Constant"
+            token birthLocation = "Volume"
+            float3 emissionDirection = (0, 1, 0)
+            token emitterShape = "Cone"
+            float particleSpeed = 0.1
+            float radialAmount = 6.2831855
+            float3 shapeSize = (0.1, 0.2, 0.1)
+
+            def RealityKitStruct "mainEmitter"
+            {
+                float birthRate = 20
+                float particleAngle = 0
+                float particleSize = 0.02
+                float spreadingAngle = 3.4906585
+            }
+
+            def RealityKitStruct "spawnedEmitter"
+            {
+            }
+        }
+    }
+}
+
