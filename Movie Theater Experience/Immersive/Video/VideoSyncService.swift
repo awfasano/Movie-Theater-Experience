@@ -1,10 +1,3 @@
-//
-//  VideoSync.swift
-//  Movie Theater Experience
-//
-//  Created by Anthony Fasano on 1/28/25.
-//
-
 import Foundation
 import UIKit
 import FirebaseFirestore
@@ -26,20 +19,18 @@ class VideoSyncService {
     var isHost = false
     var isWithinEventTime = false
     var lastError: Error?
-    var isPlaying: Bool { isPlayingState } // Add this public getter
     var currentTime = 0.0
     
-
-    
     // MARK: - Private
-    private var isPlayingState = false // Keep the actual state private but add the public getter above
     private let db: Firestore
     
     /// The *actual* player we are syncing with.
     /// We keep it here so we can remove the time observer from
     /// this exact instance in `cleanup()`.
     private(set) var currentPlayer: AVPlayer?
+    
     private var timeObserverToken: Any?
+    private var isPlayingState = false
     
     // Other properties...
     private let joinTime = Date()
@@ -118,28 +109,28 @@ class VideoSyncService {
     
     
     func handlePlayPause(isPlaying: Bool) {
-            guard isHost,
-                  isWithinEventTime,
-                  let syncRef = getBasePath(),
-                  isPlayingState != isPlaying else { return }
-            
-            isPlayingState = isPlaying  // Update the state
-            
-            // Update local player
-            if isPlaying {
-                currentPlayer?.play()
-            } else {
-                currentPlayer?.pause()
-            }
-            
-            // Update Firebase
-            syncRef.document("playState").setData([
-                "isPlaying": isPlaying,
-                "timestamp": currentTime,
-                "updatedAt": FieldValue.serverTimestamp(),
-                "updateId": UUID().uuidString
-            ], merge: true)
+        guard isHost,
+              isWithinEventTime,
+              let syncRef = getBasePath(),
+              isPlayingState != isPlaying else { return }
+        
+        isPlayingState = isPlaying
+        
+        // Update local player
+        if isPlaying {
+            currentPlayer?.play()
+        } else {
+            currentPlayer?.pause()
         }
+        
+        // Update Firebase
+        syncRef.document("playState").setData([
+            "isPlaying": isPlaying,
+            "timestamp": currentPlayer?.currentTime().seconds ?? 0,
+            "updatedAt": FieldValue.serverTimestamp(),
+            "updateId": UUID().uuidString
+        ], merge: true)
+    }
     
     private func cleanupListeners() {
           listeners.forEach { $0?.remove() }
@@ -290,10 +281,6 @@ class VideoSyncService {
                       let isPlaying = data["isPlaying"] as? Bool else {
                     return
                 }
-                
-                // Update our state
-                self.currentTime = serverTimestamp
-                self.isPlayingState = isPlaying
                 
                 // If I'm not the host, follow the server state
                 if !self.isHost {

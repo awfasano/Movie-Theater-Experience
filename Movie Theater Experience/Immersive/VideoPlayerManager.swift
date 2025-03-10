@@ -1,4 +1,10 @@
-import Foundation
+//
+//  Untitled.swift
+//  Movie Theater Experience
+//
+//  Created by Anthony Fasano on 1/28/25.
+//
+
 import SwiftUI
 import RealityKit
 import RealityKitContent
@@ -10,22 +16,20 @@ class VideoPlayerManager: ObservableObject {
     // MARK: - Published Properties
     @Published var player: AVPlayer?
     @Published var isPlaybackReady: Bool = false
-    @Published var currentTime: Double = 0.0
-    @Published var isPlaying: Bool = false
     
     // MARK: - Private Properties
     private var presentationSizeCancellable: AnyCancellable?
-    private var timeObserverToken: Any?
     private var statusObserver: NSKeyValueObservation?
     private var rateObserver: NSKeyValueObservation?
-    
     private var screenEntity: ModelEntity?
     private var videoScreenEntity: ModelEntity?
     private var spatialAudioManager: SpatialAudioManager?
     private var lightingManager: TheatreLightingManager?
+    private let videoSyncService: VideoSyncService
     
     // MARK: - Initialization
-    init() {
+    init(videoSyncService: VideoSyncService = .shared) {
+        self.videoSyncService = videoSyncService
         print("VideoPlayerManager initialized")
     }
     
@@ -50,11 +54,13 @@ class VideoPlayerManager: ObservableObject {
         let playerItem = AVPlayerItem(url: videoURL)
         let player = AVPlayer(playerItem: playerItem)
         
-        // Configure player status observation
-        setupPlayerObservation(player)
+        // Immediately seek to current sync time
+        let currentTime = videoSyncService.currentTime
+        player.seek(to: CMTime(seconds: currentTime, preferredTimescale: 1000))
         
-        // Configure time observation
-        setupTimeObservation(player)
+        // Configure observations
+        setupPlayerObservation(player)
+        setupRateObservation(player)
         
         self.player = player
         spatialAudioManager?.configureAudioForVideo(player: player)
@@ -65,69 +71,28 @@ class VideoPlayerManager: ObservableObject {
         // Configure video presentation
         configureVideoPresentation(for: playerItem, on: screenEntity)
         
-        print("Initial video configuration complete")
-    }
-    
-    func startPlayback() {
-        print("Starting video playback")
-        guard let player = player, isPlaybackReady else {
-            print("Cannot start playback: Player not ready")
-            return
-        }
+        // Let VideoSyncService handle playback control
+        videoSyncService.startSync(with: player)
         
-        Task {
-            await lightingManager?.startMovieLightingEffect()
+        // Match current play state
+        if videoSyncService.isPlayingState {
             player.play()
-            isPlaying = true
-            print("Playback started - player rate: \(player.rate)")
-        }
-    }
-    
-    func pauseVideo() {
-        print("Pausing video")
-        player?.pause()
-        isPlaying = false
-        replaceVideoScreenMaterialWithBlack()
-        Task {
-            await lightingManager?.stopMovieLightingEffect()
-        }
-    }
-    
-    func resumeVideo() {
-        print("Resuming video")
-        guard isPlaybackReady else {
-            print("Cannot resume: Playback not ready")
-            return
+        } else {
+            player.pause()
         }
         
-        restoreVideoMaterial()
-        Task {
-            await lightingManager?.startMovieLightingEffect()
-            player?.play()
-            isPlaying = true
-        }
-    }
-    
-    func seekTo(time: CMTime, completion: ((Bool) -> Void)? = nil) {
-        print("Seeking to time: \(time.seconds)")
-        player?.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] finished in
-            print("Seek completed: \(finished)")
-            completion?(finished)
-        }
+        print("Initial video configuration complete")
     }
     
     func clearAllResources() {
         print("Clearing all video resources")
         
+        // Make sure we stop lighting on the main actor
         Task {
             await lightingManager?.stopMovieLightingEffect()
         }
         
-        if let timeObserverToken = timeObserverToken {
-            player?.removeTimeObserver(timeObserverToken)
-            self.timeObserverToken = nil
-        }
-        
+        // Remove observers
         statusObserver?.invalidate()
         statusObserver = nil
         
@@ -137,57 +102,79 @@ class VideoPlayerManager: ObservableObject {
         presentationSizeCancellable?.cancel()
         presentationSizeCancellable = nil
         
-        player?.pause()
-        player = nil
-        
+        // Remove video screen
         if let videoScreen = videoScreenEntity {
             videoScreen.removeFromParent()
             videoScreenEntity = nil
         }
         
+        // Reset state
         isPlaybackReady = false
-        isPlaying = false
-        currentTime = 0.0
+        player = nil
         
         print("All resources cleared")
     }
     
-    // MARK: - Private Methods
+    // MARK: - Private: Player Observations
+    
     private func setupPlayerObservation(_ player: AVPlayer) {
-        // Observe player status
         statusObserver = player.observe(\.status, options: [.new]) { [weak self] player, _ in
             print("Player status changed: \(player.status.rawValue)")
-            DispatchQueue.main.async {
+            
+            // Jump onto main actor for RealityKit & SwiftUI
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
                 switch player.status {
                 case .readyToPlay:
                     print("Player is ready to play")
-                    self?.isPlaybackReady = true
+                    self.isPlaybackReady = true
+                    await self.handlePlaybackReady()
                 case .failed:
                     print("Player failed: \(String(describing: player.error))")
-                    self?.isPlaybackReady = false
+                    self.isPlaybackReady = false
                 case .unknown:
                     print("Player status unknown")
-                    self?.isPlaybackReady = false
+                    self.isPlaybackReady = false
                 @unknown default:
                     break
                 }
             }
         }
-        
-        // Observe player rate
+    }
+    
+    // *** FIX ***: Use a Task { @MainActor in ... } block
+    private func setupRateObservation(_ player: AVPlayer) {
         rateObserver = player.observe(\.rate, options: [.new]) { [weak self] player, _ in
-            DispatchQueue.main.async {
-                self?.isPlaying = player.rate != 0
+            guard let self = self else { return }
+            
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                
+                let isPlaying = (player.rate != 0)
+                await self.handleRateChange(isPlaying) // call the new async MainActor function
             }
         }
     }
     
-    private func setupTimeObservation(_ player: AVPlayer) {
-        let timeScale = CMTimeScale(NSEC_PER_SEC)
-        let time = CMTime(seconds: 0.5, preferredTimescale: timeScale)
-        
-        timeObserverToken = player.addPeriodicTimeObserver(forInterval: time, queue: .main) { [weak self] time in
-            self?.currentTime = time.seconds
+    // MARK: - Private: Player State Changes
+    
+    // *** FIX ***: Mark as @MainActor + async so we can await lighting safely
+    @MainActor
+    private func handleRateChange(_ isPlaying: Bool) async {
+        if isPlaying {
+            await lightingManager?.startMovieLightingEffect()
+            restoreVideoMaterial()  // safe on main actor
+        } else {
+            await lightingManager?.stopMovieLightingEffect()
+            replaceVideoScreenMaterialWithBlack() // safe on main actor
+        }
+    }
+    
+    // *** FIX ***: Also mark as @MainActor + async if you are awaiting
+    @MainActor
+    private func handlePlaybackReady() async {
+        if let player = player, player.rate != 0 {
+            await lightingManager?.startMovieLightingEffect()
         }
     }
     
@@ -201,6 +188,8 @@ class VideoPlayerManager: ObservableObject {
             self?.handleVideoEnd()
         }
     }
+    
+    // MARK: - Private: RealityKit Setup
     
     private func configureVideoPresentation(for playerItem: AVPlayerItem, on screenEntity: ModelEntity) {
         print("Starting video presentation configuration")
@@ -226,39 +215,58 @@ class VideoPlayerManager: ObservableObject {
     
     private func createVideoScreen(on originalEntity: ModelEntity, aspectRatio: Float) {
         print("Creating video screen")
-        let originalBounds = originalEntity.model?.mesh.bounds ?? RealityKit.BoundingBox()
-        let screenHeight = originalBounds.extents.y
-        let screenWidth = screenHeight * aspectRatio
         
-        let screenMesh = MeshResource.generatePlane(
-            width: screenWidth,
-            height: screenHeight
-        )
-        
-        guard let player = self.player else {
+        guard let currentPlayer = self.player else {
             print("Error: No player available for video material")
             return
         }
         
-        let videoMaterial = VideoMaterial(avPlayer: player)
-        let newScreen = ModelEntity(mesh: screenMesh, materials: [videoMaterial])
-        
-        newScreen.position = originalBounds.center
-        newScreen.orientation = originalEntity.orientation
-        
-        originalEntity.parent?.addChild(newScreen)
-        self.videoScreenEntity = newScreen
-        print("Video screen created and added to scene")
-    }
-    
-    private func handleVideoEnd() {
-        isPlaying = false
-        Task {
-            await lightingManager?.stopMovieLightingEffect()
+        // Safely do RealityKit entity manipulation on main actor
+        Task { @MainActor in
+            let originalBounds = originalEntity.model?.mesh.bounds ?? RealityKit.BoundingBox()
+            let screenHeight = originalBounds.extents.y
+            let screenWidth = screenHeight * aspectRatio
+            
+            let screenMesh = MeshResource.generatePlane(
+                width: screenWidth,
+                height: screenHeight
+            )
+            
+            let videoMaterial = VideoMaterial(avPlayer: currentPlayer)
+            let newScreen = ModelEntity(mesh: screenMesh, materials: [videoMaterial])
+            
+            newScreen.position = originalBounds.center
+            newScreen.orientation = originalEntity.orientation
+            
+            originalEntity.parent?.addChild(newScreen)
+            self.videoScreenEntity = newScreen
+            
+            print("Video screen created and added to scene")
         }
     }
     
-    private func restoreVideoMaterial() {
+    // MARK: - Private: Video End
+    
+    private func handleVideoEnd() {
+        Task {
+            // This might also need the main actor if it calls RealityKit
+            await lightingManager?.stopMovieLightingEffect()
+            replaceVideoScreenMaterialWithBlack()
+        }
+        videoSyncService.handleVideoEnd()
+    }
+    
+    // MARK: - Material Management
+    
+    // *** FIX ***: Because we call it from handleRateChange (which is now @MainActor),
+    // these can be plain (no concurrency). But you can also mark them @MainActor to be explicit.
+    func replaceVideoScreenMaterialWithBlack() {
+        guard let videoScreenEntity = videoScreenEntity else { return }
+        let blackMaterial = UnlitMaterial(color: .black)
+        videoScreenEntity.model?.materials = [blackMaterial]
+    }
+    
+    func restoreVideoMaterial() {
         guard let videoScreenEntity = videoScreenEntity,
               let player = player else { return }
         
@@ -266,15 +274,11 @@ class VideoPlayerManager: ObservableObject {
         videoScreenEntity.model?.materials = [videoMaterial]
     }
     
-    private func replaceVideoScreenMaterialWithBlack() {
-        guard let videoScreenEntity = videoScreenEntity else { return }
-        let blackMaterial = UnlitMaterial(color: .black)
-        videoScreenEntity.model?.materials = [blackMaterial]
-    }
-    
     // MARK: - Deinitialization
+    
     deinit {
         print("VideoPlayerManager deinitializing")
         clearAllResources()
+        NotificationCenter.default.removeObserver(self)
     }
 }
