@@ -1,11 +1,43 @@
 import SwiftUICore
+import SwiftUI
 
 struct ChatBubble: View {
     let message: ChatMessage
-    let isIncoming: Bool
     let showTimestamp: Bool
     let isFirstInSequence: Bool
     let opacity: Double
+    
+    // Retrieve the current user’s name.
+    @AppStorage("username") private var currentUserName: String = "User"
+    // Retrieve the current user's unique identifier.
+    @AppStorage("userId") private var currentUserId: String = ""
+    
+    // Retrieve the persisted bubble colors.
+    @AppStorage("sentMessageColorHex") private var sentMessageColorHex: String = "#0000FF"
+    @AppStorage("receivedMessageColorHex") private var receivedMessageColorHex: String = "#808080"
+    
+    // Convert hex strings to Color.
+    private var sentMessageColor: Color {
+        Color(hex: sentMessageColorHex) ?? .blue
+    }
+    
+    private var receivedMessageColor: Color {
+        Color(hex: receivedMessageColorHex) ?? .gray
+    }
+    
+    // Computed property for display name.
+    private var displayName: String {
+        if message.senderId == currentUserId {
+            return currentUserName
+        } else {
+            return message.senderName
+        }
+    }
+    
+    // Compute isIncoming based on whether the senderId matches the current user's id.
+    private var isIncoming: Bool {
+        return message.senderId != currentUserId
+    }
     
     var body: some View {
         VStack(alignment: isIncoming ? .leading : .trailing, spacing: 4) {
@@ -16,7 +48,7 @@ struct ChatBubble: View {
                 
                 VStack(alignment: isIncoming ? .leading : .trailing, spacing: 4) {
                     if isFirstInSequence {
-                        Text(message.senderName)
+                        Text(displayName)
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -24,7 +56,7 @@ struct ChatBubble: View {
                     Text(message.content)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(isIncoming ? Color.blue : Color.green)
+                        .background(isIncoming ? receivedMessageColor : sentMessageColor)
                         .foregroundColor(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
@@ -46,11 +78,15 @@ struct ChatBubble: View {
     }
     
     private var senderAvatar: some View {
-        Text(message.senderName.prefix(1).uppercased())
-            .font(.system(size: 14, weight: .medium))
+        // Determine which name to use: for current user use currentUserName, otherwise message.senderName.
+        let name = message.senderId == currentUserId ? currentUserName : message.senderName
+        let initial = name.prefix(1).uppercased()
+        
+        return Text(initial)
+            .font(.system(size: 20, weight: .medium))
             .foregroundColor(.white)
-            .frame(width: 32, height: 32)
-            .background(isIncoming ? Color.blue : Color.green)
+            .frame(width: 40, height: 40)
+            .background(message.senderId == currentUserId ? sentMessageColor : receivedMessageColor)
             .clipShape(Circle())
     }
 }

@@ -6,3 +6,8 @@
 //
 
 import Foundation
+
+struct MessagePosition: Equatable {
+    let id: String
+    let position: CGFloat
+}

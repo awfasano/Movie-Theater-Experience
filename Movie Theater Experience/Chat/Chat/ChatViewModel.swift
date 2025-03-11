@@ -1,30 +1,47 @@
 import SwiftUI
+import Firebase
+import FirebaseFirestore
+import Combine
 
 @MainActor
 class ChatViewModel: ObservableObject {
     @Published private(set) var messages: [ChatMessage] = []
-    private let eventManager = FirebaseEventManager.shared
+    
+    // Use dependency injection for the event manager.
+    private let eventManager: FirebaseEventManager
     
     let eventId: String
     let date: Date
     
-    init(eventId: String, date: Date) {
+    // Retrieve the current user's name from user settings.
+    @AppStorage("username") private var currentUsername: String = "User"
+    // Persist the userId using AppStorage.
+    @AppStorage("userId") private var currentUserId: String = ""
+    
+    // MARK: - Initializer
+    
+    /// Injects an instance of FirebaseEventManager.
+    /// You can supply one that's preconfigured for your context.
+    init(eventId: String, date: Date, eventManager: FirebaseEventManager = FirebaseEventManager.shared) {
         self.eventId = eventId
         self.date = date
+        self.eventManager = eventManager
         
         Task {
             await startListening()
         }
     }
     
+    // MARK: - Listener and Message Updates
+    
     private func startListening() async {
-        // Start the Firebase event manager listener
+        // Start the event manager listener.
         await eventManager.startListening(eventId: eventId, date: date)
         
-        // Initialize messages and observe changes
+        // Initialize messages and observe changes.
         await updateMessages()
         
-        // Start continuous updates
+        // Start continuous updates.
         Task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(100))
@@ -48,8 +65,30 @@ class ChatViewModel: ObservableObject {
         await eventManager.updateMessageOpacity(id: id, opacity: opacity)
     }
     
+    // MARK: - Sending Messages
+    
     func sendMessage(text: String) {
-        guard !text.isEmpty else { return }
-        eventManager.sendMessage(text, eventId: eventId, date: date)
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else { return }
+        
+        // Use the stored userId from AppStorage. If it's empty, generate a new one.
+        var senderId = currentUserId
+        if senderId.isEmpty {
+            senderId = UUID().uuidString
+            currentUserId = senderId
+            print("Generated new userId: \(senderId)")
+        } else {
+            print("Using existing userId: \(senderId)")
+        }
+        
+        let senderName = currentUsername
+        print("ChatViewModel.sendMessage -> senderId: \(senderId), senderName: \(senderName)")
+        
+        // Pass the message along with senderId and senderName to the event manager.
+        eventManager.sendMessage(trimmedText,
+                                 senderId: senderId,
+                                 senderName: senderName,
+                                 eventId: eventId,
+                                 date: date)
     }
 }
