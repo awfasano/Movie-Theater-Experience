@@ -1,10 +1,3 @@
-//
-//  SpacesNavBarView.swift
-//  Movie Theater Experience
-//
-//  Created by Anthony Fasano on 3/2/25.
-//
-import Foundation
 import SwiftUI
 
 struct SpacesNavBarView: View {
@@ -26,13 +19,21 @@ struct SpacesNavBarView: View {
             }
             .buttonStyle(.borderedProminent)
             
-            // Hide immersive view (for example, collapse/hide some overlay)
+            // Hide immersive view
             Button(action: {
                 withAnimation {
                     isContentHidden.toggle()
                 }
             }) {
                 Label(isContentHidden ? "Show" : "Hide", systemImage: isContentHidden ? "eye.fill" : "eye.slash.fill")
+            }
+            .buttonStyle(.bordered)
+            
+            // Seat Selection Button
+            Button(action: {
+                openWindow(id: "seatWindow")
+            }) {
+                Label("Change Seat", systemImage: "chair.lounge")
             }
             .buttonStyle(.bordered)
             

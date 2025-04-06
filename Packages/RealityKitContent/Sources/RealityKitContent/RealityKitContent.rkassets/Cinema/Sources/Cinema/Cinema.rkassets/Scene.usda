@@ -745,7 +745,7 @@ def Xform "Root"
         {
             quatf xformOp:orient = (0.99999994, 0, 0, 0)
             float3 xformOp:scale = (5000, 5000, 5000)
-            float3 xformOp:translate = (211.24428, -22.160816, -22.64289)
+            float3 xformOp:translate = (211.23462, 64.36045, 551.3957)
             uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
 
             over "VFXEmitter"
@@ -753,15 +753,18 @@ def Xform "Root"
                 over "currentState"
                 {
                     double emissionDuration = 5
+                    bool isEmitting = 0
                     bool isSpawningEnabled = 0
                     bool loops = 0
+                    float particleSpeed = 1.5
                     float3 shapeSize = (0.3, 0.3, 0.3)
 
                     over "mainEmitter"
                     {
                         float3 acceleration = (0, 0.1, 0)
-                        float birthRate = 15
+                        float birthRate = 55
                         float birthRateVariation = 5
+                        double particleLifeSpan = 5
                         double particleLifeSpanVariation = 1.5
                         float particleSize = 1
                     }

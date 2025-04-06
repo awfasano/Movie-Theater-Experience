@@ -1,9 +1,8 @@
 import SwiftUI
 import RealityKit
 
-@Observable
 @MainActor
-class ImmersiveSpaceManager:ObservableObject {
+class ImmersiveSpaceManager: ObservableObject {
     // MARK: - Singleton
     static let shared = ImmersiveSpaceManager()
     
@@ -12,15 +11,18 @@ class ImmersiveSpaceManager:ObservableObject {
     private(set) var isCleaningUp = false
     
     // MARK: - Environment Properties
-    private var dismissImmersiveSpace: () async -> Void = { }
-    private var dismissWindow: (String) -> Void = { _ in }
-    private var openWindow: (String) -> Void = { _ in }
-    private var openImmersiveSpace: () async -> Bool = { return false }
-    
+    var dismissImmersiveSpace: () async -> Void = { }
+    var dismissWindow: (String) -> Void = { _ in }
+    var openWindow: (String) -> Void = { _ in }
+    var openImmersiveSpace: () async -> Bool = { return false }
+
     // MARK: - Private Properties
     private var delegates: [WeakDelegate] = []
     private var cleanupTask: Task<Void, Never>?
     private var activeWindows: Set<String> = []
+    
+    @Published var initialUserPosition: SIMD3<Float> = SIMD3<Float>(0, 1.6, 0)
+    @Published var initialUserOrientation: simd_quatf = simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0))
     
     // MARK: - Private Init
     private init() {}
@@ -208,5 +210,10 @@ class ImmersiveSpaceManager:ObservableObject {
     
     func removeDelegate(_ delegate: ImmersiveSpaceDelegate) {
         delegates.removeAll { $0.delegate === delegate }
+    }
+    
+    func setInitialUserPosition(position: SIMD3<Float>, orientation: simd_quatf) {
+        initialUserPosition = position
+        initialUserOrientation = orientation
     }
 }

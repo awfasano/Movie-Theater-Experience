@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUICore
 
 // View for displaying occupancy information
 struct OccupancyView: View {
@@ -37,9 +38,9 @@ struct OccupancyView: View {
             }
             
             // Occupancy progress bar
-            ProgressView(
-                value: Double(space.currentOccupancy),
-                total: Double(space.maxOccupancy)
+            OccupancyProgressView(
+                currentOccupancy: space.currentOccupancy,
+                maxOccupancy: space.maxOccupancy
             )
             .tint(occupancyColor)
         }

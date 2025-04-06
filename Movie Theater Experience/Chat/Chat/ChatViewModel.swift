@@ -14,9 +14,9 @@ class ChatViewModel: ObservableObject {
     let date: Date
     
     // Retrieve the current user's name from user settings.
-    @AppStorage("username") private var currentUsername: String = "User"
+    @AppStorage("username") var currentUsername: String = "User"
     // Persist the userId using AppStorage.
-    @AppStorage("userId") private var currentUserId: String = ""
+    @AppStorage("userId") var currentUserId: String = ""
     
     // MARK: - Initializer
     

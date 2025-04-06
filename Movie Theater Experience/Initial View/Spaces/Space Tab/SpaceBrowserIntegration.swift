@@ -4,10 +4,12 @@ import FirebaseFirestore
 import FirebaseFirestoreSwift
 
 struct SpaceBrowserIntegration: View {
-    @StateObject private var service = SpaceService()
     @EnvironmentObject private var selectedSpace: SelectedSpace
     @EnvironmentObject private var windowManager: WindowManager
     @Environment(\.openWindow) private var openWindow
+    
+    @ObservedObject private var service = SpaceService.shared
+
     
     var body: some View {
         VStack {

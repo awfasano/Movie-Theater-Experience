@@ -2,13 +2,13 @@ import SwiftUI
 import RealityKit
 import AVFoundation
 
-
 @MainActor
 @Observable
-class AppModel:ObservableObject {
+class AppModel: ObservableObject {
     // MARK: - Constants
     static let shared = AppModel()
     let immersiveSpaceID = "ImmersiveSpace"
+    let spacesID = "Spaces"
     
     // MARK: - Published State
     var selectedVideoURL: URL?
@@ -17,7 +17,16 @@ class AppModel:ObservableObject {
     var lastKnownPlaybackTime: CMTime = .zero
     var wasPlayingOnSwitch: Bool = false
     var currentPlaybackTime: CMTime?
-
+    var currentActiveSpace: String?
+    
+    // Private backing field
+    private var _selectedSpace: SpaceData?
+    
+    // Public computed property
+    var selectedSpace: SpaceData? {
+        get { _selectedSpace }
+        set { _selectedSpace = newValue }
+    }
     
     // MARK: - Private Properties
     private let spaceManager = ImmersiveSpaceManager.shared
@@ -39,14 +48,33 @@ class AppModel:ObservableObject {
         currentEvent?.date ?? Date()
     }
     
-    
     // MARK: - Public Methods
-
-    
     func cleanupImmersiveSpace() async {
         print("🧹 Starting immersive space cleanup")
         await spaceManager.initiateCleanup()
+        currentActiveSpace = nil
         resetAppState()
+    }
+    
+    func switchToSpace(_ spaceID: String) async -> Bool {
+        guard canTransitionImmersiveSpace else {
+            print("❌ Cannot switch spaces while transitioning")
+            return false
+        }
+        
+        // If we're already in this space, no need to switch
+        if currentActiveSpace == spaceID {
+            return true
+        }
+        
+        // Cleanup current space if any
+        if currentActiveSpace != nil {
+            await cleanupImmersiveSpace()
+        }
+        
+        print("🔄 Switching to space: \(spaceID)")
+        currentActiveSpace = spaceID
+        return true
     }
     
     // MARK: - Private Methods
@@ -56,24 +84,28 @@ class AppModel:ObservableObject {
         selectedVideoURL = nil
         currentEvent = nil
     }
+    
+    // MARK: - Space Lifecycle Methods
     func immersiveSpaceWillOpen() {
-        print("🎭 Immersive space will open")
+        print("🎭 Immersive space will open: \(currentActiveSpace ?? "unknown")")
     }
     
     func immersiveSpaceDidOpen() {
-        print("✅ Immersive space opened")
+        print("✅ Immersive space opened: \(currentActiveSpace ?? "unknown")")
     }
     
     func immersiveSpaceWillClose() {
-        print("🔄 Immersive space will close")
+        print("🔄 Immersive space will close: \(currentActiveSpace ?? "unknown")")
     }
     
     func immersiveSpaceDidClose() {
-        print("✅ Immersive space closed")
+        print("✅ Immersive space closed: \(currentActiveSpace ?? "unknown")")
+        currentActiveSpace = nil
     }
     
     func immersiveSpaceDidFailToOpen() {
-        print("❌ Immersive space failed to open")
+        print("❌ Immersive space failed to open: \(currentActiveSpace ?? "unknown")")
+        currentActiveSpace = nil
         resetAppState()
     }
     
@@ -93,6 +125,4 @@ class AppModel:ObservableObject {
         selectedVideoURL = event.videoURLObject
         return true
     }
-    
 }
-

@@ -12,14 +12,25 @@ struct VolumetricSpaceWrapper: View {
     @State private var cancellables = Set<AnyCancellable>()
     @State private var scale: Float = 0.2  // Start with a much smaller scale
     @State private var rotationAngle: Angle = .zero
-    @State private var userCount: Int = 0  // Placeholder for user count
+    @State private var currentUserCount: Int  // Track current user count
+    @State private var maxUserCount: Int      // Track max user count
     
     // Access environment for immersive space
     @Environment(AppModel.self) private var appModel
     @Environment(\.openImmersiveSpace) private var openImmersiveSpace
     
+    // Use the shared SpaceService instance
+    private let spaceService = SpaceService.shared
+    
     // Timer for continuous rotation
     let rotationTimer = Timer.publish(every: 0.01, on: .main, in: .common).autoconnect()
+    
+    // Initialize with space data
+    init(space: SpaceData) {
+        self.space = space
+        self._currentUserCount = State(initialValue: space.currentUserCount)
+        self._maxUserCount = State(initialValue: space.maxUserCount)
+    }
     
     var body: some View {
         ZStack {
@@ -62,11 +73,13 @@ struct VolumetricSpaceWrapper: View {
                 VStack {
                     // Top row with user count and reset button
                     HStack {
-                        // User count indicator
+                        // User count indicator with occupancy status
                         HStack(spacing: 4) {
-                            Image(systemName: "person.fill")
-                                .foregroundColor(.white)
-                            Text("\(userCount) users")
+                            Circle()
+                                .fill(occupancyColor)
+                                .frame(width: 8, height: 8)
+                            
+                            Text("\(currentUserCount)/\(maxUserCount) users")
                                 .font(.callout)
                                 .foregroundColor(.white)
                         }
@@ -163,9 +176,48 @@ struct VolumetricSpaceWrapper: View {
         .background(Material.regularMaterial)
         .onAppear {
             loadEntity()
-            // Set placeholder user count
-            userCount = Int.random(in: 1...10)
+            
+            // Set up listener for user count updates
+            setupUserCountListener()
         }
+        .onDisappear {
+            // Clean up listener when view disappears
+            cancellables.forEach { $0.cancel() }
+            cancellables.removeAll()
+        }
+    }
+    
+    // Computed property for occupancy color
+    private var occupancyColor: Color {
+        let percentage = Float(currentUserCount) / Float(max(1, maxUserCount))
+        switch percentage {
+        case ..<0.5:
+            return .green // Low occupancy
+        case ..<0.8:
+            return .yellow // Medium occupancy
+        default:
+            return .red // High occupancy
+        }
+    }
+    
+    // Set up listener for user count updates
+    private func setupUserCountListener() {
+        guard let spaceId = space.id else { return }
+        
+        // Create a publisher for space updates
+        let userCountPublisher = spaceService.getSpaceUpdates(for: spaceId)
+        
+        userCountPublisher
+            .receive(on: RunLoop.main)
+            .sink { completion in
+                if case .failure(let error) = completion {
+                    print("Error in user count listener: \(error)")
+                }
+            } receiveValue: { updatedSpace in
+                self.currentUserCount = updatedSpace.currentUserCount
+                self.maxUserCount = updatedSpace.maxUserCount
+            }
+            .store(in: &cancellables)
     }
     
     // Reset the view to default settings
@@ -216,65 +268,20 @@ struct VolumetricSpaceWrapper: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
+    // Load entity using SpaceService instead of direct download
     private func loadEntity() {
         isLoading = true
         loadError = nil
         entity = nil
         
-        print("🔄 Starting load for entity from URL: \(space.usdzURL)")
+        print("🔄 Loading entity for: \(space.spaceName)")
         
-        guard let url = URL(string: space.usdzURL) else {
-            print("⚠️ Invalid URL: \(space.usdzURL)")
-            isLoading = false
-            loadError = SpaceServiceError.invalidURL
-            return
-        }
-        
-        // Create a download task
-        let task = URLSession.shared.downloadTask(with: url) { tempFileURL, response, error in
-            // Check for download errors
-            if let error = error {
-                DispatchQueue.main.async {
-                    print("⚠️ Download error: \(error.localizedDescription)")
-                    isLoading = false
-                    loadError = error
-                }
-                return
-            }
-            
-            guard let tempFileURL = tempFileURL else {
-                DispatchQueue.main.async {
-                    print("⚠️ No file URL received")
-                    isLoading = false
-                    loadError = SpaceServiceError.noData
-                }
-                return
-            }
-            
-            print("📂 Download complete, file at: \(tempFileURL.path)")
-            
-            // Get a permanent URL for the file
-            let permanentURL: URL
-            do {
-                let documentsDirectory = FileManager.default.temporaryDirectory
-                permanentURL = documentsDirectory.appendingPathComponent(UUID().uuidString + ".usdz")
-                try FileManager.default.copyItem(at: tempFileURL, to: permanentURL)
-                print("📋 File copied to: \(permanentURL.path)")
-            } catch {
-                DispatchQueue.main.async {
-                    print("⚠️ File handling error: \(error.localizedDescription)")
-                    isLoading = false
-                    loadError = error
-                }
-                return
-            }
-            
-            // Use the new initializer method
-            Task { @MainActor in
-                do {
-                    // The initializer is asynchronous and needs to be awaited
-                    let loadedEntity = try await Entity(contentsOf: permanentURL)
-                    print("✅ Entity loaded successfully")
+        // Use our shared SpaceService instead of direct download
+        spaceService.loadSpace(from: space) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let loadedEntity):
+                    print("✅ Entity loaded successfully via SpaceService")
                     
                     // Store the full entity for later use in immersive space
                     TheatreEntityWrapper.shared.setSpaceEntity(loadedEntity)
@@ -283,9 +290,9 @@ struct VolumetricSpaceWrapper: View {
                     let containerEntity = Entity()
                     
                     // Find and use only the intro entity if it exists
-                    if let introEntityName = space.introEntityName, !introEntityName.isEmpty {
+                    if let introEntityName = self.space.introEntityName, !introEntityName.isEmpty {
                         print("🔍 Looking for intro entity named: \(introEntityName)")
-                        if let introEntity = findEntityRecursively(named: introEntityName, in: loadedEntity) {
+                        if let introEntity = self.findEntityRecursively(named: introEntityName, in: loadedEntity) {
                             print("✅ Found intro entity: \(introEntityName)")
                             
                             // Create a clone of the intro entity
@@ -337,23 +344,17 @@ struct VolumetricSpaceWrapper: View {
                         containerEntity.addChild(clonedEntity)
                     }
                     
-                    // Always start with a small scale for safety
-                    scale = 0.2
-                    
                     // Use the container entity which has centered content
-                    entity = containerEntity
-                    isLoading = false
-                } catch {
-                    print("⚠️ Entity loading error: \(error.localizedDescription)")
-                    print("Error domain: \((error as NSError).domain), code: \((error as NSError).code)")
-                    isLoading = false
-                    loadError = error
+                    self.entity = containerEntity
+                    self.isLoading = false
+                    
+                case .failure(let error):
+                    print("⚠️ Entity loading error: \(error)")
+                    self.isLoading = false
+                    self.loadError = error
                 }
             }
         }
-        
-        // Start the download task
-        task.resume()
     }
     
     // Helper function to find entities by name

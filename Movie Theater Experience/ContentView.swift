@@ -1,15 +1,19 @@
 import SwiftUI
-import RealityKit
-// import RealityKitContent // Uncomment if needed
-
-import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        TabBarWindow()
+        Text("Hello, world!")
     }
 }
 
-#Preview(windowStyle: .automatic) {
-    ContentView()
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
 }
+
+// Assuming this is where SpacesView is created
+WindowGroup("Spaces", id: "spacesWindow") {
+    SpacesView()
+        .environmentObject(selectedSpace)
+} 

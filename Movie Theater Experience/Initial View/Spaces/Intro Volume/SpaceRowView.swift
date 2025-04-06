@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUICore
 
 struct SpaceRowView: View {
     let space: IntroSpace
