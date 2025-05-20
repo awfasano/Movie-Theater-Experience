@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import FirebaseFirestore
-import FirebaseFirestoreSwift
 import RealityKit
 import Combine
 

@@ -7,49 +7,57 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         FirebaseApp.configure()
         return true
     }
-    
-    func applicationWillTerminate(_ application: UIApplication) {
-        VideoSyncService.shared.handleAppTermination()
-    }
+
 }
 
 @main
 struct Movie_Theater_ExperienceApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    
+    // Create the AppModel which holds your shared state including the selected space.
     @State private var appModel = AppModel()
+    
+    // Other managers and wrappers remain as before.
     @StateObject private var immersiveSpaceManager = ImmersiveSpaceManager.shared
-    @StateObject private var selectedSpace = SelectedSpace()
     @StateObject private var spaceManager = ImmersiveSpaceManager.shared
     @StateObject private var sharedSelection = SharedSeatSelection.shared
     @StateObject private var theatreEntityWrapper = TheatreEntityWrapper.shared
     @StateObject private var windowManager = WindowManager()
-    
-    // Inject the modular managers.
+    @StateObject private var spacesEntityWrapper = SpacesEntityWrapper.shared
+
+    @StateObject private var audioLoader = SpatialAudioLoader()
+
+    // Inject additional managers.
     @StateObject private var firebaseEventManager = FirebaseEventManager.shared
     @StateObject private var emojiManager = EmojiManager.shared
     
-    // Space related managers
+    // Space-related managers.
     @StateObject private var spacesChatManager = SpacesChatManager.shared
     
     @Environment(\.openWindow) var openWindow
     @Environment(\.scenePhase) private var scenePhase
+
     @AppStorage("userId") var userId: String = ""
     
     var body: some Scene {
+        // Main content window.
         WindowGroup {
             ContentView()
                 .environment(appModel)
                 .environmentObject(immersiveSpaceManager)
-                .environmentObject(selectedSpace)
-                .environmentObject(firebaseEventManager) // Injected for movie experience
+                .environmentObject(firebaseEventManager) // For movie experience.
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .background {
+                        Task { await VideoSyncService.shared.cleanup(level: .full) }
+                    }
+                }
         }
         
-        // Volumetric preview window - using selectedSpace.
+        // Volumetric preview window - using appModel.selectedSpace.
         WindowGroup("Volume", id: "volume") {
-            if let spaceData = selectedSpace.space {
+            if let spaceData = appModel.selectedSpace {
                 VolumetricSpaceWrapper(space: spaceData)
                     .environment(appModel)
-                    .environmentObject(selectedSpace)
                     .environmentObject(spaceManager)
                     .environmentObject(sharedSelection)
                     .environmentObject(theatreEntityWrapper)
@@ -76,7 +84,6 @@ struct Movie_Theater_ExperienceApp: App {
         WindowGroup("Tab Bar", id: "tabBar") {
             TabBarWindow()
                 .environment(appModel)
-                .environmentObject(selectedSpace)
                 .environmentObject(spaceManager)
                 .environmentObject(sharedSelection)
                 .environmentObject(theatreEntityWrapper)
@@ -108,45 +115,54 @@ struct Movie_Theater_ExperienceApp: App {
         // Immersive space window for Spaces.
         ImmersiveSpace(id: appModel.spacesID) {
             if #available(visionOS 1.0, *) {
-                SpacesView()
+                // SpacesView should now be updated to use appModel.selectedSpace internally.
+                SpacesView(audioLoader: audioLoader)
                     .environment(appModel)
-                    .environmentObject(selectedSpace)
                     .environmentObject(spaceManager)
-                    .environmentObject(sharedSelection)
+                    .environmentObject(spacesEntityWrapper)
                     .environmentObject(windowManager)
+                
             }
         }
         .immersionStyle(selection: .constant(.full), in: .full)
         
-        // Other windows remain unchanged...
-        WindowGroup("Seat Map", id: "seatMap") {
-            SeatMapView()
-                .environment(appModel)
-                .environmentObject(spaceManager)
-                .environmentObject(sharedSelection)
-                .environmentObject(theatreEntityWrapper)
-                .environmentObject(windowManager)
-                .onDisappear {
-                    windowManager.windowClosed(.seatMap)
-                }
+        WindowGroup("Audio Controls", id: "audioControls") {
+          // make sure we actually have a selected space + entity
+          if let space  = appModel.selectedSpace,
+             let entity = spacesEntityWrapper.getSpaceEntity() {
+            VolumeControlView(
+              audioLoader:  audioLoader,
+              spaceEntity:  entity,
+              spaceMeta:    space
+            )
+            .environmentObject(appModel)
+            .environmentObject(spacesEntityWrapper)
+            .background(.clear) // ensure clear background
+          } else {
+            Text("No space loaded")
+              .padding()
+          }
         }
+        .windowStyle(.plain) // 🔥 removes system material + borders
+        .defaultSize(width: 360, height: 420) // 👈 starting size
+        .windowResizability(.contentSize)
         
         
-        // Add to your Movie_Theater_ExperienceApp scene declaration
+        // Space Map window.
         WindowGroup("Space Map", id: "spaceMap") {
+            // SpaceMapView now uses appModel.selectedSpace rather than a separate SelectedSpace.
             SpaceMapView()
                 .environment(appModel)
-                .environmentObject(selectedSpace)
                 .environmentObject(spaceManager)
                 .environmentObject(windowManager)
                 .onDisappear {
-                    //windowManager.windowClosed(.spaceMap)
+                    // Optionally call any cleanup here.
                 }
         }
-        .defaultSize(width: 1024, height: 1300)
+        .defaultSize(width: 1600, height: 1300)
         .windowStyle(.plain)
-        // Inside your Movie_Theater_ExperienceApp's body, add a new WindowGroup:
-
+        
+        // Space Nav Bar window.
         WindowGroup("Space Nav Bar", id: "spaceNavBar") {
             SpacesNavBarView()
                 .environment(appModel)
@@ -161,11 +177,10 @@ struct Movie_Theater_ExperienceApp: App {
         .windowStyle(.plain)
         .defaultSize(width: 600, height: 50)
         
-        // Space Chat Window
+        // Space Chat window.
         WindowGroup(id: "spaceChatWindow") {
             SpacesChatWindow()
                 .environment(appModel)
-                .environmentObject(selectedSpace)
                 .environmentObject(windowManager)
                 .onDisappear {
                     windowManager.windowClosed(.chat)
@@ -174,11 +189,10 @@ struct Movie_Theater_ExperienceApp: App {
         .defaultSize(width: 400, height: 600)
         .windowStyle(.plain)
         
-        // Space Emoji Window
+        // Space Emoji window.
         WindowGroup(id: "spaceEmojiWindow") {
             SpacesEmojiWindow()
                 .environment(appModel)
-                .environmentObject(selectedSpace)
                 .environmentObject(windowManager)
                 .onDisappear {
                     windowManager.windowClosed(.emoji)
@@ -187,6 +201,7 @@ struct Movie_Theater_ExperienceApp: App {
         .defaultSize(width: 300, height: 180)
         .windowStyle(.plain)
         
+        // Chat Settings window.
         WindowGroup("Chat Settings", id: "chatSettings") {
             ChatSettingsNavBar()
                 .environment(appModel)
@@ -197,10 +212,11 @@ struct Movie_Theater_ExperienceApp: App {
         }
         .defaultSize(width: 350, height: 225)
         
+        // Emoji window.
         WindowGroup("Emoji Window", id: "emojiWindow") {
             if let event = appModel.currentEvent {
                 EmojiButtonView(eventId: event.id ?? "", date: event.date)
-                    .environmentObject(emojiManager) // Inject EmojiManager for emoji view.
+                    .environmentObject(emojiManager)
                     .background(Color.clear)
                     .onDisappear {
                         windowManager.windowClosed(.emoji)
@@ -210,12 +226,13 @@ struct Movie_Theater_ExperienceApp: App {
         .defaultSize(width: 300, height: 100)
         .windowStyle(.plain)
         
+        // Chat window.
         WindowGroup(id: "chatWindow") {
             if let event = appModel.currentEvent {
                 ChatView(viewModel: ChatViewModel(
                     eventId: event.id ?? "",
                     date: event.date,
-                    eventManager: firebaseEventManager  // Inject the configured event manager.
+                    eventManager: firebaseEventManager
                 ))
                 .onDisappear {
                     windowManager.windowClosed(.chat)
@@ -225,6 +242,7 @@ struct Movie_Theater_ExperienceApp: App {
         .defaultSize(width: 400, height: 600)
         .windowStyle(.plain)
         
+        // Nav Bar window.
         WindowGroup("Nav Bar", id: "navBar") {
             NavBarView()
                 .environment(appModel)
@@ -239,6 +257,7 @@ struct Movie_Theater_ExperienceApp: App {
         .windowStyle(.plain)
         .defaultSize(width: 600, height: 50)
         
+        // Movie window.
         WindowGroup("Movie Window", id: "movieWindow") {
             MovieWindow()
                 .environment(appModel)
@@ -251,6 +270,7 @@ struct Movie_Theater_ExperienceApp: App {
         .defaultSize(width: 600, height: 1500)
         .windowStyle(.plain)
         
+        // Exiting window.
         WindowGroup(id: "exitingWindow", for: WatchStats.self) { stats in
             if let unwrappedStats = stats.wrappedValue {
                 ExitingWindow(stats: unwrappedStats)

@@ -149,29 +149,39 @@ struct NavBarView: View {
     }
 
     // MARK: - Full Exit Handler
+    // NavBarView.swift
     private func handleExit() async {
-        print("📤 Full exit: initiating host election and cleaning up.")
-        // Get watch stats before cleanup
-        let stats = VideoSyncService.shared.getWatchStats()
-        
-        // Cleanup sync and space
-        await VideoSyncService.shared.initiateHostElection()
+        print("📤 Full exit requested")
+
+        // 1️⃣ Flush watch‑time stats (if you need them)
+        let stats = await videoSyncService.getWatchStats()
+
+        // 2️⃣ Clean up sync — this:
+        //    • pauses / stops the player
+        //    • removes listeners & timers
+        //    • deletes your presence doc
+        //    • triggers host‑election *after* the delete (only if you were host)
+        await videoSyncService.cleanup(level: .full)
+
+        // 3️⃣ Tear down the immersive space
         await spaceManager.initiateCleanup()
-        
-        // Dismiss all active windows
+
+        // 4️⃣ Dismiss UI windows
         dismissWindow(id: "chatWindow")
         dismissWindow(id: "emojiWindow")
         dismissWindow(id: "movieWindow")
         dismissWindow(id: "seatMap")
         dismissWindow(id: "chatSettings")
         dismissWindow(id: "navBar")
-        
-        // Show stats window after a small delay to ensure clean transitions
+
+        // 5️⃣ Show the “stats / goodbye” window
         try? await Task.sleep(for: .milliseconds(100))
         if !windowManager.isWindowOpen(.exitingWindow) {
             openWindow(id: WindowType.exitingWindow.rawValue, value: stats)
             windowManager.windowOpened(.exitingWindow)
         }
-        print("✅ Cleanup complete; exit window shown.")
+
+        print("✅ Exit sequence complete")
     }
+
 }

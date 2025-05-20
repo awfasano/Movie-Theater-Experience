@@ -7,9 +7,10 @@
 
 import Foundation
 
+// Your existing TimeoutError struct
 struct TimeoutError: Error {
     let duration: TimeInterval
-    
+
     var localizedDescription: String {
         return "Operation timed out after \(duration) seconds"
     }

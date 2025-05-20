@@ -267,6 +267,41 @@ class TheatreEntityWrapper: ObservableObject {
             await cleanup()
         }
     }
+    
+    // MARK: - Video Screen Helpers
+    /// Creates (or returns) a dedicated plane sized to the screen mesh.
+    /// Always called on MainActor.
+    @MainActor
+    func videoPlane(for screenMesh: ModelEntity) -> ModelEntity {
+        if let cached = screenMesh.findEntity(named: "VideoPlane") as? ModelEntity {
+            return cached
+        }
+
+        let bounds = screenMesh.model?.mesh.bounds ?? .init()
+        let width  = bounds.extents.x
+        let height = bounds.extents.y
+
+        // Plane thickness is ≈0 so Z‑fighting is avoided
+        let planeMesh = MeshResource.generatePlane(width: width,
+                                                   height: height,
+                                                   cornerRadius: 0)
+        
+        let plane     = ModelEntity(mesh: planeMesh,
+                                    materials: [UnlitMaterial(color: .black)])
+        plane.name    = "VideoPlane"
+
+        // Position the plane flush with the front face of the mesh
+        let frontZ = bounds.center.z + bounds.extents.z * 0.51
+        plane.position = [bounds.center.x, bounds.center.y, frontZ]
+
+        // Clamp rendering order so it always draws on top of the mesh
+       // plane.renderingOrder = .
+
+        screenMesh.addChild(plane)
+        return plane
+    }
+
+    
 }
 
 // Helper extension to find entities by name

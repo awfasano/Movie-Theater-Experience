@@ -141,7 +141,6 @@ struct SpaceCard_Previews: PreviewProvider {
         VStack {
             // Low occupancy
             SpaceCard(space: SpaceData(
-                id: "1",
                 spaceName: "Movie Theater",
                 description: "A cozy virtual cinema for movie nights",
                 lastModified: Date(),
@@ -154,7 +153,6 @@ struct SpaceCard_Previews: PreviewProvider {
             
             // Medium occupancy
             SpaceCard(space: SpaceData(
-                id: "2",
                 spaceName: "Concert Hall",
                 description: "Live music experience",
                 lastModified: Date(),
@@ -167,7 +165,6 @@ struct SpaceCard_Previews: PreviewProvider {
             
             // High occupancy
             SpaceCard(space: SpaceData(
-                id: "3",
                 spaceName: "Virtual Cafe",
                 description: "Hang out and chat",
                 lastModified: Date(),

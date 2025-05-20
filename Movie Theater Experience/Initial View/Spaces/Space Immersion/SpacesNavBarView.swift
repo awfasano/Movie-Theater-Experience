@@ -31,7 +31,7 @@ struct SpacesNavBarView: View {
             
             // Seat Selection Button
             Button(action: {
-                openWindow(id: "seatWindow")
+                openWindow(id: "spaceMap")
             }) {
                 Label("Change Seat", systemImage: "chair.lounge")
             }
@@ -39,7 +39,7 @@ struct SpacesNavBarView: View {
             
             // Open Emoji Buttons Window
             Button(action: {
-                openWindow(id: "emojiWindow")
+                openWindow(id: "spaceEmojiWindow")
             }) {
                 Label("Emoji", systemImage: "face.smiling")
             }
@@ -47,11 +47,19 @@ struct SpacesNavBarView: View {
             
             // Open Chat Messages Window
             Button(action: {
-                openWindow(id: "chatWindow")
+                openWindow(id: "spaceChatWindow")
             }) {
                 Label("Chat", systemImage: "message.fill")
             }
             .buttonStyle(.bordered)
+            
+            Button(action: {
+              openWindow(id: "audioControls")
+            }) {
+              Label("Volume", systemImage: "speaker.wave.2.fill")
+            }
+            .buttonStyle(.bordered)
+            
         }
         .padding()
         .background(.ultraThinMaterial)

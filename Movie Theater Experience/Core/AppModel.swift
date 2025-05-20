@@ -19,25 +19,32 @@ class AppModel: ObservableObject {
     var currentPlaybackTime: CMTime?
     var currentActiveSpace: String?
     
-    // Private backing field
+    // Private backing field for selectedSpace
     private var _selectedSpace: SpaceData?
     
-    // Public computed property
+    // Public computed property; this is your single source of truth for the selected space.
     var selectedSpace: SpaceData? {
         get { _selectedSpace }
         set { _selectedSpace = newValue }
     }
     
-    // MARK: - Private Properties
-    private let spaceManager = ImmersiveSpaceManager.shared
+    // MARK: - Update Methods for a Struct
+    
+    /// Updates the current seat of the selected space.
+    /// Because SpaceData is a struct, we update it by making a copy with the new seat value.
+    func updateSelectedSpaceSeat(to newSeat: String) {
+        guard var space = _selectedSpace else { return }
+        space.currentSeat = newSeat
+        _selectedSpace = space  // Replace with the updated struct to trigger observations.
+    }
     
     // MARK: - Computed Properties
     var immersiveSpaceState: ImmersiveSpaceState {
-        spaceManager.state
+        ImmersiveSpaceManager.shared.state
     }
     
     var canTransitionImmersiveSpace: Bool {
-        !immersiveSpaceState.isTransitioning
+        !ImmersiveSpaceManager.shared.state.isTransitioning
     }
     
     var selectedEventID: String {
@@ -51,7 +58,7 @@ class AppModel: ObservableObject {
     // MARK: - Public Methods
     func cleanupImmersiveSpace() async {
         print("🧹 Starting immersive space cleanup")
-        await spaceManager.initiateCleanup()
+        await ImmersiveSpaceManager.shared.initiateCleanup()
         currentActiveSpace = nil
         resetAppState()
     }
@@ -111,11 +118,11 @@ class AppModel: ObservableObject {
     
     func handleEventSelection(_ event: CalendarEvent) async -> Bool {
         // Wait for any ongoing cleanup
-        while spaceManager.isCleaningUp {
+        while ImmersiveSpaceManager.shared.isCleaningUp {
             try? await Task.sleep(for: .milliseconds(100))
         }
         
-        guard await spaceManager.prepareForOpening() else {
+        guard await ImmersiveSpaceManager.shared.prepareForOpening() else {
             print("❌ Failed to prepare for event: \(event.title)")
             return false
         }

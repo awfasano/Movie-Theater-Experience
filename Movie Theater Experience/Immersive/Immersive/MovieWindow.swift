@@ -4,209 +4,180 @@ import AVKit
 import AVFoundation
 
 struct MovieWindow: View {
-    // MARK: - Environment
-    @Environment(AppModel.self) private var appModel
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.dismissWindow) private var dismissWindow
+
+    // MARK: ‑‑ Environment
+    @Environment(AppModel.self)         private var appModel
+    @Environment(\.dismiss)             private var dismiss
+    @Environment(\.dismissWindow)       private var dismissWindow
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
-    @Environment(\.openWindow) var openWindow
-    
-    // MARK: - State
+    @Environment(\.openWindow)          private var openWindow
+
+    // MARK: ‑‑ State
     @State private var player: AVPlayer?
+    @State private var isLoading            = true
     @State private var showAccessDeniedAlert = false
-    @State private var accessDeniedMessage = ""
+    @State private var accessDeniedMessage   = ""
     @State private var rateObserver: NSKeyValueObservation?
-    
-    // MARK: - Services
-    private let spaceManager = ImmersiveSpaceManager.shared
+
+    // MARK: ‑‑ Services
+    private let spaceManager    = ImmersiveSpaceManager.shared
     private let videoSyncService = VideoSyncService.shared
-    
+
+    // MARK: ‑‑ Body
     var body: some View {
-        VStack {
-            if let player = player {
-                VideoPlayerView(player: player, videoGravity: .resizeAspect)
-                    .edgesIgnoringSafeArea(.all)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                Text("Loading video...")
+        ZStack {
+            // main video or placeholder
+            Group {
+                if let player {
+                    VideoPlayerView(player: player,
+                                    videoGravity: .resizeAspect)
+                        .overlay(Color.black.opacity(0.001)) // allow tap‑through
+                } else {
+                    ProgressView("Loading…")
+                        .progressViewStyle(.circular)
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .animation(.easeInOut(duration: 0.25), value: player != nil)
+        }
+        .frame(minWidth: 560, minHeight: 315)               // 16:9 base
+        .padding()
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+        .shadow(radius: 8)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text(appModel.currentEvent?.title ?? "Now Playing")
+                    .font(.headline)
+            }
+            ToolbarItem(placement: .navigation) {
+                Button {
+                    Task { await handleCleanup() ; dismiss() }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .help("Close")
             }
         }
-        .task {
-            await setupVideo()
-        }
+        .task { await setupVideo() }
         .onDisappear {
-            handleOnDisappear()
+            // onDisappear must not call async directly
+            Task { await handleCleanup() }
         }
         .alert("Access Denied", isPresented: $showAccessDeniedAlert) {
             Button("OK", role: .cancel) {
-                handleCleanup()
-                dismiss()
+                Task { await handleCleanup() ; dismiss() }
             }
-        } message: {
-            Text(accessDeniedMessage)
-        }
-    }
-    
-    // MARK: - Setup
-    // In MovieWindow.swift
-    private func setupVideo() async {
-        print("🎬 Setting up video in MovieWindow")
-        
-        guard let videoURL = appModel.selectedVideoURL,
-              let event = appModel.currentEvent else {
-            print("❌ Missing video URL or event")
-            handleCleanup()
-            dismiss()
-            return
-        }
-        
-        // Create new AVPlayer
-        let newPlayer = AVPlayer(url: videoURL)
-        
-        // Ensure player is initially paused
-        newPlayer.pause()
-        self.player = newPlayer
-        
-        // Configure sync first
-        if videoSyncService.configureSync(
-            eventId: event.id ?? "",
-            userId: getDeviceId(),
-            event: event
-        ) {
-            print("✅ Video sync configured")
-            
-            // IMPORTANT: Wait for player to be ready
-            while newPlayer.status != .readyToPlay {
-                print("⏳ Waiting for player to be ready...")
-                try? await Task.sleep(nanoseconds: 100_000_000)
-            }
-            print("✅ Player ready to play")
-            
-            // Get current sync time and seek to it
-            let syncTime = videoSyncService.currentTime
-            print("⏱️ Seeking to sync time: \(syncTime)")
-            
-            // Use accurate seeking and wait for it to complete
-            await newPlayer.seek(to: CMTime(seconds: syncTime, preferredTimescale: 1000),
-                               toleranceBefore: .zero,
-                               toleranceAfter: .zero)
-            print("✅ Seek completed")
-            
-            // Setup end handler
-            setupVideoEndHandler()
-            
-            // Start sync
-            videoSyncService.startSync(with: newPlayer)
-            
-            // Match current playstate
-            let shouldPlay = videoSyncService.isPlaying
-            print("🎮 Current sync play state: \(shouldPlay)")
-            
-            if shouldPlay {
-                print("▶️ Starting playback")
-                newPlayer.play()
-            } else {
-                print("⏸️ Ensuring paused")
-                newPlayer.pause()
-            }
-            
-            print("✅ MovieWindow video setup complete")
-        } else {
-            print("❌ Sync configuration failed")
-            showAccessDenied()
-        }
+        } message: { Text(accessDeniedMessage) }
     }
 
-    // Add this to help debug what's happening with the player
-    private func addDebugObservations() {
-        guard let player = player else { return }
-        
-        // Observe timeControlStatus
-        let statusObserver = player.observe(\.timeControlStatus) { player, _ in
-            print("🎮 Player timeControlStatus: \(player.timeControlStatus.rawValue)")
-            switch player.timeControlStatus {
-            case .playing:
-                print("▶️ Player is playing")
-            case .paused:
-                print("⏸️ Player is paused")
-            case .waitingToPlayAtSpecifiedRate:
-                print("⏳ Player is waiting to play")
-            @unknown default:
-                break
+    // MARK: ‑‑ Initial setup
+    private func setupVideo() async {
+        print("🎬 [MovieWindow] setupVideo started")
+
+        // 0️⃣ Sanity‑check inputs
+        guard
+            let videoURL = appModel.selectedVideoURL,
+            let event    = appModel.currentEvent
+        else {
+            await presentAccessDenied("Missing video URL or event.")
+            return
+        }
+
+        // 1️⃣ Create the AVPlayer (initially paused)
+        let newPlayer = AVPlayer(url: videoURL)
+        newPlayer.pause()
+        player    = newPlayer          // show the player
+        isLoading = true
+
+        // 2️⃣ Configure (or reuse) the VideoSyncService
+        let uid = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+        let eid = event.id ?? ""
+
+        let alreadyConfigured = videoSyncService.isConfigured(for: eid, userId: uid)
+        if !alreadyConfigured {
+            print("🔄 Configuring sync service …")
+            guard await videoSyncService.configureSync(eventId: eid,
+                                                 userId:  uid,
+                                                 event:   event)
+            else {
+                await presentAccessDenied("This event isn’t available right now.")
+                return
             }
+            print("✅ Sync configured")
+            try? await Task.sleep(for: .milliseconds(300))   // let listeners settle
+        } else {
+            print("ℹ️ Sync already configured – re‑using session")
         }
-        // Store statusObserver if needed
-    }
-    
-    private func setupRateObservation(_ player: AVPlayer) {
-        rateObserver = player.observe(\.rate, options: [.new]) { [weak videoSyncService] player, _ in
-            let isPlaying = (player.rate != 0)
-            videoSyncService?.handlePlayPause(isPlaying: isPlaying)
+
+        // 3️⃣ Wait for the player to be ready
+        while newPlayer.status == .unknown {
+            try? await Task.sleep(for: .milliseconds(100))
         }
-    }
-    
-    private func setupVideoEndHandler() {
+        guard newPlayer.status == .readyToPlay else {
+            await presentAccessDenied("Cannot play this video.")
+            return
+        }
+        print("✅ Player ready")
+
+        // 4️⃣ Seek to the current sync position
+        let syncPos = videoSyncService.currentTime
+        await newPlayer.seek(to: CMTime(seconds: syncPos, preferredTimescale: 1000),
+                             toleranceBefore: .zero,
+                             toleranceAfter:  .zero)
+        print("⏱️ Sought to \(String(format: "%.2f", syncPos)) s")
+
+        // 5️⃣ Register video‑end handler *once*
         videoSyncService.setupVideoEndHandler {
-            Task { @MainActor in
-                await handleVideoEnd()
-            }
+            Task { await handleVideoEnd() }
         }
+
+        // 6️⃣ Hand the player to the sync service
+        await videoSyncService.startSync(with: newPlayer)
+
+        // 7️⃣ Match the play/pause state from Firestore
+        if videoSyncService.isPlaying {
+            print("▶️ Starting playback")
+            newPlayer.play()
+        } else {
+            newPlayer.pause()
+        }
+
+        // 8️⃣ Done — hide loading placeholder
+        withAnimation { isLoading = false }
+        print("✅ [MovieWindow] setupVideo finished")
     }
-    
-    // MARK: - Cleanup
-    private func handleCleanup() {
-        print("🧹 MovieWindow cleanup")
-        
-        // Create snapshot before any cleanup
-        if let player = player {
-            let position = player.currentTime().seconds
-            let isPlaying = player.rate != 0
-            print("📸 Creating final snapshot - position: \(position), playing: \(isPlaying)")
+
+
+    // MARK: ‑‑ Cleanup
+    private func handleCleanup() async {
+        // snapshot
+        if let player {
+            let pos = player.currentTime().seconds
+            let play = player.timeControlStatus == .playing
+            videoSyncService.storePlaybackSnapshot(position: pos, isPlaying: play)
         }
-        
-        videoSyncService.switchToView(.immersive)
-        
-        // Don't cleanup videoSyncService here
-        videoSyncService.cleanup(level: .light) 
-        
+
+        // tidy
+        await videoSyncService.cleanup(level: .light)
         player?.pause()
         player = nil
         appModel.isMovieWindowOpen = false
     }
-    
-    private func handleOnDisappear() {
-        print("🪟 MovieWindow onDisappear called")
-        handleCleanup()
-        appModel.isMovieWindowOpen = false
-    }
-    
+
     private func handleVideoEnd() async {
-        print("🎬 Handling video end in MovieWindow...")
+        await videoSyncService.handleVideoEnd()
+    }
 
-        // Call the global video end handler in VideoSyncService
-        await VideoSyncService.shared.handleVideoEnd()
-    }
-    
-    private func dismissAllWindows() {
-        print("🪟 Dismissing all content windows")
-        let ids = ["chatWindow", "emojiWindow", "movieWindow", "seatMap", "navBar"]
-        for wId in ids {
-            dismissWindow(id: wId)
-        }
-    }
-    
-    // MARK: - Helpers
-    private func showAccessDenied() {
+    // MARK: ‑‑ Helpers
+    @MainActor
+    private func presentAccessDenied(_ reason: String) {
+        accessDeniedMessage = reason
         showAccessDeniedAlert = true
-        accessDeniedMessage = "This event is not currently available for viewing."
-        handleCleanup()
-        dismiss()
-    }
-
-    private func getDeviceId() -> String {
-        UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
     }
 }
+
 
 // Supporting Views remain unchanged
 struct VideoPlayerView: UIViewRepresentable {
