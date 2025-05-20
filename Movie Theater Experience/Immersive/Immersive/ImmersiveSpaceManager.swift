@@ -167,7 +167,7 @@ class ImmersiveSpaceManager: ObservableObject {
         // 1. Stop any ongoing videos
         if let videoManager = TheatreEntityWrapper.shared.videoPlayerManager {
             print("📺 Stopping video playback")
-            VideoSyncService.shared.handlePlayPause(isPlaying: false)  // Use VideoSyncService instead
+            await VideoSyncService.shared.handlePlayPause(isPlaying: false)  // Use VideoSyncService instead
             videoManager.clearAllResources()
         }
         

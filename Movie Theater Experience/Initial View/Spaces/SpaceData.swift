@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import FirebaseFirestoreSwift
 import FirebaseFirestore
 import RealityKit
 
@@ -21,6 +20,7 @@ struct SpaceData: Identifiable, Codable {
     var attributions: String?
     var tags: [String]?
     var introEntityName: String?
+    var currentSeat:String?
     
     // Viewer position adjustments
     var viewerXAdjustment: Double = 0.0

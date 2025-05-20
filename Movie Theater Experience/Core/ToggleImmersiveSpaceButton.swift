@@ -38,7 +38,7 @@ struct ToggleImmersiveSpaceButton: View {
         await spaceManager.initiateCleanup()
         
         // Cleanup video sync
-        videoSyncService.cleanup()
+        await videoSyncService.cleanup()
         
         // Dismiss the space
         await dismissImmersiveSpace()

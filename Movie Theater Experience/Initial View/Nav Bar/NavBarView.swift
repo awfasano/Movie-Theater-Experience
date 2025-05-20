@@ -16,25 +16,95 @@ struct NavBarView: View {
 
     // MARK: - State
     @AppStorage("showEmojis") private var showEmojis = true
-    @State private var showMovieEndAlert = false
+    @State var videoSyncService = VideoSyncService.shared // Observe VideoSyncService
 
     // MARK: - Services
+    // Ensure this line is present and ImmersiveSpaceManager is correctly defined and accessible
     private let spaceManager = ImmersiveSpaceManager.shared
-    let videoSyncService = VideoSyncService.shared
+
+    // State for displaying formatted time
+    @State private var currentTimeFormatted: String = "00:00"
+    @State private var totalDurationFormatted: String = "00:00"
 
     var body: some View {
-        HStack(spacing: 40) {
+        HStack(spacing: 15) {
+            // Left-aligned buttons
             chatButton
             emojiButton
             emojiVisibilityButton
             movieButton
             seatMapButton
-            exitButton
+
+            // Media Controls - Conditionally shown
+            if appModel.selectedVideoURL != nil && videoSyncService.currentVideoDuration > 0 {
+                HStack(spacing: 10) {
+                    PlayPauseButton()
+
+                    Text(currentTimeFormatted)
+                        .font(.caption)
+                        .monospacedDigit()
+                        .frame(minWidth: 45, alignment: .trailing)
+
+                    SeekSliderView(duration: videoSyncService.currentVideoDuration)
+                        .frame(width: 200)
+
+                    Text(totalDurationFormatted)
+                        .font(.caption)
+                        .monospacedDigit()
+                        .frame(minWidth: 45, alignment: .leading)
+                }
+                .padding(.horizontal, 10)
+            }
+
+            // Sync with Host Button
+            if !videoSyncService.isHost && appModel.selectedVideoURL != nil {
+                syncWithHostButton
+            }
+
+            Spacer()
+
             chatSettingsButton
+            exitButton
         }
         .padding()
         .background(.ultraThinMaterial.opacity(0.9))
         .cornerRadius(10)
+        .onReceive(Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()) { _ in
+            if appModel.selectedVideoURL != nil {
+                self.currentTimeFormatted = formatTime(videoSyncService.currentTime)
+                if videoSyncService.currentVideoDuration > 0 {
+                    let newFormattedTotalDuration = formatTime(videoSyncService.currentVideoDuration)
+                    if self.totalDurationFormatted != newFormattedTotalDuration {
+                        self.totalDurationFormatted = newFormattedTotalDuration
+                    }
+                } else if totalDurationFormatted != "00:00" {
+                    self.totalDurationFormatted = "00:00"
+                }
+            } else {
+                if currentTimeFormatted != "00:00" { self.currentTimeFormatted = "00:00" }
+                if totalDurationFormatted != "00:00" { self.totalDurationFormatted = "00:00" }
+            }
+        }
+        .onChange(of: videoSyncService.currentVideoDuration) { _, newDuration in
+            self.totalDurationFormatted = formatTime(newDuration)
+        }
+        .onChange(of: appModel.selectedVideoURL) { _, newURL in
+            if newURL == nil {
+                self.currentTimeFormatted = "00:00"
+                self.totalDurationFormatted = "00:00"
+            } else {
+                 self.totalDurationFormatted = formatTime(videoSyncService.currentVideoDuration)
+            }
+        }
+    }
+
+    // MARK: - Time Formatting Helper
+    private func formatTime(_ time: Double) -> String {
+        let validTime = time.isFinite ? time : 0.0
+        let seconds = Int(validTime)
+        let minutes = seconds / 60
+        let remainingSeconds = seconds % 60
+        return String(format: "%02d:%02d", minutes, remainingSeconds)
     }
 
     // MARK: - Chat Button
@@ -47,8 +117,9 @@ struct NavBarView: View {
         } label: {
             Image(systemName: "message.fill")
                 .resizable()
-                .frame(width: 30, height: 30)
+                .frame(width: 28, height: 28)
         }
+        .help("Open Chat")
     }
 
     // MARK: - Emoji Button
@@ -61,9 +132,11 @@ struct NavBarView: View {
         } label: {
             Image(systemName: "face.smiling.fill")
                 .resizable()
-                .frame(width: 30, height: 30)
+                .frame(width: 28, height: 28)
         }
-        .disabled(spaceManager.state != .open)
+        .help("Open Emoji Tray")
+        // Corrected: Fully qualify the enum case
+        .disabled(spaceManager.state != ImmersiveSpaceState.open)
     }
 
     // MARK: - Emoji Visibility Button
@@ -74,35 +147,49 @@ struct NavBarView: View {
         } label: {
             Image(systemName: showEmojis ? "eye.fill" : "eye.slash.fill")
                 .resizable()
-                .frame(width: 30, height: 30)
+                .frame(width: 28, height: 28)
                 .overlay(
                     Image(systemName: "face.smiling.fill")
                         .resizable()
-                        .frame(width: 15, height: 15)
-                        .offset(x: 8, y: 8)
+                        .frame(width: 14, height: 14)
+                        .offset(x: 7, y: 7)
                 )
         }
+        .help(showEmojis ? "Hide Emojis" : "Show Emojis")
     }
 
     // MARK: - Movie Window Button
     private var movieButton: some View {
         Button {
-            if let _ = appModel.selectedVideoURL, !windowManager.isWindowOpen(.movie) {
+            if appModel.selectedVideoURL != nil {
                 Task {
-                    videoSyncService.switchToView(.movieWindow)
-                    if case .open = spaceManager.state {
-                        TheatreEntityWrapper.shared.videoPlayerManager?.clearAllResources()
+                    if appModel.isMovieWindowOpen {
+                        print("🎬 Movie button: Movie window open, switching to immersive.")
+                        await videoSyncService.switchToView(.immersive)
+                        appModel.isMovieWindowOpen = false
+                        appModel.resumePlaybackAfterTransition = true
+
+                        dismissWindow(id: WindowType.movie.rawValue)
+                        windowManager.windowClosed(.movie)
+                        // Corrected: Fully qualify the enum case
+                        if spaceManager.state != ImmersiveSpaceState.open {
+                             _ = await ImmersiveSpaceManager.shared.openImmersiveSpace()
+                        }
+                    } else {
+                        print("🎬 Movie button: Movie window not open, switching to movie window.")
+                        await videoSyncService.switchToView(.movieWindow)
+                        appModel.isMovieWindowOpen = true
+                        openWindow(id: WindowType.movie.rawValue)
+                        windowManager.windowOpened(.movie)
                     }
-                    appModel.isMovieWindowOpen = true
-                    openWindow(id: WindowType.movie.rawValue)
-                    windowManager.windowOpened(.movie)
                 }
             }
         } label: {
-            Image(systemName: "rectangle.on.rectangle")
+            Image(systemName: appModel.isMovieWindowOpen ? "arrow.down.right.and.arrow.up.left.rectangle.fill" : "rectangle.on.rectangle")
                 .resizable()
-                .frame(width: 30, height: 30)
+                .frame(width: 28, height: 28)
         }
+        .help(appModel.isMovieWindowOpen ? "Close Movie Window (Return to Immersive)" : "Open Movie in Window")
         .disabled(appModel.selectedVideoURL == nil)
     }
 
@@ -116,8 +203,24 @@ struct NavBarView: View {
         } label: {
             Image(systemName: "chair.fill")
                 .resizable()
-                .frame(width: 30, height: 30)
+                .frame(width: 28, height: 28)
         }
+        .help("Open Seat Map")
+    }
+
+    // MARK: - Sync with Host Button
+    private var syncWithHostButton: some View {
+        Button {
+            Task {
+                print("🎬 [NavBarView] Sync with Host button tapped.")
+                await videoSyncService.forceSyncToHost()
+            }
+        } label: {
+            Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
+                .resizable()
+                .frame(width: 28, height: 28)
+        }
+        .help("Sync with Host")
     }
 
     // MARK: - Chat Settings Button
@@ -130,8 +233,9 @@ struct NavBarView: View {
         } label: {
             Image(systemName: "paintbrush.fill")
                 .resizable()
-                .frame(width: 30, height: 30)
+                .frame(width: 28, height: 28)
         }
+        .help("Open Chat Settings")
     }
 
     // MARK: - Full Exit Button
@@ -143,35 +247,35 @@ struct NavBarView: View {
         } label: {
             Image(systemName: "xmark.circle.fill")
                 .resizable()
-                .frame(width: 30, height: 30)
+                .frame(width: 28, height: 28)
                 .foregroundStyle(.red)
         }
+        .help("Exit Experience")
     }
 
     // MARK: - Full Exit Handler
     private func handleExit() async {
-        print("📤 Full exit: initiating host election and cleaning up.")
-        // Get watch stats before cleanup
-        let stats = VideoSyncService.shared.getWatchStats()
-        
-        // Cleanup sync and space
-        await VideoSyncService.shared.initiateHostElection()
+        print("📤 Full exit requested from NavBar")
+        let stats = await videoSyncService.getWatchStats()
+        await videoSyncService.cleanup(level: .full)
+        // Ensure spaceManager is accessible here. If it's a struct property, it will be.
         await spaceManager.initiateCleanup()
+
+        for windowType in WindowType.allCases where windowType != .exitingWindow {
+            if windowManager.isWindowOpen(windowType) {
+                print("🚪 Closing window: \(windowType.rawValue)")
+                dismissWindow(id: windowType.rawValue)
+                windowManager.windowClosed(windowType)
+            }
+        }
         
-        // Dismiss all active windows
-        dismissWindow(id: "chatWindow")
-        dismissWindow(id: "emojiWindow")
-        dismissWindow(id: "movieWindow")
-        dismissWindow(id: "seatMap")
-        dismissWindow(id: "chatSettings")
-        dismissWindow(id: "navBar")
-        
-        // Show stats window after a small delay to ensure clean transitions
-        try? await Task.sleep(for: .milliseconds(100))
+        try? await Task.sleep(for: .milliseconds(200))
+
         if !windowManager.isWindowOpen(.exitingWindow) {
+            print("🚪 Opening exiting window with stats.")
             openWindow(id: WindowType.exitingWindow.rawValue, value: stats)
             windowManager.windowOpened(.exitingWindow)
         }
-        print("✅ Cleanup complete; exit window shown.")
+        print("✅ NavBar exit sequence complete.")
     }
 }
