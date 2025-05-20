@@ -20,6 +20,7 @@ struct VolumetricSpaceView: View {
     // Timer for continuous rotation
     let rotationTimer = Timer.publish(every: 0.01, on: .main, in: .common).autoconnect()
     
+    
     // MARK: - Body
     var body: some View {
         ZStack {

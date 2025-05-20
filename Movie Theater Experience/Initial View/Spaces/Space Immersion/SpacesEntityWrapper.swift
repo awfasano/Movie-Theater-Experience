@@ -5,7 +5,6 @@ import Foundation
 import SwiftUI
 import UIKit // Needed for UIImage
 import FirebaseFirestore // Assuming you use these
-import FirebaseFirestoreSwift // Assuming you use these
 import RealityKit
 import Combine
 

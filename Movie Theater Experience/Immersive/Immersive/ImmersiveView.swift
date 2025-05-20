@@ -12,7 +12,8 @@ struct ImmersiveView: View {
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
     @Environment(\.dismissWindow) private var dismissWindow
     @Environment(\.openImmersiveSpace) private var openImmersiveSpace
-    // Added: Environment object for the window manager.
+    @State private var showEndScreen = false
+
     @EnvironmentObject var windowManager: WindowManager
 
     // MARK: - Observed / State Objects
@@ -20,7 +21,7 @@ struct ImmersiveView: View {
     @ObservedObject private var theatreEntityWrapper = TheatreEntityWrapper.shared
     
     private let spaceManager = ImmersiveSpaceManager.shared
-    private let videoSyncService = VideoSyncService.shared
+    @State private var videoSyncService = VideoSyncService.shared
     
     @StateObject private var videoPlayerManager: VideoPlayerManager
     @StateObject private var lightingManager = TheatreLightingManager()
@@ -29,6 +30,8 @@ struct ImmersiveView: View {
     // MARK: - Internal States
     @State private var showAccessDeniedAlert = false
     @State private var accessDeniedMessage = ""
+    @State private var isConfiguring = false
+
     
     // MARK: - Constants
     private enum Constants {
@@ -39,62 +42,72 @@ struct ImmersiveView: View {
     
     // MARK: - Init
     init() {
-        let syncService = VideoSyncService.shared
-        _videoPlayerManager = StateObject(wrappedValue: VideoPlayerManager(videoSyncService: syncService))
+        // --- FIX #1 IS HERE ---
+        // VideoPlayerManager initializer no longer takes a videoSyncService argument.
+        _videoPlayerManager = StateObject(wrappedValue: VideoPlayerManager())
         _lightingManager = StateObject(wrappedValue: TheatreLightingManager())
         _spatialAudioManager = StateObject(wrappedValue: SpatialAudioManager())
+        print("🎬 ImmersiveView initialized with its managers.")
     }
     
     // MARK: - Body
     var body: some View {
-        RealityView { content in
-            do {
-                try await setupTheatreEnvironment(in: content)
-            } catch {
-                print("❌ Failed to setup theatre environment: \(error)")
+        ZStack {
+            RealityView { content in
+                do {
+                    print(" realtà [ImmersiveView] RealityView content closure: Setting up theatre environment.")
+                    try await setupTheatreEnvironment(in: content)
+                }
+                catch { print("❌ [ImmersiveView] Failed to set up theatre environment: \(error)") }
             }
-        }
-        // 1) Watch for changes in the "Movie Window Open" flag
-        .onChange(of: appModel.isMovieWindowOpen) { _, newValue in
-            Task { @MainActor in
-                await handleMovieWindowChange(newValue)
-            }
-        }
-        // 2) Example seat selection logic
-        .onChange(of: sharedSelection.selectedSeatEntity) { _, newSeat in
-            Task { @MainActor in
-                if let seat = newSeat {
-                    await adjustViewerPosition(for: seat)
+            .onChange(of: appModel.isMovieWindowOpen) { _, newValue in
+                Task { @MainActor in
+                    print("🎬 [ImmersiveView] Detected appModel.isMovieWindowOpen change to: \(newValue)")
+                    await handleMovieWindowChange(newValue)
                 }
             }
-        }
-        // 3) If selectedVideoURL changes (and movie window closed), re-load in immersive
-        .onChange(of: appModel.selectedVideoURL) { _, newURL in
-            Task { @MainActor in
-                await handleVideoURLChange(newURL)
+            .onChange(of: sharedSelection.selectedSeatEntity) { _, newSeat in
+                Task { @MainActor in
+                    if let seat = newSeat {
+                        print("🪑 [ImmersiveView] Detected selectedSeatEntity change.")
+                        await adjustViewerPosition(for: seat)
+                    }
+                }
             }
-        }
-        // 4) Lifecycle events
-        .onAppear {
-            Task { @MainActor in
-                await onViewAppear()
-                configureImmersiveSpaceManager()
+            .onChange(of: appModel.selectedVideoURL) { _, newURL in
+                Task { @MainActor in
+                    print("🎬 [ImmersiveView] Detected selectedVideoURL change.")
+                    await handleVideoURLChange(newURL)
+                }
             }
-        }
-        .onDisappear {
-            Task { @MainActor in
-                await handleCleanup()
+            .onAppear {
+                Task { @MainActor in
+                    print("👋 [ImmersiveView] .onAppear triggered.")
+                    await onViewAppear()
+                }
             }
-        }
-        // 5) Alert for "access denied"
-        .alert("Access Denied", isPresented: $showAccessDeniedAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(accessDeniedMessage)
+            .onDisappear {
+                Task { @MainActor in
+                    print("💨 [ImmersiveView] .onDisappear triggered.")
+                    await handleCleanup()
+                }
+            }
+            .alert("Access Denied", isPresented: $showAccessDeniedAlert) {
+                Button("OK", role: .cancel) { }
+            } message: { Text(accessDeniedMessage) }
+
+            if showEndScreen {
+                EndScreen {
+                    Task { @MainActor in await dismissImmersiveSpace() }
+                }
+                .transition(.opacity.combined(with: .scale))
+                .zIndex(1)
+            }
         }
     }
-    
+
     private func configureImmersiveSpaceManager() {
+        print("🛠️ [ImmersiveView] Configuring ImmersiveSpaceManager closures.")
         let dismissImmersiveSpaceAction = dismissImmersiveSpace
         let dismissWindowAction = dismissWindow
         let openWindowAction = openWindow
@@ -102,87 +115,86 @@ struct ImmersiveView: View {
         
         ImmersiveSpaceManager.shared.configure(
             dismissImmersiveSpace: {
+                print("🚪 [ImmersiveView via SpaceManager] Dismissing immersive space.")
                 await dismissImmersiveSpaceAction()
             },
             dismissWindow: { windowId in
+                print("🚪 [ImmersiveView via SpaceManager] Dismissing window: \(windowId)")
                 dismissWindowAction(id: windowId)
             },
             openWindow: { windowId in
+                print("🚪 [ImmersiveView via SpaceManager] Opening window: \(windowId)")
                 openWindowAction(id: windowId)
             },
             openImmersiveSpace: {
-                return await openImmersiveSpaceAction(id: "immersiveSpaceID") == .opened
+                print("🚪 [ImmersiveView via SpaceManager] Attempting to open immersive space: \(appModel.immersiveSpaceID)")
+                let result = await openImmersiveSpaceAction(id: appModel.immersiveSpaceID)
+                print("🚪 [ImmersiveView via SpaceManager] Open immersive space result: \(result)")
+                return result == .opened
             }
         )
     }
     
     // MARK: - Setup
     private func setupTheatreEnvironment(in content: RealityViewContent) async throws {
-        print("🎬 Setting up theatre environment")
+        print("🎭 [ImmersiveView] setupTheatreEnvironment: Starting.")
         
-        // Wait for any ongoing cleanup
         while spaceManager.isCleaningUp {
-            print("⏳ Waiting for cleanup to complete...")
+            print("⏳ [ImmersiveView] Waiting for SpaceManager cleanup to complete...")
             try? await Task.sleep(for: .milliseconds(100))
         }
 
-        // Clean up the old entity if any
         await TheatreEntityWrapper.shared.cleanup()
 
-        // Load a new "Movie" entity from your .reality file
+        print("🧩 [ImmersiveView] Loading 'Movie' entity from bundle.")
         let theatreEntity = try await Entity(named: "Movie", in: realityKitContentBundle)
         theatreEntity.position = Constants.initialTheatrePosition
         
-        // Add to RealityView
         await MainActor.run {
+            print("➕ [ImmersiveView] Adding theatreEntity to RealityView content.")
             content.add(theatreEntity)
             theatreEntityWrapper.setEntity(theatreEntity)
         }
         
-        // Let everything settle
         try? await Task.sleep(for: .milliseconds(50))
         
-        // Configure audio & lighting
+        print("🔊 [ImmersiveView] Configuring spatial audio and lighting.")
         await MainActor.run {
             spatialAudioManager.configureSpeakersFromTheater(theatreEntity)
         }
         await lightingManager.configureLighting(theatreEntity: theatreEntity)
         
-        // Find the screen entity and init if needed
+        print("🖥️ [ImmersiveView] Configuring screen entities.")
         await configureScreenEntities(in: theatreEntity)
         
-        print("✅ Theatre environment setup complete")
+        print("✅ [ImmersiveView] Theatre environment setup complete.")
     }
 
     private func configureScreenEntities(in theatre: Entity) async {
+        print("🖥️ [ImmersiveView] configureScreenEntities for theatre: \(theatre.name)")
         await MainActor.run {
-            // 1️⃣ Find the screen entity
-            guard let screenEntity = findModelEntity(byName: Constants.screenEntityName, in: theatre),
-                  let modelEntity = screenEntity as? ModelEntity else {
-                print("❌ Failed to find screen entity")
+            guard let originalScreenMesh = findModelEntity(byName: Constants.screenEntityName, in: theatre) else {
+                print("❌ [ImmersiveView] Original screen mesh ('\(Constants.screenEntityName)') not found.")
                 return
             }
-            
-            print("✅ Found screen entity: \(screenEntity.name)")
+            print("✅ [ImmersiveView] Original screen mesh located: \(originalScreenMesh.name).")
 
-            // 2️⃣ Apply a temporary white material for testing
-            var material = PhysicallyBasedMaterial()
-            material.baseColor = .init(tint: .black)  // Ensures visibility
-            material.roughness = 0.3
-            material.metallic = 0.0
-            
-            // 3️⃣ Ensure RealityKit updates the material
-            modelEntity.model?.materials = [material]
-            
-            print("✅ Applied new white material to screen entity.")
+            let matte = UnlitMaterial(color: .black)
+            originalScreenMesh.model?.materials = [matte]
+            print("⬛ [ImmersiveView] Applied matte black material to original screen mesh.")
 
-            // 4️⃣ Check if a video should be played
+            let videoSurfacePlane = TheatreEntityWrapper.shared.videoPlane(for: originalScreenMesh)
+            theatreEntityWrapper.screenEntity = videoSurfacePlane
+            print("📺 [ImmersiveView] VideoPlane created/obtained and set in TheatreEntityWrapper.")
+
             Task {
                 if let videoURL = appModel.selectedVideoURL,
                    !appModel.isMovieWindowOpen,
-                   case .open = spaceManager.state {
-                    print("🎥 Configuring video with sync...")
-                    await configureVideoWithSync(screenEntity: screenEntity, url: videoURL)
+                   spaceManager.state == .open {
+                    print("🎥 [ImmersiveView] Video pending for immersive view. Configuring video with sync...")
+                    await configureVideoWithSync(screenEntity: videoSurfacePlane, url: videoURL)
+                } else {
+                    print("ℹ️ [ImmersiveView] Conditions not met for immediate video binding in configureScreenEntities: isMovieWindowOpen=\(appModel.isMovieWindowOpen), spaceState=\(spaceManager.state)")
                 }
             }
         }
@@ -190,213 +202,176 @@ struct ImmersiveView: View {
     
     // MARK: - Lifecycle: Appear / Disappear
     private func onViewAppear() async {
-        print("👋 ImmersiveView appeared")
+        print("👋 [ImmersiveView] onViewAppear: Configuring managers and checking video state.")
         
-        // Configure space manager's environment closures
-        spaceManager.configure(
-            dismissImmersiveSpace: { await dismissImmersiveSpace() },
-            dismissWindow: { windowId in dismissWindow(id: windowId) },
-            openWindow: { windowId in openWindow(id: windowId) },
-            openImmersiveSpace: {
-                switch await openImmersiveSpace(id: appModel.immersiveSpaceID) {
-                case .opened:       return true
-                case .error, .userCancelled, _:
-                    return false
-                }
-            }
-        )
-        
-        // Indicate that we've opened successfully
+        configureImmersiveSpaceManager()
         spaceManager.handleOpenSuccess()
-        
-        // Assign your managers
+
+        videoPlayerManager.setLightingManager(lightingManager)
         videoPlayerManager.setSpatialAudioManager(spatialAudioManager)
         theatreEntityWrapper.videoPlayerManager = videoPlayerManager
         
-        // If we have a video & the user is not currently in a pop-out window, load it
-        if !appModel.isMovieWindowOpen,
-           let videoURL = appModel.selectedVideoURL,
-           let theatre = theatreEntityWrapper.entity,
-           let screen = findModelEntity(byName: Constants.screenEntityName, in: theatre) {
-            await configureVideoWithSync(screenEntity: screen, url: videoURL)
+        if !appModel.isMovieWindowOpen, let videoURL = appModel.selectedVideoURL {
+            if let videoPlane = theatreEntityWrapper.screenEntity {
+                print("🎥 [ImmersiveView] onViewAppear: VideoPlane exists. Configuring video with URL: \(videoURL)")
+                await configureVideoWithSync(screenEntity: videoPlane, url: videoURL)
+            } else {
+                print("⚠️ [ImmersiveView] onViewAppear: VideoPlane not yet available. Video setup might be pending from configureScreenEntities.")
+            }
+        } else {
+            print("ℹ️ [ImmersiveView] onViewAppear: Conditions not met for video setup (isMovieWindowOpen=\(appModel.isMovieWindowOpen) or no videoURL).")
         }
     }
     
     private func handleCleanup() async {
-        print("🧹 Handling immersive space cleanup...")
+        print("🧹 [ImmersiveView] handleCleanup: Starting cleanup sequence.")
 
-        // 1️⃣ Determine if we should keep the player alive
-        let keepPlayer = appModel.isMovieWindowOpen  // Don't stop video if MovieWindow is open
+        let keepPlayer = appModel.isMovieWindowOpen
         videoPlayerManager.clearAllResources(keepPlayer: keepPlayer)
+        print("🧹 [ImmersiveView] VideoPlayerManager resources cleared (keepPlayer: \(keepPlayer)).")
 
-        // 2️⃣ Save playback state
         if let player = videoPlayerManager.player {
-            let position = player.currentTime().seconds
-            let isPlaying = player.timeControlStatus == .playing
-
-            videoSyncService.storePlaybackSnapshot(position: position, isPlaying: isPlaying)
-
-            if isPlaying {
-                videoSyncService.handlePlayPause(isPlaying: false)
+            let pos = player.currentTime().seconds
+            let playing = player.timeControlStatus == .playing
+            videoSyncService.storePlaybackSnapshot(position: pos, isPlaying: playing)
+            print("📸 [ImmersiveView] Stored snapshot: pos=\(pos), playing=\(playing)")
+            if playing {
+                await videoSyncService.handlePlayPause(isPlaying: false)
+                print("⏸️ [ImmersiveView] Paused player via VideoSyncService.")
             }
         }
 
-        // 3️⃣ Cleanup logic
-        videoSyncService.cleanup(level: keepPlayer ? .light : .full)
+        let syncCleanupLevel: CleanupLevel = keepPlayer ? .light : .full
+        await videoSyncService.cleanup(level: syncCleanupLevel)
+        print("🧹 [ImmersiveView] VideoSyncService cleanup called with level: \(syncCleanupLevel).")
+        
         await lightingManager.stopMovieLightingEffect()
         spatialAudioManager.cleanup()
         await theatreEntityWrapper.cleanup()
-        await spaceManager.initiateCleanup()
-
-        print("✅ Immersive space cleanup complete.")
+        
+        print("✅ [ImmersiveView] Cleanup sequence finished.")
     }
 
     // MARK: - Observing isMovieWindowOpen
     private func handleMovieWindowChange(_ isMovieWindowOpen: Bool) async {
+        print("🎬 [ImmersiveView] handleMovieWindowChange: isMovieWindowOpen is now \(isMovieWindowOpen)")
         if isMovieWindowOpen {
-            print("📱 MovieWindow opened - Hiding immersive screen entity")
-            
-            // Hide immersive screen entity
-            if let screenEntity = theatreEntityWrapper.screenEntity {
-                await MainActor.run {
-                    screenEntity.isEnabled = false
-                    print("⬛ Immersive screen **HIDDEN**")
-                }
+            print("⬛ [ImmersiveView] MovieWindow opened. Hiding immersive video screen.")
+            if let videoPlane = theatreEntityWrapper.screenEntity {
+                await MainActor.run { videoPlane.isEnabled = false }
+                print("✅ [ImmersiveView] Immersive videoPlane hidden.")
             }
-            return
-        }
-
-        print("📱 MovieWindow closed - Restoring immersive screen entity")
-
-        if let theatre = theatreEntityWrapper.entity,
-           let screenEntity = findModelEntity(byName: Constants.screenEntityName, in: theatre),
-           let videoURL = appModel.selectedVideoURL {
-            
-            await MainActor.run {
-                screenEntity.isEnabled = true
-                print("🎬 Immersive screen **VISIBLE**")
+        } else {
+            print("🎬 [ImmersiveView] MovieWindow closed. Restoring immersive video screen.")
+            guard let videoPlane = theatreEntityWrapper.screenEntity else {
+                print("❌ [ImmersiveView] No videoPlane found to restore. Cannot continue.")
+                return
             }
 
-            await configureVideoWithSync(screenEntity: screenEntity, url: videoURL)
+            await MainActor.run { videoPlane.isEnabled = true }
+            print("✅ [ImmersiveView] Immersive videoPlane made visible.")
 
-            if let snapshot = videoSyncService.currentSnapshot {
-                print("📸 Restoring snapshot - position: \(snapshot.position), playing: \(snapshot.isPlaying)")
-                
-                guard let player = videoPlayerManager.player else {
-                    print("❌ No player found after restoring screen entity")
-                    return
-                }
-
-                await player.seek(to: CMTime(seconds: snapshot.position, preferredTimescale: 1000))
-                
-                if snapshot.isPlaying {
-                    print("▶️ Resuming playback")
-                    player.play()
-                } else {
-                    print("⏸️ Ensuring paused state")
-                    player.pause()
-                }
+            if let videoURL = appModel.selectedVideoURL {
+                print("🎥 [ImmersiveView] Re-configuring video with sync after window close.")
+                await configureVideoWithSync(screenEntity: videoPlane, url: videoURL)
+            } else {
+                print("ℹ️ [ImmersiveView] No video URL to configure after MovieWindow closed.")
             }
         }
     }
     
     // MARK: - Handling selectedVideoURL changes
     private func handleVideoURLChange(_ newURL: URL?) async {
+        print("🎬 [ImmersiveView] handleVideoURLChange: New URL is \(newURL?.absoluteString ?? "nil")")
         guard let newURL = newURL,
-              let theatre = theatreEntityWrapper.entity,
-              let screenEntity = findModelEntity(byName: Constants.screenEntityName, in: theatre),
+              let videoPlane = theatreEntityWrapper.screenEntity,
               !appModel.isMovieWindowOpen else {
+            print("ℹ️ [ImmersiveView] Conditions not met for video URL change handling.")
             return
         }
         
-        // If the movie window is closed, refresh the immersive
-        await configureVideoWithSync(screenEntity: screenEntity, url: newURL)
+        print("🎥 [ImmersiveView] Refreshing immersive video on VideoPlane with new URL.")
+        await configureVideoWithSync(screenEntity: videoPlane, url: newURL)
     }
     
     // MARK: - Configuring Video with Sync
     private func configureVideoWithSync(screenEntity: ModelEntity, url: URL) async {
-        print("🎥 Starting video configuration with sync")
-        
+        // --- SEMAPHORE LOCK ---
+        guard !isConfiguring else {
+            print("🔁 [ImmersiveView] Configuration already in progress. Skipping.")
+            return
+        }
+        isConfiguring = true
+        defer {
+            isConfiguring = false
+            print("✅ [ImmersiveView] configureVideoWithSync finished.")
+        }
+
+        print("🎥 [ImmersiveView] configureVideoWithSync for screen: \(screenEntity.name), URL: \(url.lastPathComponent)")
+
         guard let currentEvent = appModel.currentEvent else {
-            print("❌ No current event found")
+            await handleSyncFailure("Cannot configure video without a selected event.")
             return
         }
-
-        // 1. Configure sync service first
-        print("🔄 Configuring sync service...")
-        guard videoSyncService.configureSync(
-            eventId: currentEvent.id ?? "",
-            userId: getUserId(),
-            event: currentEvent
-        ) else {
-            print("❌ Failed to configure sync service")
-            handleSyncFailure()
+        
+        let userId = appModel.currentUserId
+        guard !userId.isEmpty else {
+            await handleSyncFailure("User identification error. Cannot sync video.")
             return
         }
-        print("✅ Sync service configured")
+        let eventId = currentEvent.id ?? ""
 
-        // 2. Wait for any pending operations
-        try? await Task.sleep(for: .milliseconds(300))
-
-        // 3. Configure video player with completion handling
-        let success = await withCheckedContinuation { continuation in
-            Task { @MainActor in
-                videoPlayerManager.configureVideo(for: screenEntity, videoURL: url) { success in
-                    if success {
-                        print("✅ Video player configuration complete")
-                    } else {
-                        print("❌ Video player configuration failed")
-                    }
-                    continuation.resume(returning: success)
-                }
+        if !videoSyncService.isConfigured(for: eventId, userId: userId) {
+            print("🔄 [ImmersiveView] VideoSyncService not configured. Configuring now...")
+            guard await videoSyncService.configureSync(eventId: eventId, userId: userId, event: currentEvent) else {
+                await handleSyncFailure("Failed to configure video synchronization service.")
+                return
             }
         }
 
-        guard success else {
-            print("❌ Video configuration failed")
+        if videoSyncService.currentViewState != .immersive {
+            await videoSyncService.switchToView(.immersive)
+        }
+
+        // --- FIX #2 IS HERE ---
+        // Call the new async `configureVideo` and get the player back directly.
+        guard let player = await videoPlayerManager.configureVideo(for: screenEntity, videoURL: url) else {
+            await handleSyncFailure("Failed to prepare video for playback.")
             return
         }
-
-        // 4. Wait for player readiness
-        let maxAttempts = 50
-        var attempts = 0
-        while !videoPlayerManager.isPlaybackReady && attempts < maxAttempts {
-            try? await Task.sleep(for: .milliseconds(100))
-            attempts += 1
-        }
-
-        guard videoPlayerManager.isPlaybackReady else {
-            print("❌ Player readiness timeout")
-            return
-        }
-
-        // 5. Setup video end handler
+        
         setupVideoEndHandler()
+        await videoSyncService.startSync(with: player)
+        
+        if appModel.resumePlaybackAfterTransition {
+            print("▶️ [ImmersiveView] Resuming playback after returning from movie window (consuming intent).")
+            await videoSyncService.handlePlayPause(isPlaying: true)
+            appModel.resumePlaybackAfterTransition = false
+        }
     }
     
     // MARK: - Video End Handler
     private func setupVideoEndHandler() {
         videoSyncService.setupVideoEndHandler {
             Task { @MainActor in
-                // Get stats before cleanup
-                let stats = videoSyncService.getWatchStats()
-                
-                // Cleanup immersive space
-                await spaceManager.initiateCleanup()
-                
-                // Dismiss all windows
-                dismissWindow(id: "chatWindow")
-                dismissWindow(id: "emojiWindow")
-                dismissWindow(id: "movieWindow")
-                dismissWindow(id: "seatMap")
-                dismissWindow(id: "chatSettings")
-                dismissWindow(id: "navBar")
-                
-                // Show stats window
-                try? await Task.sleep(for: .milliseconds(100))
-                if !windowManager.isWindowOpen(.exitingWindow) {
-                    openWindow(id: "exitingWindow", value: stats)
-                    windowManager.windowOpened(.exitingWindow)
+                print("🎉 [ImmersiveView] Video end handler triggered by VideoSyncService.")
+                withAnimation { self.showEndScreen = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                    withAnimation { self.showEndScreen = false }
+                }
+                print("🧹 [ImmersiveView] Initiating cleanup and window dismissal after video end.")
+                await self.spaceManager.initiateCleanup()
+                self.dismissWindow(id: "chatWindow"); self.windowManager.windowClosed(.chat)
+                self.dismissWindow(id: "emojiWindow"); self.windowManager.windowClosed(.emoji)
+                self.dismissWindow(id: "seatMap"); self.windowManager.windowClosed(.seatMap)
+                self.dismissWindow(id: "chatSettings"); self.windowManager.windowClosed(.chatSettings)
+                self.dismissWindow(id: "navBar"); self.windowManager.windowClosed(.navBar)
+
+                let stats = await self.videoSyncService.getWatchStats()
+                try? await Task.sleep(for: .milliseconds(200))
+                if !self.windowManager.isWindowOpen(.exitingWindow) {
+                    self.openWindow(id: WindowType.exitingWindow.rawValue, value: stats)
+                    self.windowManager.windowOpened(.exitingWindow)
                 }
             }
         }
@@ -404,29 +379,34 @@ struct ImmersiveView: View {
     
     // MARK: - Seat Position Adjustment
     private func adjustViewerPosition(for selectedSeat: Entity) async {
-        guard let theatre = theatreEntityWrapper.entity else { return }
-        
+        guard let theatre = theatreEntityWrapper.entity else {
+            print("⚠️ [ImmersiveView] Cannot adjust viewer position: theatre entity is nil.")
+            return
+        }
+        print("🪑 [ImmersiveView] Adjusting viewer position for seat: \(selectedSeat.name)")
         await MainActor.run {
             let seatPos = selectedSeat.position(relativeTo: nil)
-            let viewerPos = SIMD3<Float>(seatPos.x, seatPos.y + Constants.viewerHeight, seatPos.z)
+            let viewerTargetWorldPos = SIMD3<Float>(seatPos.x, seatPos.y + Constants.viewerHeight, seatPos.z)
+            let shift = -viewerTargetWorldPos
+            let newTheatrePosition = theatre.position + shift
             
-            // We'll move the entire theatre so the seat lines up with the user
-            let shift = SIMD3<Float>(-viewerPos.x, -viewerPos.y, -viewerPos.z)
-            
+            print("🪑 [ImmersiveView] Current theatre pos: \(theatre.position), Seat world pos: \(seatPos), Viewer target world pos: \(viewerTargetWorldPos), Required shift: \(shift), New theatre pos: \(newTheatrePosition)")
+
             withAnimation(.smooth(duration: 0.8)) {
-                theatre.position += shift
+                theatre.position = newTheatrePosition
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                spatialAudioManager.updateSpeakerPositions(theatre)
+                print("🔊 [ImmersiveView] Updating speaker positions after seat adjustment.")
+                self.spatialAudioManager.updateSpeakerPositions(theatre)
             }
         }
     }
     
-    private func handleSyncFailure() {
-        print("❌ Video sync failed")
-        videoSyncService.handlePlayPause(isPlaying: false)
+    @MainActor
+    private func handleSyncFailure(_ message: String = "Video synchronization failed.") {
+        print("❌ [ImmersiveView] Sync Failure: \(message)")
+        accessDeniedMessage = message
         showAccessDeniedAlert = true
-        accessDeniedMessage = "This event is not currently available for viewing."
     }
     
     // MARK: - Helpers
@@ -440,15 +420,5 @@ struct ImmersiveView: View {
             }
         }
         return nil
-    }
-    
-    private func getUserId() -> String {
-        if let storedUserId = UserDefaults.standard.string(forKey: "userId") {
-            return storedUserId
-        } else {
-            let newUserId = UUID().uuidString
-            UserDefaults.standard.set(newUserId, forKey: "userId")
-            return newUserId
-        }
     }
 }

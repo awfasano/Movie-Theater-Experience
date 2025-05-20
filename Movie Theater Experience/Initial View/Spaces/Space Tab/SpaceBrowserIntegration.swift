@@ -1,10 +1,11 @@
 import SwiftUI
 import RealityKit
 import FirebaseFirestore
-import FirebaseFirestoreSwift
 
 struct SpaceBrowserIntegration: View {
     @EnvironmentObject private var selectedSpace: SelectedSpace
+    @Environment(AppModel.self) private var appModel
+
     @EnvironmentObject private var windowManager: WindowManager
     @Environment(\.openWindow) private var openWindow
     
@@ -47,7 +48,7 @@ struct SpaceBrowserIntegration: View {
                         ForEach(service.spaces) { space in
                             SpaceCard(space: space)
                                 .onTapGesture {
-                                    selectedSpace.space = space
+                                    appModel.selectedSpace = space
                                     openVolumetricView()
                                 }
                         }

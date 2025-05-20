@@ -2,7 +2,6 @@ import Foundation
 import SwiftUICore
 import RealityKit
 import FirebaseFirestore
-import FirebaseFirestoreSwift
 
 // The event model matching your Firebase structure
 struct CalendarEvent: Identifiable, Codable {
@@ -104,7 +103,7 @@ class CalendarService: ObservableObject {
                         print("eventdoc.data()")
                         var tempCal = try? eventDoc.data(as: CalendarEvent.self)
                         tempCal?.id = eventDoc.documentID
-                        print(tempCal)
+                        print(tempCal as Any)
                         return tempCal
                     }
                                         

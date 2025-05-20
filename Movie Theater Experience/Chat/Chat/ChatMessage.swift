@@ -1,6 +1,5 @@
-import Firebase
-import FirebaseFirestore
 import Combine
+import FirebaseFirestore
 
 
 struct ChatMessage: Identifiable, Equatable, Hashable {

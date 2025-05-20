@@ -1,8 +1,8 @@
 //
-//  Untitled.swift
+//  VideoPlayerManager.swift
 //  Movie Theater Experience
 //
-//  Created by Anthony Fasano on 1/28/25.
+//  Created by Anthony Fasano on [Original Date]
 //
 
 import SwiftUI
@@ -11,392 +11,261 @@ import RealityKitContent
 import AVFoundation
 import Combine
 
-@available(visionOS 2.0, *)
+@available(visionOS 1.0, *)
+@MainActor // Mark the whole class to run on the Main Actor by default
 class VideoPlayerManager: ObservableObject {
     // MARK: - Published Properties
     @Published var player: AVPlayer?
     @Published var isPlaybackReady: Bool = false
-    
+
     // MARK: - Private Properties
     private var presentationSizeCancellable: AnyCancellable?
     private var statusObserver: NSKeyValueObservation?
     private var rateObserver: NSKeyValueObservation?
-    private var screenEntity: ModelEntity?
     private var videoScreenEntity: ModelEntity?
+    private var parentScreenEntity: ModelEntity?
     private var spatialAudioManager: SpatialAudioManager?
     private var lightingManager: TheatreLightingManager?
     private let theatreEntityWrapper: TheatreEntityWrapper
-    private let videoSyncService: VideoSyncService
+    // Note: No videoSyncService property needed here anymore.
 
-    
-    
-    
     // MARK: - Initialization
-    init(videoSyncService: VideoSyncService = .shared, theatreEntityWrapper: TheatreEntityWrapper = .shared) {
-        self.videoSyncService = videoSyncService
+    init(theatreEntityWrapper: TheatreEntityWrapper = .shared) {
         self.theatreEntityWrapper = theatreEntityWrapper
         print("🎬 VideoPlayerManager initialized")
     }
-    
+
     // MARK: - Public Methods
     func setLightingManager(_ manager: TheatreLightingManager) {
         self.lightingManager = manager
-        print("Lighting manager set")
+        print("💡 Lighting manager set")
     }
-    
+
     func setSpatialAudioManager(_ manager: SpatialAudioManager) {
         self.spatialAudioManager = manager
-        print("Spatial audio manager set")
+        print("🔊 Spatial audio manager set")
     }
     
-    func setScreenVisibility(screenEntity: ModelEntity?, visible: Bool) async {
-        guard let screenEntity = screenEntity else { return }
+    // This is a new, simplified configuration method.
+    // It returns the created player to the caller (ImmersiveView),
+    // giving it control over when to start the sync.
+    // In VideoPlayerManager.swift
 
-        await MainActor.run {
-            if !visible {
-                print("⬛ Replacing video material with black before hiding the screen")
-                let blackMaterial = UnlitMaterial(color: .black)
-                screenEntity.model?.materials = [blackMaterial]  // Apply black material when hiding
-            }
-            
-            screenEntity.isEnabled = visible  // Hide or show screen
-            print(visible ? "🎬 Immersive screen **VISIBLE**" : "⬛ Immersive screen **HIDDEN**")
+    // This is the new, safer version of your configureVideo function.
+    func configureVideo(for placeholderScreenEntity: ModelEntity, videoURL: URL) async -> AVPlayer? {
+        print("=== VideoPlayerManager: Visual Configuration Start ===")
+        print("Configuring with URL: \(videoURL)")
+
+        // --- THIS LINE WAS REMOVED ---
+        // clearAllResources() // Do NOT clear everything at the start of configuration.
+
+        // If the player exists and is for the same URL, we might not need to do anything.
+        // For simplicity now, we'll still create a new player but avoid the destructive full cleanup.
+        // Invalidate old observers before creating new ones.
+        statusObserver?.invalidate()
+        rateObserver?.invalidate()
+        presentationSizeCancellable?.cancel()
+        
+        self.parentScreenEntity = placeholderScreenEntity
+
+        let playerItem = AVPlayerItem(url: videoURL)
+        
+        // Pre-load asset properties
+        do {
+            _ = try await playerItem.asset.load(.duration, .tracks)
+        } catch {
+            print("❌ Error pre-loading asset properties: \(error)")
+            return nil
+        }
+
+        let newPlayer = AVPlayer(playerItem: playerItem)
+        self.player = newPlayer
+        
+        setupPlayerObservation(newPlayer)
+        setupRateObservation(newPlayer)
+        setupEndOfVideoObservation(playerItem)
+        spatialAudioManager?.configureAudioForVideo(player: newPlayer)
+
+        let presentationSuccess = await setupVideoPresentation(for: playerItem, on: placeholderScreenEntity)
+        
+        if presentationSuccess {
+            print("✅ VideoPlayerManager visual configuration complete. Ready for sync.")
+            return newPlayer
+        } else {
+            print("❌ Video presentation setup failed.")
+            clearAllResources() // Clear resources if setup fails.
+            return nil
         }
     }
 
-
-    
-    private func setupVideoPresentation(for playerItem: AVPlayerItem, on screenEntity: ModelEntity) async -> Bool {
+    // MARK: - Private: RealityKit Setup
+    private func setupVideoPresentation(for playerItem: AVPlayerItem, on placeholderScreenEntity: ModelEntity) async -> Bool {
         return await withCheckedContinuation { continuation in
-            print("Starting video presentation configuration")
-            
-            var hasCompletedSetup = false
-            
+            print("📐 Starting video presentation configuration")
+            presentationSizeCancellable?.cancel()
+
             presentationSizeCancellable = playerItem.publisher(for: \.presentationSize)
+                .filter { $0.width > 0 && $0.height > 0 }
+                .first()
                 .receive(on: DispatchQueue.main)
-                .removeDuplicates()
-                .sink { [weak self] size in
-                    print("Received presentation size: \(size)")
-                    
-                    guard let self = self else {
-                        if !hasCompletedSetup {
-                            hasCompletedSetup = true
+                .sink(
+                    receiveCompletion: { completion in
+                        if case .failure(let error) = completion {
+                            print("❌ Error receiving presentation size: \(error)")
                             continuation.resume(returning: false)
                         }
-                        return
-                    }
-                    
-                    guard size.width > 0, size.height > 0 else {
-                        if size.width == 0 && size.height == 0 {
-                            // Skip invalid size
+                    },
+                    receiveValue: { [weak self] size in
+                        guard let self = self else {
+                            continuation.resume(returning: false)
                             return
                         }
-                        if !hasCompletedSetup {
-                            hasCompletedSetup = true
-                            continuation.resume(returning: false)
-                        }
-                        return
+                        self.createVideoScreen(on: placeholderScreenEntity, aspectRatio: Float(size.width / size.height))
+                        continuation.resume(returning: true)
                     }
-                    
-                    let aspectRatio = Float(size.width / size.height)
-                    Task { @MainActor in
-                        self.createVideoScreen(on: screenEntity, aspectRatio: aspectRatio)
-                        if !hasCompletedSetup {
-                            hasCompletedSetup = true
-                            continuation.resume(returning: true)
-                        }
-                    }
-                }
+                )
+        }
+    }
+    
+    // In VideoPlayerManager.swift
+
+    private func createVideoScreen(on originalEntity: ModelEntity, aspectRatio: Float) {
+        guard let currentPlayer = self.player else { return }
+
+        // --- START OF FIX ---
+
+        // 1. Capture the parent entity immediately. This is the crucial change.
+        // We must get a reference to the parent *before* we risk removing the originalEntity from it.
+        guard let parent = originalEntity.parent else {
+            print("❌ Cannot create video screen: The original entity has no parent in the scene graph.")
+            return
+        }
+
+        // 2. Now that we have a safe reference to the parent, we can clean up the previous screen.
+        if let existingScreen = self.videoScreenEntity {
+            existingScreen.removeFromParent()
+        }
+        
+        // --- END OF FIX ---
+
+        // The rest of your function logic is correct.
+        let originalBounds = originalEntity.model?.mesh.bounds ?? .init()
+        let screenHeight = originalBounds.extents.y
+        let screenWidth = screenHeight * aspectRatio
+        let screenMesh = MeshResource.generatePlane(width: screenWidth, height: screenHeight)
+        let videoMaterial = VideoMaterial(avPlayer: currentPlayer)
+        let newScreen = ModelEntity(mesh: screenMesh, materials: [videoMaterial])
+
+        newScreen.position = originalEntity.position
+        newScreen.orientation = originalEntity.orientation
+
+        // 3. Use the safely captured 'parent' to add the new screen to the scene.
+        parent.addChild(newScreen)
+        
+        // 4. Hide the placeholder entity that was passed in.
+        originalEntity.isEnabled = false
+
+        // 5. Update the internal and shared references to point to the newly created screen.
+        self.videoScreenEntity = newScreen
+        theatreEntityWrapper.screenEntity = newScreen
+        print("✅ Video screen created and added to scene.")
+    }
+
+    // MARK: - Private: Player Observations
+
+    private func setupPlayerObservation(_ player: AVPlayer) {
+        statusObserver?.invalidate()
+        statusObserver = player.observe(\.status, options: [.new]) { [weak self] _, _ in
+            Task { @MainActor [weak self] in
+                self?.isPlaybackReady = (self?.player?.status == .readyToPlay)
+            }
         }
     }
 
-    
-    
-    func configureVideo(for screenEntity: ModelEntity, videoURL: URL, completion: @escaping (Bool) -> Void) {
-        print("=== Video Configuration Start ===")
-        print("Configuring video with URL: \(videoURL)")
-        
-        clearAllResources()
-        self.screenEntity = screenEntity
-        
-        let playerItem = AVPlayerItem(url: videoURL)
-        let player = AVPlayer(playerItem: playerItem)
-        
-        // Configure asset for loading
-        let asset = playerItem.asset
-        Task {
-            do {
-                // Load duration and tracks first
-                let duration = try await asset.load(.duration)
-                let tracks = try await asset.load(.tracks)
-                
-                guard duration != .zero, !tracks.isEmpty else {
-                    print("❌ Invalid asset loaded")
-                    completion(false)
-                    return
-                }
-                
-                await MainActor.run {
-                    // Now configure the player after asset is loaded
-                    self.player = player
-                    
-                    // Configure observations after player is set
-                    setupPlayerObservation(player)
-                    setupRateObservation(player)
-                    
-                    // Configure audio after player is ready
-                    spatialAudioManager?.configureAudioForVideo(player: player)
-                    
-                    // Setup end of video notification
-                    setupEndOfVideoObservation(playerItem)
-                    
-                    // Configure video presentation with completion
-                    Task {
-                        let presentationSuccess = await setupVideoPresentation(for: playerItem, on: screenEntity)
-                        
-                        if presentationSuccess {
-                            // Let VideoSyncService handle playback control
-                            videoSyncService.startSync(with: player)
-                            
-                            // Seek to current sync time
-                            let currentTime = videoSyncService.currentTime
-                            await player.seek(to: CMTime(seconds: currentTime, preferredTimescale: 1000))
-                            
-                            // Match current play state
-                            if videoSyncService.isPlaying {
-                                player.play()
-                            }
-                            
-                            print("✅ Initial video configuration complete")
-                            completion(true)
-                        } else {
-                            print("❌ Video presentation setup failed")
-                            completion(false)
-                        }
-                    }
-                }
-            } catch {
-                print("❌ Error configuring video: \(error)")
-                completion(false)
+    // --- FIX #1: The Rate Change Handler is now safe ---
+    private func setupRateObservation(_ player: AVPlayer) {
+        rateObserver?.invalidate()
+        rateObserver = player.observe(\.rate, options: [.new]) { [weak self] observedPlayer, _ in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                let isPlaying = (observedPlayer.rate != 0)
+                print("⏯️ Player rate changed. Is playing: \(isPlaying)")
+                // The only job of this observer is to update local visuals.
+                await self.handleRateChange(isPlaying)
             }
         }
     }
     
+    // --- FIX #2: The handleRateChange function NO LONGER calls the sync service ---
+    private func handleRateChange(_ isPlaying: Bool) async {
+        if isPlaying {
+            await lightingManager?.startMovieLightingEffect()
+        } else {
+            await lightingManager?.stopMovieLightingEffect()
+        }
+        // The line that called videoSyncService.handlePlayPause has been DELETED.
+    }
+    
+    private func setupEndOfVideoObservation(_ playerItem: AVPlayerItem) {
+        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
+        NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: playerItem, queue: .main) { [weak self] _ in
+            Task { await self?.handleVideoEnd() }
+        }
+    }
+
+    // MARK: - Private: Video End and Cleanup
+    private func handleVideoEnd() async {
+        await lightingManager?.stopMovieLightingEffect()
+        replaceVideoScreenMaterialWithBlack()
+        await VideoSyncService.shared.handleVideoEnd()
+    }
+
+    func replaceVideoScreenMaterialWithBlack() {
+        guard let videoScreen = self.videoScreenEntity else { return }
+        videoScreen.model?.materials = [UnlitMaterial(color: .black)]
+    }
+
     func clearAllResources(keepPlayer: Bool = false) {
         print("🧹 Clearing video resources (keepPlayer: \(keepPlayer))")
 
         Task { await lightingManager?.stopMovieLightingEffect() }
 
-        // Remove observers
         statusObserver?.invalidate()
         rateObserver?.invalidate()
-        statusObserver = nil
-        rateObserver = nil
         presentationSizeCancellable?.cancel()
-        presentationSizeCancellable = nil
+        NotificationCenter.default.removeObserver(self)
 
-        // If we should clear the player completely, remove it
-        if !keepPlayer {
-            player = nil
-        }
-
-        // Remove the video screen entity if it exists
         if let videoScreen = videoScreenEntity {
             videoScreen.removeFromParent()
-            videoScreenEntity = nil
+            self.videoScreenEntity = nil
+            theatreEntityWrapper.screenEntity = nil
         }
+        if let placeholder = parentScreenEntity {
+            placeholder.isEnabled = true
+        }
+        parentScreenEntity = nil
 
-        print("✅ Video resources cleared")
-    }
-
-    
-    // MARK: - Private: Player Observations
-    
-    private func setupPlayerObservation(_ player: AVPlayer) {
-        statusObserver = player.observe(\.status, options: [.new]) { [weak self] player, _ in
-            print("Player status changed: \(player.status.rawValue)")
-            
-            // Jump onto main actor for RealityKit & SwiftUI
-            Task { @MainActor [weak self] in
-                guard let self = self else { return }
-                switch player.status {
-                case .readyToPlay:
-                    print("Player is ready to play")
-                    self.isPlaybackReady = true
-                    await self.handlePlaybackReady()
-                case .failed:
-                    print("Player failed: \(String(describing: player.error))")
-                    self.isPlaybackReady = false
-                case .unknown:
-                    print("Player status unknown")
-                    self.isPlaybackReady = false
-                @unknown default:
-                    break
-                }
-            }
+        if !keepPlayer {
+            player?.pause()
+            player = nil
+            isPlaybackReady = false
         }
     }
-    
-    // *** FIX ***: Use a Task { @MainActor in ... } block
-    private func setupRateObservation(_ player: AVPlayer) {
-        rateObserver = player.observe(\.rate, options: [.new]) { [weak self] player, _ in
-            guard let self = self else { return }
-            
-            Task { @MainActor [weak self] in
-                guard let self = self else { return }
-                
-                let isPlaying = (player.rate != 0)
-                await self.handleRateChange(isPlaying) // call the new async MainActor function
-            }
-        }
-    }
-    
-    // MARK: - Private: Player State Changes
-    
-    // *** FIX ***: Mark as @MainActor + async so we can await lighting safely
-    @MainActor
-    private func handleRateChange(_ isPlaying: Bool) async {
-        if isPlaying {
-            await lightingManager?.startMovieLightingEffect()
-            restoreVideoMaterial()  // safe on main actor
-        } else {
-            await lightingManager?.stopMovieLightingEffect()
-            replaceVideoScreenMaterialWithBlack() // safe on main actor
-        }
-    }
-    
-    // *** FIX ***: Also mark as @MainActor + async if you are awaiting
-    @MainActor
-    private func handlePlaybackReady() async {
-        if let player = player, player.rate != 0 {
-            await lightingManager?.startMovieLightingEffect()
-        }
-    }
-    
-    private func setupEndOfVideoObservation(_ playerItem: AVPlayerItem) {
-        NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: playerItem,
-            queue: .main
-        ) { [weak self] _ in
-            print("Video playback ended")
-            self?.handleVideoEnd()
-        }
-    }
-    
-    // MARK: - Private: RealityKit Setup
-    
-    private func configureVideoPresentation(for playerItem: AVPlayerItem, on screenEntity: ModelEntity) {
-        print("Starting video presentation configuration")
-        
-        // Cancel any existing subscription
-        presentationSizeCancellable?.cancel()
-        
-        presentationSizeCancellable = playerItem.publisher(for: \.presentationSize)
-            .receive(on: DispatchQueue.main)
-            .removeDuplicates() // Add this to prevent duplicate processing
-            .sink { [weak self] size in
-                print("Received presentation size: \(size)")
-                
-                guard let self = self,
-                      size.width > 0,
-                      size.height > 0 else {
-                    print("Invalid presentation size or self reference")
-                    return
-                }
-                
-                let aspectRatio = Float(size.width / size.height)
-                print("Creating video screen with aspect ratio: \(aspectRatio)")
-                
-                // Remove existing screen first
-                if let existingScreen = self.videoScreenEntity {
-                    print("🧹 Removing existing video screen")
-                    existingScreen.removeFromParent()
-                    self.videoScreenEntity = nil
-                }
-                
-                self.createVideoScreen(on: screenEntity, aspectRatio: aspectRatio)
-            }
-    }
-    
-    private func createVideoScreen(on originalEntity: ModelEntity, aspectRatio: Float) {
-        print("Creating video screen")
-
-        guard let currentPlayer = self.player else {
-            print("Error: No player available for video material")
-            return
-        }
-
-        Task { @MainActor in
-            let originalBounds = originalEntity.model?.mesh.bounds ?? RealityKit.BoundingBox()
-            let screenHeight = originalBounds.extents.y
-            let screenWidth = screenHeight * aspectRatio
-
-            let screenMesh = MeshResource.generatePlane(
-                width: screenWidth,
-                height: screenHeight
-            )
-
-            let videoMaterial = VideoMaterial(avPlayer: currentPlayer)
-            let newScreen = ModelEntity(mesh: screenMesh, materials: [videoMaterial])
-
-            newScreen.position = originalBounds.center
-            newScreen.orientation = originalEntity.orientation
-
-            originalEntity.parent?.addChild(newScreen)
-
-            // Store reference for easy visibility toggling
-            theatreEntityWrapper.screenEntity = newScreen
-            self.videoScreenEntity = newScreen
-
-            print("✅ Video screen created and added to scene")
-        }
-    }
-
-    
-    // MARK: - Private: Video End
-    
-    private func handleVideoEnd() {
-        Task {
-            // This might also need the main actor if it calls RealityKit
-            await lightingManager?.stopMovieLightingEffect()
-            await replaceVideoScreenMaterialWithBlack()
-        }
-        videoSyncService.handleVideoEnd()
-    }
-    
-    // MARK: - Material Management
-    
-    // *** FIX ***: Because we call it from handleRateChange (which is now @MainActor),
-    // these can be plain (no concurrency). But you can also mark them @MainActor to be explicit.
-    @MainActor
-    func replaceVideoScreenMaterialWithBlack() {
-        guard let videoScreenEntity = videoScreenEntity else { return }
-        print("⬛ Replacing video material with black")
-        let blackMaterial = UnlitMaterial(color: .black)
-        videoScreenEntity.model?.materials = [blackMaterial]
-    }
-    
-    @MainActor
-    func restoreVideoMaterial() {
-        print("🎬 Attempting to restore video material")
-        guard let videoScreenEntity = videoScreenEntity,
-              let player = player else {
-            print("❌ Cannot restore video material - missing entity or player")
-            return
-        }
-        print("🎬 Creating new video material")
-        let videoMaterial = VideoMaterial(avPlayer: player)
-        print("🎬 Applying video material to screen")
-        videoScreenEntity.model?.materials = [videoMaterial]
-        print("✅ Video material restored")
-    }
-    
-    // MARK: - Deinitialization
     
     deinit {
-        print("VideoPlayerManager deinitializing")
-        clearAllResources()
-        NotificationCenter.default.removeObserver(self)
+        print("🗑️ VideoPlayerManager deinitializing. Primary cleanup should occur in ImmersiveView.handleCleanup().")
+
+        // Perform minimal, thread-safe observer invalidation as a final safeguard.
+        // These operations are generally safe to call from any thread.
+        statusObserver?.invalidate()
+        rateObserver?.invalidate()
+        presentationSizeCancellable?.cancel()
+        NotificationCenter.default.removeObserver(self) // This is thread-safe
+
+        // IMPORTANT: Do NOT call methods here that require the MainActor,
+        // such as UI updates, RealityKit operations, or methods that modify
+        // @Published properties without explicit MainActor dispatch (which isn't safe in deinit).
+        // The main call to clearAllResources() is handled by the owning view (ImmersiveView).
+        print("🗑️ VideoPlayerManager deinit: Basic observer invalidation complete as safeguard.")
     }
 }

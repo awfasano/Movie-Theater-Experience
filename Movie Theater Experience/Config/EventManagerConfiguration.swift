@@ -7,6 +7,7 @@
 
 import Foundation
 import Firebase
+import FirebaseFirestoreInternalWrapper
 
 struct EventManagerConfiguration {
     /// The root collection for this event manager.

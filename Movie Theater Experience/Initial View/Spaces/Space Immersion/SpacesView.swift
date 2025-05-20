@@ -1,5 +1,6 @@
 import SwiftUI
 import RealityKit
+import RealityKitContent
 import Combine
 
 struct SpacesView: View {
@@ -9,34 +10,114 @@ struct SpacesView: View {
     @Environment(AppModel.self) private var appModel
     @Environment(\.openWindow) private var openWindow
     @Environment(\.realityKitScene) private var realityKitScene
+    //@EnvironmentObject var audioLoader: SpatialAudioLoader
     
     // State
     @State private var selectedSpace: SpaceData?
     @State private var isLoading = false
     @State private var errorMessage: String?
-    @State private var showDebugInfo = true
-    @State private var realityViewUpdateCounter = 0
+    @State private var lastSpaceID: Entity.ID? = nil   // memo
 
+
+    
     // Anchor for placing content in the scene
     @State private var anchorEntity = AnchorEntity()
-
-    // Combine subscriptions
-    @State private var cancellables = Set<AnyCancellable>()
-
+    
     // Notification State
     @State private var notificationSentForEntityID: Entity.ID? = nil
     @State private var notificationPostTask: Task<Void, Never>? = nil
     
-    // Debug logs
-    @State private var notificationLogs: [String] = []
-    
-    // Root entity reference - track the actual Root entity once found
+    // Root entity reference
     @State private var rootEntity: Entity? = nil
+    
+    // Volume control visibility
+    @State private var showVolumeControl = false
+    
+    // Combine subscriptions
+    @State private var cancellables = Set<AnyCancellable>()
+    
+    
+    private let audioLoader: SpatialAudioLoader
+
+    /// Designated init; `audioLoader` is required.
+    init(audioLoader: SpatialAudioLoader) {
+        self.audioLoader = audioLoader
+    }
     
     // MARK: - Body
     var body: some View {
+        // Split the body into smaller view components
         ZStack {
-            // Loading and error overlay UI
+            // Main RealityView component
+            mainRealityView
+            
+            // Loading and error overlays
+            overlayViews
+            
+            // Volume control overlay
+            if showVolumeControl, let space = selectedSpace {
+                VolumeControlView(
+                    audioLoader: audioLoader,
+                    spaceEntity: entityWrapper.getSpaceEntity() ?? anchorEntity,
+                    spaceMeta: space
+                )
+                .padding(.bottom, 40)
+            }
+            
+            // Volume control toggle button
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        showVolumeControl.toggle()
+                    }) {
+                        Image(systemName: showVolumeControl ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                            .font(.title)
+                            .padding()
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
+                    }
+                    .padding(.trailing, 30)
+                    .padding(.bottom, 30)
+                }
+            }
+        }
+        .onAppear {
+            print("📱 SpacesView appeared")
+            initializeSpace()
+        }
+        .onChange(of: entityWrapper.getSpaceEntity()?.id) { oldId, newId in
+            handleEntityIdChangeForNotification(oldId: oldId, newId: newId)
+        }
+        .onChange(of: appModel.selectedSpace?.currentSeat) { oldSeat, newSeat in
+            handleSeatChange(oldSeat: oldSeat, newSeat: newSeat)
+        }
+        .onDisappear {
+            cleanupView()
+        }
+    }
+    
+    // MARK: - View Components
+    private var mainRealityView: some View {
+        RealityView { content in
+            content.add(anchorEntity)
+        } update: { _ in
+            // lightweight – runs every frame
+            if let e = entityWrapper.getSpaceEntity(),
+               e.id != lastSpaceID                       // NEW space?
+            {
+                Task { @MainActor in
+                    ensureEntityIsParented(e)            // run on main actor, outside the frame
+                }
+            }
+        }
+        .ignoresSafeArea()
+    }
+
+    
+    private var overlayViews: some View {
+        Group {
             if isLoading && notificationSentForEntityID == nil {
                 ProgressView("Loading space...")
                     .padding()
@@ -47,218 +128,118 @@ struct SpacesView: View {
                     .padding()
                     .background(.thinMaterial, in: .rect(cornerRadius: 10))
             }
-
-            // The core RealityKit view
-            RealityView { content in
-                // Initial setup: Add the anchor to the RealityView's scene content
-                print("➡️ RealityView make: Adding anchor entity")
-                content.add(anchorEntity)
-            } update: { content in
-                print("➡️ RealityView update: triggered (Counter: \(realityViewUpdateCounter))")
-                
-                // Ensure the correct entity is visually present
-                let currentEntityInWrapper = entityWrapper.getSpaceEntity()
-                let currentEntityID = currentEntityInWrapper?.id
-                let anchorHasCorrectChild = anchorEntity.children.contains { $0.id == currentEntityID }
-                let anchorShouldBeEmpty = currentEntityInWrapper == nil && !anchorEntity.children.isEmpty
-                
-                print("   - Update Check: Entity ID = \(currentEntityID?.description ?? "nil"), Anchor Has Correct Child = \(anchorHasCorrectChild), Anchor Should Be Empty = \(anchorShouldBeEmpty)")
-                
-                if let entity = currentEntityInWrapper, !anchorHasCorrectChild {
-                    print("   - Update Action: Entity '\(entity.name)' found but not child. Adding/Replacing in anchor.")
-                    
-                    guard let space = getSpaceForScene(for: entity.id) else {
-                        print("      - Error: Could not get SpaceData for entity '\(entity.name)' in update. Cannot position.")
-                        if !anchorEntity.children.isEmpty { anchorEntity.children.removeAll() }
-                        return
-                    }
-                    
-                    if !anchorEntity.children.isEmpty {
-                        print("      - Clearing existing anchor children.")
-                        anchorEntity.children.removeAll()
-                    }
-                    
-                    // IMPORTANT - Extract the root child directly rather than searching for it by name
-                    // This approach avoids name-based search which isn't working based on your logs
-                    let rootCandidate = entity.children.first { $0.name == "Root" }
-                    if let foundRoot = rootCandidate {
-                        Task { @MainActor in
-                            print("🔍 DEBUG: Found Root entity at top level (ID: \(foundRoot.id))")
-                            addLog("🔍 Found Root entity at top level (ID: \(foundRoot.id))")
-                            self.rootEntity = foundRoot
-                        }
-                    } else {
-                        // Fallback to deeper search
-                        if let foundRoot = findEntityDeep(named: "Root", in: entity) {
-                            Task { @MainActor in
-                                print("🔍 DEBUG: Found Root entity deeper in hierarchy (ID: \(foundRoot.id))")
-                                addLog("🔍 Found Root entity deeper in hierarchy (ID: \(foundRoot.id))")
-                                self.rootEntity = foundRoot
-                            }
-                        } else {
-                            Task { @MainActor in
-                                print("⚠️ DEBUG: Could NOT find Root entity in hierarchy")
-                                addLog("⚠️ Could NOT find Root entity in hierarchy")
-                                self.rootEntity = nil
-                                
-                                // Try forcing a fixed name of "root" (lowercase) as some exporters change the case
-                                if let altRoot = findEntityDeep(named: "root", in: entity) {
-                                    print("🔍 DEBUG: Found lowercase 'root' entity instead (ID: \(altRoot.id))")
-                                    addLog("🔍 Found lowercase 'root' entity instead")
-                                    self.rootEntity = altRoot
-                                }
-                            }
-                        }
-                    }
-                    
-                    entity.isEnabled = true
-                    enableAllEntities(in: entity)
-                    let adjustment = SIMD3<Float>(
-                        Float(space.viewerXAdjustment),
-                        Float(space.viewerYAdjustment),
-                        Float(space.viewerZAdjustment)
-                    )
-                    entity.position = adjustment
-                    entity.orientation = simd_quatf(angle: 0, axis: [0, 1, 0])
-                    print("      - Configured entity '\(entity.name)' position: \(adjustment)")
-                    
-                    anchorEntity.addChild(entity)
-                    print("      - Added entity '\(entity.name)' (ID: \(entity.id)) to anchor.")
-                    
-                    // IMPORTANT: Dump the entire hierarchy to help debug
-                    Task { @MainActor in
-                        print("📊 ENTITY HIERARCHY DUMP:")
-                        dumpEntity(entity, level: 0)
-                        
-                        // Get list of all entity names
-                        let names = collectEntityNames(entity)
-                        addLog("📋 Entity names: \(names.prefix(10).joined(separator: ", "))\(names.count > 10 ? "..." : "")")
-                    }
-                } else if anchorShouldBeEmpty {
-                    print("   - Update Action: No entity in wrapper, but anchor not empty. Clearing anchor children.")
-                    anchorEntity.children.removeAll()
-                    Task { @MainActor in
-                        self.rootEntity = nil
-                    }
-                }
-            }
-            .id(realityViewUpdateCounter)
-            .ignoresSafeArea()
-
-            // Debug overlay UI
-            if showDebugInfo {
-                debugOverlay
-            }
-        }
-        .onAppear {
-            print("📱 SpacesView appeared")
-            initializeSpace()
-        }
-        .onChange(of: entityWrapper.getSpaceEntity()?.id) { oldId, newId in
-            handleEntityIdChangeForNotification(oldId: oldId, newId: newId)
-        }
-        .onDisappear {
-            print("📱 SpacesView disappeared")
-            cancellables.forEach { $0.cancel() }
-            cancellables.removeAll()
-            notificationPostTask?.cancel()
-            notificationPostTask = nil
-            Task {
-                await entityWrapper.cleanup()
-                print("   - Wrapper cleanup called.")
-            }
-            notificationSentForEntityID = nil
-            selectedSpace = nil
-            rootEntity = nil
-            anchorEntity.children.removeAll()
-            print("   - Cleaned up view state.")
         }
     }
     
-    // MARK: - Logging and Debug Helpers
+    // MARK: - Core Functionality
     
-    private func addLog(_ message: String) {
-        if notificationLogs.count > 50 {
-            notificationLogs.removeFirst(10)
-        }
-        notificationLogs.append(message)
-    }
-    
-    private func dumpEntity(_ entity: Entity, level: Int) {
-        let indent = String(repeating: "  ", count: level)
-        print("\(indent)- \(entity.name) (ID: \(entity.id), Children: \(entity.children.count))")
-        
-        for child in entity.children {
-            dumpEntity(child, level: level + 1)
-        }
-    }
-    
-    private func collectEntityNames(_ entity: Entity) -> [String] {
-        var names = [entity.name]
-        
-        for child in entity.children {
-            names.append(contentsOf: collectEntityNames(child))
-        }
-        
-        return names
-    }
-    
-    // MARK: - Initialization and Loading
-    
-    private func initializeSpace() {
-        print("🔄 Initializing Space...")
-        notificationSentForEntityID = nil
+    // Missing method that was causing the compilation error
+    private func handleEntityIdChangeForNotification(oldId: Entity.ID?, newId: Entity.ID?) {
         notificationPostTask?.cancel()
         notificationPostTask = nil
+        
+        // Update UI to reflect changes
+        
+        guard let currentNewId = newId, oldId != currentNewId else {
+            Task { @MainActor in self.notificationSentForEntityID = nil }
+            return
+        }
+        
+        // Schedule notification task
+        Task { @MainActor in
+            self.notificationSentForEntityID = nil
+            
+            self.notificationPostTask = Task {
+                await postNotification(for: currentNewId)
+            }
+        }
+    }
+    
+    private func initializeSpace() {
+        // Reset notification state
+        notificationSentForEntityID = nil
+        notificationPostTask?.cancel()
+        
+        // Reset view state
         isLoading = false
         errorMessage = nil
         rootEntity = nil
-        notificationLogs.removeAll()
-        addLog("🔄 Space initialization started")
         
-        if let currentSelectedSpace = appModel.selectedSpace,
-           let entity = entityWrapper.getSpaceEntity(),
-           entity.name == currentSelectedSpace.spaceName {
-            print("✅ Found entity '\(entity.name)' matching selected space '\(currentSelectedSpace.spaceName)'.")
-            selectedSpace = currentSelectedSpace
-            handleEntityIdChangeForNotification(oldId: nil, newId: entity.id)
-            realityViewUpdateCounter += 1
+        // Stop any existing audio
+        audioLoader.stopAllAudio()
+
+        // --- Join Space ---
+        // Join the space as soon as the view is initialized
+        if let spaceId = appModel.selectedSpace?.id {
+            Task {
+                let success = await spaceService.joinSpace(spaceId)
+                if success {
+                    print("✅ Successfully joined space: \(spaceId)")
+                } else {
+                    print("⚠️ Failed to join space: \(spaceId)")
+                }
+            }
+        }
+        // --- End Join Space ---
+
+        // Ensure the current seat is always set to "seat_1" for a new space
+        if let currentSpace = appModel.selectedSpace {
+            if currentSpace.currentSeat == nil || currentSpace.currentSeat!.isEmpty {
+                appModel.updateSelectedSpaceSeat(to: "seat_1")
+            }
+        }
+
+        if let currentSpace = appModel.selectedSpace,
+           let entity       = entityWrapper.getSpaceEntity(),
+           entity.name == currentSpace.spaceName {
+
+            selectedSpace = currentSpace
             openWindowsIfNeeded()
-            addLog("✅ Reusing existing entity for space: \(currentSelectedSpace.spaceName)")
-        } else {
-            print("ℹ️ No existing entity matching current state (\(appModel.selectedSpace?.spaceName ?? "None selected")), starting load process.")
-            addLog("ℹ️ Starting new space load process")
+
+            // 🚀
+            Task { @MainActor in
+                ensureEntityIsParented(entity)
+                applyViewerOffset(for: entity)
+                await audioLoader.loadAudioForSpace(rootEntity: entity)
+            }
+            
+            return // important: skip the call to loadSpace()
+        }
+        
+        else {
             loadSpace()
         }
     }
     
     private func loadSpace() {
-        print("🔄 Starting loadSpace...")
-        notificationSentForEntityID = nil
-        isLoading = true
-        errorMessage = nil
-        notificationPostTask?.cancel()
-        notificationPostTask = nil
-        rootEntity = nil
-        
-        entityWrapper.setSpaceEntity(nil)
-        entityWrapper.setActiveSceneEntity(nil)
-        anchorEntity.children.removeAll()
-        realityViewUpdateCounter += 1
-        openWindowsIfNeeded()
+        resetViewState()
         
         let spaceToLoad = appModel.selectedSpace ?? spaceService.spaces.first
         self.selectedSpace = spaceToLoad
         
         if let space = spaceToLoad {
-            print("   - Attempting to load space: \(space.spaceName)")
-            addLog("🔄 Loading space: \(space.spaceName)")
+            // Load selected space
             loadSpaceEntity(for: space)
         } else {
-            print("   - No space available locally, fetching from service...")
-            addLog("🔄 Fetching spaces from service")
+            // Fetch spaces from service
             fetchSpacesAndLoadFirst()
         }
+    }
+    
+    private func resetViewState() {
+        notificationSentForEntityID = nil
+        isLoading = true
+        errorMessage = nil
+        notificationPostTask?.cancel()
+        rootEntity = nil
+        
+        // Stop all audio
+        audioLoader.stopAllAudio()
+
+        entityWrapper.setSpaceEntity(nil)
+        entityWrapper.setActiveSceneEntity(nil)
+        anchorEntity.children.removeAll()
+        openWindowsIfNeeded()
     }
     
     private func fetchSpacesAndLoadFirst() {
@@ -267,326 +248,298 @@ struct SpacesView: View {
             .dropFirst()
             .first(where: { !$0.isEmpty })
             .sink { fetchedSpaces in
-                print("   - Spaces fetched via Combine, count: \(fetchedSpaces.count)")
-                self.addLog("📥 Fetched \(fetchedSpaces.count) spaces")
-                
-                guard let firstFetchedSpace = fetchedSpaces.first else {
+                guard let firstSpace = fetchedSpaces.first else {
                     Task { @MainActor in
-                        self.addLog("❌ No spaces found")
-                        self.handleLoadError("Failed to load space data (empty list fetched).")
+                        self.handleLoadError("Failed to load space data (empty list).")
                     }
                     return
                 }
+                
                 if self.selectedSpace == nil {
-                    self.selectedSpace = firstFetchedSpace
-                    print("   - Using first fetched space: \(firstFetchedSpace.spaceName)")
-                    self.addLog("🔄 Using first fetched space: \(firstFetchedSpace.spaceName)")
-                    self.loadSpaceEntity(for: firstFetchedSpace)
-                } else {
-                    print("   - A space (\(self.selectedSpace?.spaceName ?? "unknown")) was selected while fetch completed. Load assumed handled.")
-                    self.addLog("ℹ️ Using already selected space: \(self.selectedSpace?.spaceName ?? "unknown")")
+                    self.selectedSpace = firstSpace
+                    self.loadSpaceEntity(for: firstSpace)
                 }
             }
             .store(in: &cancellables)
-     }
+    }
+    
+    /// Adds `entity` to `anchorEntity` if it isn’t there yet.
+    @MainActor
+    private func ensureEntityIsParented(_ entity: Entity) {
+        let hasEntity = anchorEntity.children.contains(where: { $0.id == entity.id })
+        guard !hasEntity else { return }              // ← nothing to do
+
+        anchorEntity.children.removeAll()             // remove *other* models, not this one
+        anchorEntity.addChild(entity)
+    }
+
+    
+    private func debugPrintAllTransforms(of entity: Entity, level: Int = 0) {
+        let indent = String(repeating: "  ", count: level)
+        let q = entity.orientation.vector
+        print("\(indent)\(entity.name): orientation = \(q), position = \(entity.position)")
+        for child in entity.children {
+            debugPrintAllTransforms(of: child, level: level+1)
+        }
+    }
     
     private func loadSpaceEntity(for space: SpaceData) {
-        print("🔄 Loading entity asset for space: \(space.spaceName)")
         isLoading = true
         
         spaceService.loadSpace(from: space) { result in
             Task { @MainActor in
+                // Skip stale loads
                 guard space.id == self.selectedSpace?.id else {
-                    print("⚠️ Stale load completed for \(space.spaceName). Current selection: \(self.selectedSpace?.spaceName ?? "nil"). Discarding result.")
-                    self.addLog("⚠️ Discarding stale load result for \(space.spaceName)")
-                    if entityWrapper.getSpaceEntity() == nil { self.isLoading = false }
+                    if self.entityWrapper.getSpaceEntity() == nil { self.isLoading = false }
                     return
                 }
                 
                 switch result {
-                case .success(let loadedRawEntity):
+                case .success(let loadedEntity):
                     self.isLoading = false
-                    print("✅ Entity loaded successfully for space: \(space.spaceName)")
-                    self.addLog("✅ Entity loaded successfully for: \(space.spaceName)")
-                    
-                    let clonedEntity = loadedRawEntity.clone(recursive: true)
-                    clonedEntity.name = space.spaceName
-                    clonedEntity.isEnabled = true
-                    
-                    // Look for Root entity immediately after loading
-                    if let rootCandidate = self.findEntityDeep(named: "Root", in: clonedEntity) {
-                        print("🔍 DEBUG: Found Root entity during loading (ID: \(rootCandidate.id))")
-                        self.addLog("🔍 Found Root entity during loading")
-                        self.rootEntity = rootCandidate
-                    } else {
-                        print("⚠️ DEBUG: Could NOT find Root entity during loading")
-                        self.addLog("⚠️ No Root entity found during loading")
-                        self.rootEntity = nil
+
+                    let entity = loadedEntity.clone(recursive: true)
+                    entity.name     = space.spaceName
+                    entity.isEnabled = true
+                    /* …all the existing work… */
+
+                    self.entityWrapper.setEntity(entity)
+                    self.entityWrapper.setSpaceEntity(entity)
+                    self.entityWrapper.setActiveSceneEntity(entity)
+
+                    // 🚀 <-- add this block
+                    Task { @MainActor in
+                        ensureEntityIsParented(entity)          // anchor it
+                        applyViewerOffset(for: entity)          // center it for the viewer
+                        await audioLoader.loadAudioForSpace(    // start the speakers
+                            rootEntity: entity)
                     }
+
                     
-                    self.notificationSentForEntityID = nil
-                    self.notificationPostTask?.cancel()
-                    self.notificationPostTask = nil
-                    
-                    entityWrapper.setEntity(clonedEntity)
-                    entityWrapper.setSpaceEntity(clonedEntity)
-                    entityWrapper.setActiveSceneEntity(clonedEntity)
-                    print("   - Entity set in wrapper. onChange will now trigger notification logic.")
-                    self.addLog("🔄 Entity set in wrapper - will trigger notification")
+                    // Load spatial audio for the space
                     
                 case .failure(let error):
-                    self.addLog("❌ Failed to load space: \(error.localizedDescription)")
                     self.handleLoadError("Failed to load \(space.spaceName): \(error.localizedDescription)")
                 }
             }
         }
     }
     
-    @MainActor private func handleLoadError(_ message: String) {
-        print("❌ Load Error: \(message)")
+    private func findRootEntity(in entity: Entity) -> Entity? {
+        // First check for direct child named "Root"
+        if let root = entity.children.first(where: { $0.name == "Root" }) {
+            return root
+        }
+        
+        // Then try deep search for "Root"
+        if let root = findEntityDeep(named: "Root", in: entity) {
+            return root
+        }
+        
+        // Last try lowercase "root"
+        return findEntityDeep(named: "root", in: entity)
+    }
+    
+    private func configureInitialPosition(entity: Entity, space: SpaceData) {
+        guard let seats = space.seats, !seats.isEmpty else { return }
+        
+        // Don't set position here, will be handled in updateEntityInAnchor.
+        // Just make sure a seat is selected.
+        // Default to seat_1 if no seat is selected.
+        if space.currentSeat == nil || space.currentSeat!.isEmpty {
+            appModel.updateSelectedSpaceSeat(to: "seat_1")
+        }
+    }
+    
+    private func updateEntityInAnchor(_ e: Entity) {
+        ensureEntityIsParented(e)
+        applyViewerOffset(for: e)          // see (3)
+    }
+    
+    @MainActor
+    private func applyViewerOffset(for spaceEntity: Entity) {
+        guard
+          let space = getSpaceForScene(for: spaceEntity.id),
+          let root  = findRootEntity(in: spaceEntity)
+        else { return }
+
+        root.position = SIMD3(
+            Float(space.viewerXAdjustment),
+            Float(space.viewerYAdjustment),
+            Float(space.viewerZAdjustment)
+        )
+    }
+
+
+    
+    private func handleSeatChange(oldSeat: String?, newSeat: String?) {
+        guard
+            let spaceEntity = entityWrapper.getSpaceEntity(),
+            let space = getSpaceForScene(for: spaceEntity.id),
+            let seatID = newSeat,
+            let seatEntity = findEntityDeep(named: seatID, in: spaceEntity),
+            let oldSeatEntity = findEntityDeep(named: oldSeat ?? "seat_1", in: spaceEntity)
+
+        else {
+            return
+        }
+
+        // 1) seat position including your root-offset
+        let seatLocalPos = seatEntity.position(relativeTo: spaceEntity)
+        let oldSeatLocalPos = oldSeatEntity.position(relativeTo: spaceEntity)
+
+        // 2) recompute your viewer offset
+        let viewerOffset = SIMD3<Float>(
+            Float(space.viewerXAdjustment),
+            Float(space.viewerYAdjustment),
+            Float(space.viewerZAdjustment)
+        )
+
+        // 3) desired anchor = viewerOffset - seatLocalPos
+        let newAnchorPos =  anchorEntity.position+oldSeatLocalPos-seatLocalPos
+
+        print("🪑 Moving to seat \(seatID): seatLocalPos=\(seatLocalPos), newAnchorPos=\(newAnchorPos)")
+
+        // 4) apply absolutely, not additively
+        withAnimation(.easeInOut(duration: 2)) {
+            anchorEntity.position = newAnchorPos
+        }
+    }
+    
+    @MainActor
+    private func postNotification(for entityId: Entity.ID) async {
+        // Wait to ensure scene is stable.
+        do {
+            try await Task.sleep(nanoseconds: 1_000_000_000)
+        } catch {
+            return // Task interrupted.
+        }
+        
+        guard !Task.isCancelled,
+              let scene = realityKitScene else {
+            return
+        }
+        
+        // Post notification with appropriate target.
+        if let root = rootEntity, isEntityInScene(root) {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("RealityKit.NotificationTrigger"),
+                object: nil,
+                userInfo: [
+                    "RealityKit.NotificationTrigger.Scene": scene,
+                    "RealityKit.NotificationTrigger.Entity": root,
+                    "RealityKit.NotificationTrigger.Identifier": "loop"
+                ]
+            )
+        } else if let entity = entityWrapper.getSpaceEntity() {
+            if let foundRoot = findRootEntity(in: entity), isEntityInScene(foundRoot) {
+                self.rootEntity = foundRoot
+                
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("RealityKit.NotificationTrigger"),
+                    object: nil,
+                    userInfo: [
+                        "RealityKit.NotificationTrigger.Scene": scene,
+                        "RealityKit.NotificationTrigger.Entity": foundRoot,
+                        "RealityKit.NotificationTrigger.Identifier": "loop"
+                    ]
+                )
+            } else {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("RealityKit.NotificationTrigger"),
+                    object: nil,
+                    userInfo: [
+                        "RealityKit.NotificationTrigger.Scene": scene,
+                        "RealityKit.NotificationTrigger.Identifier": "loop"
+                    ]
+                )
+            }
+        } else {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("RealityKit.NotificationTrigger"),
+                object: nil,
+                userInfo: [
+                    "RealityKit.NotificationTrigger.Scene": scene,
+                    "RealityKit.NotificationTrigger.Identifier": "loop"
+                ]
+            )
+        }
+        
+        self.notificationSentForEntityID = entityId
+    }
+    
+    @MainActor
+    private func handleLoadError(_ message: String) {
         self.isLoading = false
         self.errorMessage = message
         
         if entityWrapper.getSpaceEntity()?.name == selectedSpace?.spaceName {
-             entityWrapper.setSpaceEntity(nil)
-             entityWrapper.setActiveSceneEntity(nil)
+            entityWrapper.setSpaceEntity(nil)
+            entityWrapper.setActiveSceneEntity(nil)
         }
+        
+        // Stop all audio playback on error
+        audioLoader.stopAllAudio()
+
         self.notificationSentForEntityID = nil
         self.notificationPostTask?.cancel()
         self.notificationPostTask = nil
         self.rootEntity = nil
-        self.realityViewUpdateCounter += 1
     }
     
-    // MARK: - Notification Triggering
-    
-    private func handleEntityIdChangeForNotification(oldId: Entity.ID?, newId: Entity.ID?) {
-        print("ℹ️ handleEntityIdChangeForNotification: Triggered by ID change: \(oldId?.description ?? "nil") -> \(newId?.description ?? "nil")")
-        addLog("ℹ️ Entity ID changed: \(oldId?.description ?? "nil") -> \(newId?.description ?? "nil")")
+    private func cleanupView() {
+        // --- Leave Space ---
+        // Leave the space before cleaning up the view state
+        if let spaceId = selectedSpace?.id {
+            Task {
+                await spaceService.leaveSpace(spaceId)
+                print("✅ Successfully left space: \(spaceId)")
+            }
+        }
+        // --- End Leave Space ---
         
+        cancellables.forEach { $0.cancel() }
+        cancellables.removeAll()
         notificationPostTask?.cancel()
         notificationPostTask = nil
         
-        Task { @MainActor in realityViewUpdateCounter += 1 }
-        
-        guard let currentNewId = newId else {
-            print("   - New ID is nil. No notification scheduled. Resetting flag.")
-            addLog("ℹ️ No notification - new ID is nil")
-            Task { @MainActor in self.notificationSentForEntityID = nil }
-            return
+        // Stop all audio playback
+        audioLoader.stopAllAudio()
+
+        Task {
+            await entityWrapper.cleanup()
         }
         
-        guard oldId != currentNewId else {
-            print("   - onChange detected same ID (\(currentNewId)). No action needed.")
-            addLog("ℹ️ No notification - same entity ID")
-            return
-        }
-        
-        Task { @MainActor in
-            self.notificationSentForEntityID = nil
-            print("   - Notification flag reset. Scheduling notification task for new Entity ID: \(currentNewId)")
-            addLog("🔄 Scheduling notification for ID: \(currentNewId)")
-            
-            // Create a new task for posting the notification with delay
-            self.notificationPostTask = Task { @MainActor in
-                print("   - Notification Task (ID:\(currentNewId)): Started.")
-                addLog("🚀 Starting notification task")
-                
-                // Wait for 1 second to ensure the interaction system is ready
-                // (per Apple's recommendation to wait at least half a second)
-                do {
-                    print("⏱️ Waiting 1000ms before sending notification")
-                    addLog("⏱️ Waiting 1000ms for scene to stabilize")
-                    try await Task.sleep(nanoseconds: 1_000_000_000)
-                } catch {
-                    print("   - Notification Task (ID:\(currentNewId)): Sleep interrupted.")
-                    addLog("❌ Wait interrupted: \(error.localizedDescription)")
-                    return
-                }
-                
-                guard !Task.isCancelled else {
-                    print("   - Notification Task (ID:\(currentNewId)): Cancelled before sending.")
-                    addLog("❌ Task cancelled before sending")
-                    return
-                }
-                
-                // Get the RealityKit scene from the environment
-                guard let scene = realityKitScene else {
-                    print("❌ No RealityKit scene available from environment")
-                    addLog("❌ No RealityKit scene available")
-                    return
-                }
-                
-                print("✅ Got RealityKit scene from environment")
-                addLog("✅ Got RealityKit scene from environment")
-                
-                // IMPORTANT: Check if our anchor entity is connected to the scene
-                if anchorEntity.scene != nil {
-                    print("✅ Anchor entity is connected to scene")
-                    addLog("✅ Anchor entity is connected to scene")
-                } else {
-                    print("⚠️ Anchor entity is NOT connected to scene")
-                    addLog("⚠️ Anchor entity NOT connected to scene")
-                }
-                
-                // IMPORTANT: Use our cached Root entity if available
-                if let trackedRoot = self.rootEntity, isEntityInScene(trackedRoot) {
-                    print("✅ Using tracked Root entity (ID: \(trackedRoot.id))")
-                    addLog("✅ Using tracked Root entity (ID: \(trackedRoot.id))")
-                    
-                    // Try to send notification directly to the Root entity
-                    NotificationCenter.default.post(
-                        name: NSNotification.Name("RealityKit.NotificationTrigger"),
-                        object: nil,
-                        userInfo: [
-                            "RealityKit.NotificationTrigger.Scene": scene,
-                            "RealityKit.NotificationTrigger.Entity": trackedRoot,
-                            "RealityKit.NotificationTrigger.Identifier": "loop"
-                        ]
-                    )
-                    
-                    print("📬 Posted notification with Root entity reference")
-                    addLog("📬 Posted notification with Root entity reference")
-                } else {
-                    // If we don't have a cached Root entity, try to find it in the current space
-                    print("⚠️ No tracked Root entity available, searching again")
-                    addLog("⚠️ No tracked Root entity available")
-                    
-                    // Try both approaches to find Root
-                    if let entity = entityWrapper.getSpaceEntity() {
-                        var foundRoot: Entity? = nil
-                        
-                        // First try direct child with "Root" name
-                        let directRoot = entity.children.first { $0.name == "Root" }
-                        if let directRoot = directRoot {
-                            foundRoot = directRoot
-                            print("🔍 Found Root as direct child")
-                            addLog("🔍 Found Root as direct child")
-                        } else {
-                            // Then try with recursive search
-                            foundRoot = findEntityDeep(named: "Root", in: entity)
-                            if foundRoot != nil {
-                                print("🔍 Found Root via deep search")
-                                addLog("🔍 Found Root via deep search")
-                            } else {
-                                // Last resort - try lowercase "root"
-                                foundRoot = findEntityDeep(named: "root", in: entity)
-                                if foundRoot != nil {
-                                    print("🔍 Found lowercase 'root' entity")
-                                    addLog("🔍 Found lowercase 'root' entity")
-                                }
-                            }
-                        }
-                        
-                        if let foundRoot = foundRoot, isEntityInScene(foundRoot) {
-                            // Save for future use
-                            self.rootEntity = foundRoot
-                            
-                            // Send notification with found Root entity
-                            NotificationCenter.default.post(
-                                name: NSNotification.Name("RealityKit.NotificationTrigger"),
-                                object: nil,
-                                userInfo: [
-                                    "RealityKit.NotificationTrigger.Scene": scene,
-                                    "RealityKit.NotificationTrigger.Entity": foundRoot,
-                                    "RealityKit.NotificationTrigger.Identifier": "loop"
-                                ]
-                            )
-                            
-                            print("📬 Posted notification with newly found Root entity")
-                            addLog("📬 Posted notification with newly found Root")
-                        } else {
-                            // Last resort - scene-only notification
-                            print("⚠️ Could not find Root entity for notification")
-                            addLog("⚠️ Using scene-only notification (no Root)")
-                            
-                            NotificationCenter.default.post(
-                                name: NSNotification.Name("RealityKit.NotificationTrigger"),
-                                object: nil,
-                                userInfo: [
-                                    "RealityKit.NotificationTrigger.Scene": scene,
-                                    "RealityKit.NotificationTrigger.Identifier": "loop"
-                                ]
-                            )
-                            
-                            print("📬 Posted scene-only notification as fallback")
-                            addLog("📬 Posted scene-only notification")
-                        }
-                    } else {
-                        // Scene-only notification as last fallback
-                        print("⚠️ No space entity available for Root search")
-                        addLog("⚠️ No space entity available")
-                        
-                        NotificationCenter.default.post(
-                            name: NSNotification.Name("RealityKit.NotificationTrigger"),
-                            object: nil,
-                            userInfo: [
-                                "RealityKit.NotificationTrigger.Scene": scene,
-                                "RealityKit.NotificationTrigger.Identifier": "loop"
-                            ]
-                        )
-                        
-                        print("📬 Posted scene-only notification (no space entity)")
-                        addLog("📬 Posted scene-only notification")
-                    }
-                }
-                
-                // Set flag regardless of which notification approach was used
-                print("✅ Notification posted. Setting flag for ID \(currentNewId).")
-                addLog("✅ Notification posted with identifier 'loop'")
-                self.notificationSentForEntityID = currentNewId
-                
-                // Check state after a delay
-                do {
-                    try await Task.sleep(nanoseconds: 1_000_000_000)
-                    if !Task.isCancelled, let rootEntity = self.rootEntity {
-                        let message = "🔍 Post-notification check: Root entity state: isEnabled=\(rootEntity.isEnabled)"
-                        print(message)
-                        addLog(message)
-                    }
-                } catch {
-                    // Ignore errors in post-check
-                }
-            }
-        }
+        notificationSentForEntityID = nil
+        selectedSpace = nil
+        rootEntity = nil
+        anchorEntity.children.removeAll()
     }
     
-    // MARK: - Scene Setup Helpers
-    
+    // MARK: - Helper Methods
     private func getSpaceForScene(for entityID: Entity.ID) -> SpaceData? {
         if let currentSpace = selectedSpace, entityWrapper.getSpaceEntity()?.id == entityID {
             return currentSpace
         }
         if let appModelSpace = appModel.selectedSpace, entityWrapper.getSpaceEntity()?.name == appModelSpace.spaceName {
-            print("   - getSpaceForScene: Using appModel space based on name match.")
             return appModelSpace
         }
         if let currentSpace = selectedSpace, currentSpace.spaceName == entityWrapper.getSpaceEntity()?.name {
-            print("   - getSpaceForScene: Falling back to selectedSpace based on name match.")
             return currentSpace
         }
-        print("⚠️ getSpaceForScene: Could not find matching SpaceData for entity ID \(entityID) and selectedSpace '\(selectedSpace?.spaceName ?? "nil")'")
         return nil
     }
     
-    // MARK: - Entity Helpers
-    
-    /// Helper to find an entity by name recursively through the hierarchy
     private func findEntityDeep(named name: String, in parent: Entity) -> Entity? {
-        if parent.name == name {
-            return parent
-        }
-        
+        if parent.name == name { return parent }
         for child in parent.children {
             if let found = findEntityDeep(named: name, in: child) {
                 return found
             }
         }
-        
         return nil
     }
     
-    /// Helper to verify if an entity is actually connected to a scene
     private func isEntityInScene(_ entity: Entity) -> Bool {
         var current: Entity? = entity
         while let currentEntity = current {
@@ -605,158 +558,63 @@ struct SpacesView: View {
         }
     }
     
-    // Function to manually trigger a notification for debugging
-    private func triggerManualNotification() {
-        guard let scene = realityKitScene else {
-            print("❌ No RealityKit scene available from environment")
-            addLog("❌ Manual notification failed: No scene")
-            return
-        }
-        
-        // Try to use our cached Root entity
-        if let root = rootEntity, isEntityInScene(root) {
-            addLog("🔔 Manual notification with Root entity")
-            
-            NotificationCenter.default.post(
-                name: NSNotification.Name("RealityKit.NotificationTrigger"),
-                object: nil,
-                userInfo: [
-                    "RealityKit.NotificationTrigger.Scene": scene,
-                    "RealityKit.NotificationTrigger.Entity": root,
-                    "RealityKit.NotificationTrigger.Identifier": "loop"
-                ]
-            )
-        } else {
-            addLog("🔔 Manual notification (scene only)")
-            
-            NotificationCenter.default.post(
-                name: NSNotification.Name("RealityKit.NotificationTrigger"),
-                object: nil,
-                userInfo: [
-                    "RealityKit.NotificationTrigger.Scene": scene,
-                    "RealityKit.NotificationTrigger.Identifier": "loop"
-                ]
-            )
-        }
-        
-        print("🔄 Manual notification 'loop' sent")
-    }
-    
     private func openWindowsIfNeeded() {
         openWindow(id: "spaceNavBar")
         openWindow(id: "spaceMap")
     }
     
-    // MARK: - Debug Overlay
-    
-    private var debugOverlay: some View {
-        VStack(alignment: .leading) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    let currentEntity = entityWrapper.getSpaceEntity()
-                    let currentEntityID = currentEntity?.id
-                    Text("Wrapper SpaceEnt: \(currentEntity?.name ?? "None") (ID: \(currentEntityID?.description ?? "N/A"))")
-                        .foregroundColor(currentEntity != nil ? .green : .red)
-                    Text("Selected Space: \(selectedSpace?.spaceName ?? "None")")
-                    Text("Root Entity: \(rootEntity != nil ? "Found ✅" : "Not Found ❌")")
-                        .foregroundColor(rootEntity != nil ? .green : .red)
-                    
-                    Divider().background(.gray)
-                    
-                    Text("Notif Sent For ID: \(notificationSentForEntityID?.description ?? "nil")")
-                         .foregroundColor(notificationSentForEntityID == currentEntityID && currentEntity != nil ? .blue : .orange)
-                    Text("Notif Task Active: \(notificationPostTask != nil && !notificationPostTask!.isCancelled ? "Yes" : "No")")
-                        .foregroundColor(notificationPostTask != nil && !notificationPostTask!.isCancelled ? .yellow : .gray)
-                    
-                    Divider().background(.gray)
-                    
-                    Text("Loading State: \(isLoading ? "Loading" : "Idle")")
-                        .foregroundColor(isLoading ? .yellow : .green)
-                    if let errorMessage {
-                        Text("Error: \(errorMessage)")
-                            .foregroundColor(.pink)
-                            .lineLimit(2)
-                    }
-                    
-                    Divider().background(.gray)
-                    
-                    Text("Anchor Children: \(anchorEntity.children.count)")
-                    Text("RV Update Cntr: \(realityViewUpdateCounter)")
-                    
-                    // Notification log display
-                    Divider().background(.gray)
-                    Text("Notification Log:")
-                        .fontWeight(.bold)
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 2) {
-                            ForEach(Array(notificationLogs.enumerated()), id: \.offset) { index, log in
-                                Text(log)
-                                    .font(.system(size: 9))
-                                    .lineLimit(1)
-                            }
-                        }
-                    }
-                    .frame(height: 100)
-                    .background(Color.black.opacity(0.3))
-                    .cornerRadius(5)
+    // MARK: - Sphere Markers
+    /// Adds large sphere markers at seat_1 and seat_2 positions.
+    private func addSphereMarkers(to spaceEntity: Entity) {
+        print("🔍 Starting to add sphere markers to \(spaceEntity.name)")
+        
+        let seatNames = ["seat_1", "seat_2"]
+        for seatName in seatNames {
+            // Remove any existing markers first
+            if let existingMarker = findEntityDeep(named: "\(seatName)_marker", in: spaceEntity) {
+                print("🗑️ Removing existing marker for \(seatName)")
+                existingMarker.removeFromParent()
+            }
+            
+            if let seatEntity = findEntityDeep(named: seatName, in: spaceEntity) {
+                // Create a visible sphere
+                let sphereMesh = MeshResource.generateSphere(radius: 10)
+                
+                // Create a material with the Metal API
+                var material = SimpleMaterial()
+                material.baseColor = MaterialColorParameter.color(.red)
+                material.roughness = MaterialScalarParameter(1.0)
+                material.metallic = MaterialScalarParameter(0.0)
+                
+                let sphereEntity = ModelEntity(mesh: sphereMesh, materials: [material])
+                sphereEntity.name = "\(seatName)_marker"
+                
+                // Position slightly above the seat to ensure visibility
+                sphereEntity.position = SIMD3<Float>(0, 0, 0)
+                
+                seatEntity.addChild(sphereEntity)
+                print("✅ Added visible sphere for \(seatName) at position \(sphereEntity.position) relative to seat")
+            } else {
+                print("⚠️ Could not find entity for \(seatName) in \(spaceEntity.name)")
+                // Print all entities at the first level for debugging
+                print("📋 Available entities at root level:")
+                for (index, child) in spaceEntity.children.enumerated() {
+                    print("  \(index): \(child.name)")
                 }
-                .font(.system(size: 10))
-                .padding(8)
-                .background(Color.black.opacity(0.75))
-                .cornerRadius(8)
-                .fixedSize(horizontal: false, vertical: true)
                 
-                Spacer()
-                
-                VStack(spacing: 8) {
-                    Button(action: triggerManualNotification) {
-                                            Image(systemName: "bell.fill")
-                                                .font(.system(size: 16))
-                                                .padding(8)
-                                                .background(Color.blue.opacity(0.75))
-                                                .foregroundColor(.white)
-                                                .cornerRadius(8)
-                                        }
-                                        .help("Send manual notification")
-                                        
-                                        Button(action: refreshSpace) {
-                                            Image(systemName: "arrow.clockwise")
-                                                .font(.system(size: 16))
-                                                .padding(8)
-                                                .background(Color.black.opacity(0.75))
-                                                .foregroundColor(.white)
-                                                .cornerRadius(8)
-                                        }
-                                        .help("Refresh space")
-                                        
-                                        Button(action: {
-                                            notificationLogs.removeAll()
-                                            addLog("🧹 Log cleared")
-                                        }) {
-                                            Image(systemName: "trash")
-                                                .font(.system(size: 16))
-                                                .padding(8)
-                                                .background(Color.red.opacity(0.75))
-                                                .foregroundColor(.white)
-                                                .cornerRadius(8)
-                                        }
-                                        .help("Clear logs")
-                                    }
-                                }
-                                Spacer()
-                            }
-                            .padding()
-                            .zIndex(10)
-                        }
-                        
-                        private func refreshSpace() {
-                            print("🔄 Manual refresh triggered")
-                            addLog("🔄 Manual refresh triggered")
-                            cancellables.forEach { $0.cancel() }
-                            cancellables.removeAll()
-                            notificationPostTask?.cancel()
-                            notificationPostTask = nil
-                            errorMessage = nil
-                            initializeSpace()
-                        }
-                    }
+                // Print full hierarchy for more detailed debugging
+                print("📊 Full entity hierarchy:")
+                printEntityHierarchy(spaceEntity, level: 0)
+            }
+        }
+    }
+
+    // Helper function to print the entire entity hierarchy
+    private func printEntityHierarchy(_ entity: Entity, level: Int) {
+        let indent = String(repeating: "  ", count: level)
+        print("\(indent)- \(entity.name) (type: \(type(of: entity)))")
+        for child in entity.children {
+            printEntityHierarchy(child, level: level + 1)
+        }
+    }
+}

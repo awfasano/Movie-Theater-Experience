@@ -55,7 +55,8 @@ class TheatreEntityWrapper: ObservableObject {
     }
     
     // MARK: - Cleanup
-    
+    // In /Immersive/TheatreEntities/TheatreEntityWrapper.swift
+
     func cleanup() async {
         print("🧹 Starting TheatreEntityWrapper cleanup")
 
@@ -68,14 +69,21 @@ class TheatreEntityWrapper: ObservableObject {
             }
         }
 
-        if let manager = videoPlayerManager {
+        // Safely check for the manager. Note: Accessing a @Published property
+        // from a background thread can cause data races. This cleanup function
+        // should ideally be a @MainActor function if it's not already.
+        // For now, this structure will resolve the compiler error.
+        if let manager = self.videoPlayerManager {
+            
+            // 1. Perform the async operation first.
+            // The 'switchToView' function is already marked @MainActor, so this call
+            // will safely execute on the main thread, and 'cleanup' will wait for it.
+            await videoSyncService.switchToView(.none)
+            
+            // 2. Perform the remaining synchronous cleanup operations in their own
+            //    MainActor.run block. The closure here is now synchronous.
             await MainActor.run {
-                if let player = manager.player {
-                    let position = player.currentTime().seconds
-                    let isPlaying = player.rate != 0
-                    videoSyncService.switchToView(.none)
-                    print("📸 Creating snapshot - position: \(position), playing: \(isPlaying)")
-                }
+                print("🧹 Clearing video player manager resources.")
                 manager.clearAllResources()
                 self.videoPlayerManager = nil
             }
@@ -267,6 +275,41 @@ class TheatreEntityWrapper: ObservableObject {
             await cleanup()
         }
     }
+    
+    // MARK: - Video Screen Helpers
+    /// Creates (or returns) a dedicated plane sized to the screen mesh.
+    /// Always called on MainActor.
+    @MainActor
+    func videoPlane(for screenMesh: ModelEntity) -> ModelEntity {
+        if let cached = screenMesh.findEntity(named: "VideoPlane") as? ModelEntity {
+            return cached
+        }
+
+        let bounds = screenMesh.model?.mesh.bounds ?? .init()
+        let width  = bounds.extents.x
+        let height = bounds.extents.y
+
+        // Plane thickness is ≈0 so Z‑fighting is avoided
+        let planeMesh = MeshResource.generatePlane(width: width,
+                                                   height: height,
+                                                   cornerRadius: 0)
+        
+        let plane     = ModelEntity(mesh: planeMesh,
+                                    materials: [UnlitMaterial(color: .black)])
+        plane.name    = "VideoPlane"
+
+        // Position the plane flush with the front face of the mesh
+        let frontZ = bounds.center.z + bounds.extents.z * 0.51
+        plane.position = [bounds.center.x, bounds.center.y, frontZ]
+
+        // Clamp rendering order so it always draws on top of the mesh
+       // plane.renderingOrder = .
+
+        screenMesh.addChild(plane)
+        return plane
+    }
+
+    
 }
 
 // Helper extension to find entities by name

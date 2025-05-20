@@ -1,212 +1,264 @@
 import SwiftUI
-import RealityFoundation
+// import RealityFoundation // Keep if used by other parts of AppModel or services
 import AVKit
 import AVFoundation
 
 struct MovieWindow: View {
-    // MARK: - Environment
+
+    // MARK: ‑‑ Environment
     @Environment(AppModel.self) private var appModel
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.dismissWindow) private var dismissWindow
-    @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
-    @Environment(\.openWindow) var openWindow
-    
-    // MARK: - State
+    @Environment(\.dismissWindow) private var dismissWindow // Keep if used for other window interactions
+    // @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace // Not directly used here
+    // @Environment(\.openWindow) private var openWindow // Not directly used here for opening other windows
+
+    // MARK: ‑‑ State
     @State private var player: AVPlayer?
+    @State private var isLoading = true
     @State private var showAccessDeniedAlert = false
     @State private var accessDeniedMessage = ""
-    @State private var rateObserver: NSKeyValueObservation?
-    
-    // MARK: - Services
-    private let spaceManager = ImmersiveSpaceManager.shared
-    private let videoSyncService = VideoSyncService.shared
-    
+    // @State private var rateObserver: NSKeyValueObservation? // Not directly used in provided snippet, can be removed if not needed
+    // videoDuration is now sourced from videoSyncService.currentVideoDuration for the SeekSliderView
+
+    // MARK: ‑‑ Services
+    // private let spaceManager = ImmersiveSpaceManager.shared // Not directly used in this view's logic
+    // Use @State for @Observable shared instances to ensure the view observes changes
+    @State var videoSyncService = VideoSyncService.shared
+
+    // MARK: ‑‑ Body
     var body: some View {
-        VStack {
-            if let player = player {
-                VideoPlayerView(player: player, videoGravity: .resizeAspect)
-                    .edgesIgnoringSafeArea(.all)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                Text("Loading video...")
+        ZStack {
+            // main video or placeholder
+            Group {
+                if let player = player { // Ensure we use the @State player
+                    VideoPlayerView(player: player, videoGravity: .resizeAspect)
+                        .overlay(Color.black.opacity(0.000)) // allow tap‑through
+                } else {
+                    ProgressView("Loading…")
+                        .progressViewStyle(.circular)
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .animation(.easeInOut(duration: 0.25), value: player != nil)
+
+            // Controls Overlay including SeekSliderView, PlayPauseButton, and Sync Button
+            VStack {
+                Spacer() // Pushes controls to the bottom
+
+                // Show controls only if player exists and duration is known
+                if player != nil && videoSyncService.currentVideoDuration > 0 {
+                    HStack(spacing: 12) { // Added spacing for better layout
+                        PlayPauseButton()
+                            .padding(.trailing, 0) // Adjusted padding
+
+                        SeekSliderView(duration: videoSyncService.currentVideoDuration)
+                        
+                        // --- NEW CODE START ---
+                        Text("\(videoSyncService.currentTime.formatted()) / \(videoSyncService.currentVideoDuration.formatted())")
+                            .font(.caption.monospacedDigit()) // Monospaced font prevents the text from shifting
+                            .foregroundStyle(.secondary)
+                            .frame(minWidth: 120, alignment: .center) // Give it a consistent width
+                            .padding(.horizontal, 4)
+                        // --- NEW CODE END ---
+
+                        // Sync with Host Button
+                        if !videoSyncService.isHost {
+                            Button {
+                                Task {
+                                    print("🎬 [MovieWindow] Sync with Host button tapped.")
+                                    await videoSyncService.forceSyncToHost()
+                                }
+                            } label: {
+                                Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
+                                    .font(.title2)
+                            }
+                            .help("Sync with Host")
+                            .padding(.leading, 0) // Adjusted padding
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 10)
+                }
             }
         }
-        .task {
-            await setupVideo()
+        .frame(minWidth: 560, minHeight: 315) // 16:9 base
+        .padding() // Overall padding for the window content
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+        .shadow(radius: 8)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text(appModel.currentEvent?.title ?? "Now Playing")
+                    .font(.headline)
+            }
+            ToolbarItem(placement: .navigation) {
+                Button {
+                    Task {
+                        await handleWindowClose() // Use a dedicated close handler
+                    }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .help("Close Movie Window")
+            }
         }
+        .task { await setupVideo() }
         .onDisappear {
-            handleOnDisappear()
+            // This onDisappear might be too broad if the window is just covered.
+            // Consider if cleanup should only happen on explicit close.
+            // For now, assuming onDisappear means the window is going away.
+            // If MovieWindow can be covered by other windows without closing,
+            // this cleanup might be premature.
+            // Task { await handleCleanup() } // Original cleanup
         }
         .alert("Access Denied", isPresented: $showAccessDeniedAlert) {
             Button("OK", role: .cancel) {
-                handleCleanup()
-                dismiss()
+                Task {
+                    await handleWindowClose() // Also use dedicated close handler here
+                }
             }
-        } message: {
-            Text(accessDeniedMessage)
-        }
+        } message: { Text(accessDeniedMessage) }
     }
-    
-    // MARK: - Setup
-    // In MovieWindow.swift
+
+    // MARK: ‑‑ Initial setup
     private func setupVideo() async {
-        print("🎬 Setting up video in MovieWindow")
-        
-        guard let videoURL = appModel.selectedVideoURL,
-              let event = appModel.currentEvent else {
-            print("❌ Missing video URL or event")
-            handleCleanup()
-            dismiss()
+        print("🎬 [MovieWindow] setupVideo started")
+
+        guard
+            let videoURL = appModel.selectedVideoURL,
+            let event = appModel.currentEvent
+        else {
+            await presentAccessDenied("Missing video URL or event.")
             return
         }
-        
-        // Create new AVPlayer
+
         let newPlayer = AVPlayer(url: videoURL)
+        // Do not pause immediately here; let VideoSyncService control it after sync.
+        // newPlayer.pause()
         
-        // Ensure player is initially paused
-        newPlayer.pause()
-        self.player = newPlayer
-        
-        // Configure sync first
-        if videoSyncService.configureSync(
-            eventId: event.id ?? "",
-            userId: getDeviceId(),
-            event: event
-        ) {
-            print("✅ Video sync configured")
-            
-            // IMPORTANT: Wait for player to be ready
-            while newPlayer.status != .readyToPlay {
-                print("⏳ Waiting for player to be ready...")
-                try? await Task.sleep(nanoseconds: 100_000_000)
+        // Update the @State player on the MainActor
+        await MainActor.run {
+            self.player = newPlayer
+            self.isLoading = true // Keep true until sync service confirms state
+        }
+
+
+        let uid = appModel.currentUserId // NEW WAY - Use the consistent User ID from AppModel
+        let eid = event.id ?? ""
+
+        let alreadyConfigured = videoSyncService.isConfigured(for: eid, userId: uid)
+        if !alreadyConfigured {
+            print("🔄 [MovieWindow] Configuring sync service for event \(eid) with AppModel User ID: \(uid)...") // Added log for clarity
+            guard await videoSyncService.configureSync(eventId: eid,
+                                                   userId: uid, // Use the 'uid' from AppModel
+                                                   event: event)
+            else {
+                // This is the required else block for the guard statement
+                await presentAccessDenied("This event isn’t available right now (sync config failed).")
+                return // Exit the setupVideo method if configureSync fails
             }
-            print("✅ Player ready to play")
-            
-            // Get current sync time and seek to it
-            let syncTime = videoSyncService.currentTime
-            print("⏱️ Seeking to sync time: \(syncTime)")
-            
-            // Use accurate seeking and wait for it to complete
-            await newPlayer.seek(to: CMTime(seconds: syncTime, preferredTimescale: 1000),
-                               toleranceBefore: .zero,
-                               toleranceAfter: .zero)
-            print("✅ Seek completed")
-            
-            // Setup end handler
-            setupVideoEndHandler()
-            
-            // Start sync
-            videoSyncService.startSync(with: newPlayer)
-            
-            // Match current playstate
-            let shouldPlay = videoSyncService.isPlaying
-            print("🎮 Current sync play state: \(shouldPlay)")
-            
-            if shouldPlay {
-                print("▶️ Starting playback")
-                newPlayer.play()
-            } else {
-                print("⏸️ Ensuring paused")
-                newPlayer.pause()
-            }
-            
-            print("✅ MovieWindow video setup complete")
+            print("✅ [MovieWindow] Sync configured for event \(eid)") // This line will only be reached if configureSync succeeds
+            try? await Task.sleep(for: .milliseconds(300)) // Let listeners settle
         } else {
-            print("❌ Sync configuration failed")
-            showAccessDenied()
+            print("ℹ️ [MovieWindow] Sync already configured for event \(eid) – re‑using session")
         }
+        
+        // VideoSyncService.startSync will handle player readiness and duration.
+        // No need to manually load duration here if startSync does it.
+        // VideoSyncService.continueSync will set videoSyncService.currentVideoDuration.
+
+        // Ensure VideoSyncService is aware of the current view context
+        // This should happen *before* startSync if switchToView manages snapshots correctly.
+        // If MovieWindow is opening, AppModel.isMovieWindowOpen should be true.
+        // The logic in AppModel or the view that opens MovieWindow should call switchToView.
+        // For robustness, we can call it here if not already in the correct state.
+        if videoSyncService.currentViewState != .movieWindow {
+            print("🎬 [MovieWindow] Explicitly switching VideoSyncService to .movieWindow state.")
+            await videoSyncService.switchToView(.movieWindow) // This will store snapshot and pause previous player
+        }
+
+        // Pass the player to VideoSyncService to manage.
+        // startSync should handle player readiness checks and then call continueSync.
+        await videoSyncService.startSync(with: newPlayer)
+
+        // isLoading should be set to false after startSync completes and player state is known.
+        // VideoSyncService's isPlaying will determine if player.play() is called.
+        // The visual loading state can be tied to player readiness or a flag in VideoSyncService.
+        // For simplicity, let's assume startSync handles the initial play/pause.
+        
+        // Check if player became ready and duration was loaded by VideoSyncService
+        // This check is more for the UI state than for re-doing work.
+        if newPlayer.status == .readyToPlay && videoSyncService.currentVideoDuration > 0 {
+             print("✅ [MovieWindow] Player ready and duration known after startSync.")
+        } else if newPlayer.status == .failed || (newPlayer.currentItem != nil && newPlayer.currentItem!.status == .failed) {
+             print("❌ [MovieWindow] Player or item failed after startSync attempt.")
+             let errorDesc = newPlayer.error?.localizedDescription ?? newPlayer.currentItem?.error?.localizedDescription ?? "Unknown player error"
+             await presentAccessDenied("Cannot play this video (\(errorDesc)).")
+             return // Critical failure
+        } else {
+             print("⏳ [MovieWindow] Player might still be loading or duration pending after startSync call. UI will update via VideoSyncService state.")
+        }
+
+        // The actual play/pause will be handled by VideoSyncService based on snapshot or host state.
+        // No explicit newPlayer.play() or newPlayer.pause() here after startSync.
+
+        await MainActor.run { // Ensure UI updates are on main actor
+            isLoading = false
+        }
+        print("✅ [MovieWindow] setupVideo finished. Player state managed by VideoSyncService.")
     }
 
-    // Add this to help debug what's happening with the player
-    private func addDebugObservations() {
-        guard let player = player else { return }
+    private func handleWindowClose() async {
+        print("🎬 [MovieWindow] handleWindowClose called.")
         
-        // Observe timeControlStatus
-        let statusObserver = player.observe(\.timeControlStatus) { player, _ in
-            print("🎮 Player timeControlStatus: \(player.timeControlStatus.rawValue)")
-            switch player.timeControlStatus {
-            case .playing:
-                print("▶️ Player is playing")
-            case .paused:
-                print("⏸️ Player is paused")
-            case .waitingToPlayAtSpecifiedRate:
-                print("⏳ Player is waiting to play")
-            @unknown default:
-                break
-            }
-        }
-        // Store statusObserver if needed
-    }
-    
-    private func setupRateObservation(_ player: AVPlayer) {
-        rateObserver = player.observe(\.rate, options: [.new]) { [weak videoSyncService] player, _ in
-            let isPlaying = (player.rate != 0)
-            videoSyncService?.handlePlayPause(isPlaying: isPlaying)
-        }
-    }
-    
-    private func setupVideoEndHandler() {
-        videoSyncService.setupVideoEndHandler {
-            Task { @MainActor in
-                await handleVideoEnd()
-            }
-        }
-    }
-    
-    // MARK: - Cleanup
-    private func handleCleanup() {
-        print("🧹 MovieWindow cleanup")
-        
-        // Create snapshot before any cleanup
-        if let player = player {
-            let position = player.currentTime().seconds
-            let isPlaying = player.rate != 0
-            print("📸 Creating final snapshot - position: \(position), playing: \(isPlaying)")
-        }
-        
-        videoSyncService.switchToView(.immersive)
-        
-        // Don't cleanup videoSyncService here
-        videoSyncService.cleanup(level: .light) 
-        
-        player?.pause()
-        player = nil
-        appModel.isMovieWindowOpen = false
-    }
-    
-    private func handleOnDisappear() {
-        print("🪟 MovieWindow onDisappear called")
-        handleCleanup()
-        appModel.isMovieWindowOpen = false
-    }
-    
-    private func handleVideoEnd() async {
-        print("🎬 Handling video end in MovieWindow...")
+        // 1. Set the intent to resume playback in the immersive view.
+        appModel.resumePlaybackAfterTransition = true
 
-        // Call the global video end handler in VideoSyncService
-        await VideoSyncService.shared.handleVideoEnd()
-    }
-    
-    private func dismissAllWindows() {
-        print("🪟 Dismissing all content windows")
-        let ids = ["chatWindow", "emojiWindow", "movieWindow", "seatMap", "navBar"]
-        for wId in ids {
-            dismissWindow(id: wId)
+        // 2. Inform the AppModel that the window is closing.
+        appModel.isMovieWindowOpen = false
+
+        // 3. Tell the sync service to prepare for the immersive view.
+        if videoSyncService.currentViewState == .movieWindow {
+            print("🎬 [MovieWindow] Closing window, switching sync service back to .immersive state.")
+            await videoSyncService.switchToView(.immersive)
         }
-    }
-    
-    // MARK: - Helpers
-    private func showAccessDenied() {
-        showAccessDeniedAlert = true
-        accessDeniedMessage = "This event is not currently available for viewing."
-        handleCleanup()
+        
+        // Perform local player cleanup
+        if let player = self.player {
+            player.pause()
+        }
+        await MainActor.run {
+            self.player = nil
+        }
+
+        // Dismiss the window
         dismiss()
+        print("✅ [MovieWindow] Window close handling complete.")
     }
 
-    private func getDeviceId() -> String {
-        UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+    // MARK: ‑‑ Helpers
+    @MainActor
+    private func presentAccessDenied(_ reason: String) {
+        print("❌ [MovieWindow] Access Denied: \(reason)")
+        accessDeniedMessage = reason
+        showAccessDeniedAlert = true
+        isLoading = false // Stop loading indicator on error
     }
 }
+
+// Supporting Views (VideoPlayerView, PlayerView) remain unchanged.
+// Make sure SeekSliderView.swift and ThinTrackSliderControl.swift are in your project.
+
+// Helper extension for CMTime
+extension CMTime {
+    var secondsIfFinite: Double? {
+        let s = CMTimeGetSeconds(self)
+        return s.isFinite && !s.isNaN ? s : nil
+    }
+}
+
+
 
 // Supporting Views remain unchanged
 struct VideoPlayerView: UIViewRepresentable {
