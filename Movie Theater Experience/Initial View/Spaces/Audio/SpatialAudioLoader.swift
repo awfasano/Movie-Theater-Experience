@@ -265,12 +265,12 @@ final class SpatialAudioLoader: ObservableObject {
     }
 
 
-    private func findSpeakers(in root: Entity) -> [Entity] {
+    func findSpeakers(in root: Entity) -> [Entity] {
         var out: [Entity] = []
         if root.name.hasPrefix("speaker_") { out.append(root) }
         for child in root.children { out += findSpeakers(in: child) }
         return out
     }
 
-    private func linearToDB(_ v: Float) -> Float { v <= 0 ? -80 : 20 * log10(v) }
+    func linearToDB(_ v: Float) -> Float { v <= 0 ? -80 : 20 * log10(v) }
 }

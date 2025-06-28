@@ -1,4 +1,5 @@
 import SwiftUI
+import GroupActivities
 import RealityKit
 import RealityKitContent
 import Combine
@@ -18,7 +19,6 @@ struct SpacesView: View {
     @State private var errorMessage: String?
     @State private var lastSpaceID: Entity.ID? = nil   // memo
 
-
     
     // Anchor for placing content in the scene
     @State private var anchorEntity = AnchorEntity()
@@ -36,6 +36,10 @@ struct SpacesView: View {
     // Combine subscriptions
     @State private var cancellables = Set<AnyCancellable>()
     
+    // NEW: Add the SharePlayManager and state for participant entities
+    @StateObject private var sharePlayManager = SharePlayManager.shared
+    @State private var participantEntities: [Participant.ID: Entity] = [:]
+    
     
     private let audioLoader: SpatialAudioLoader
 
@@ -46,14 +50,14 @@ struct SpacesView: View {
     
     // MARK: - Body
     var body: some View {
-        // Split the body into smaller view components
         ZStack {
             // Main RealityView component
             mainRealityView
-            
+                .overlay(sharePlayParticipantManager) // Attach manager here
+
             // Loading and error overlays
             overlayViews
-            
+
             // Volume control overlay
             if showVolumeControl, let space = selectedSpace {
                 VolumeControlView(
@@ -63,29 +67,20 @@ struct SpacesView: View {
                 )
                 .padding(.bottom, 40)
             }
-            
+
             // Volume control toggle button
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        showVolumeControl.toggle()
-                    }) {
-                        Image(systemName: showVolumeControl ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                            .font(.title)
-                            .padding()
-                            .background(.ultraThinMaterial)
-                            .clipShape(Circle())
-                    }
-                    .padding(.trailing, 30)
-                    .padding(.bottom, 30)
-                }
-            }
+            volumeToggleButton
         }
         .onAppear {
             print("📱 SpacesView appeared")
             initializeSpace()
+        }
+        .onChange(of: sharePlayManager.isSessionActive) { _, isActive in
+            if isActive {
+                print("SharePlay: Session just became active.")
+            } else {
+                print("SharePlay: Session ended.")
+            }
         }
         .onChange(of: entityWrapper.getSpaceEntity()?.id) { oldId, newId in
             handleEntityIdChangeForNotification(oldId: oldId, newId: newId)
@@ -97,6 +92,7 @@ struct SpacesView: View {
             cleanupView()
         }
     }
+
     
     // MARK: - View Components
     private var mainRealityView: some View {
@@ -131,6 +127,27 @@ struct SpacesView: View {
         }
     }
     
+    // MARK: - Volume Control Toggle Button
+    private var volumeToggleButton: some View {
+        VStack {
+            Spacer()
+            HStack {
+                Spacer()
+                Button(action: {
+                    showVolumeControl.toggle()
+                }) {
+                    Image(systemName: showVolumeControl ? "speaker.wave.2.fill" : "speaker.wave.2")
+                        .font(.title2)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(.thinMaterial, in: .circle)
+                }
+                .padding(.trailing)
+                .padding(.bottom)
+            }
+        }
+    }
+    
     // MARK: - Core Functionality
     
     // Missing method that was causing the compilation error
@@ -155,6 +172,7 @@ struct SpacesView: View {
         }
     }
     
+    // Add this to initializeSpace() in SpacesView.swift
     private func initializeSpace() {
         // Reset notification state
         notificationSentForEntityID = nil
@@ -242,6 +260,17 @@ struct SpacesView: View {
         openWindowsIfNeeded()
     }
     
+    // NEW: This "invisible" view manages the participant lifecycle.
+    private var sharePlayParticipantManager: some View {
+        Color.clear
+            .onChange(of: sharePlayManager.participants) { _, newParticipants in
+                updateParticipantEntities(participants: newParticipants)
+            }
+            .onChange(of: sharePlayManager.localParticipantState) { _, newState in
+                updateLocalParticipantState(state: newState)
+            }
+    }
+    
     private func fetchSpacesAndLoadFirst() {
         spaceService.fetchSpaces()
         spaceService.$spaces
@@ -263,7 +292,7 @@ struct SpacesView: View {
             .store(in: &cancellables)
     }
     
-    /// Adds `entity` to `anchorEntity` if it isn’t there yet.
+    /// Adds `entity` to `anchorEntity` if it isn't there yet.
     @MainActor
     private func ensureEntityIsParented(_ entity: Entity) {
         let hasEntity = anchorEntity.children.contains(where: { $0.id == entity.id })
@@ -372,6 +401,7 @@ struct SpacesView: View {
 
 
     
+    // MODIFIED: This function now ONLY handles local seat changes and does NOT broadcast them.
     private func handleSeatChange(oldSeat: String?, newSeat: String?) {
         guard
             let spaceEntity = entityWrapper.getSpaceEntity(),
@@ -379,31 +409,22 @@ struct SpacesView: View {
             let seatID = newSeat,
             let seatEntity = findEntityDeep(named: seatID, in: spaceEntity),
             let oldSeatEntity = findEntityDeep(named: oldSeat ?? "seat_1", in: spaceEntity)
-
         else {
             return
         }
 
-        // 1) seat position including your root-offset
+        // --- This is your existing local animation logic. It remains unchanged. ---
         let seatLocalPos = seatEntity.position(relativeTo: spaceEntity)
         let oldSeatLocalPos = oldSeatEntity.position(relativeTo: spaceEntity)
-
-        // 2) recompute your viewer offset
-        let viewerOffset = SIMD3<Float>(
-            Float(space.viewerXAdjustment),
-            Float(space.viewerYAdjustment),
-            Float(space.viewerZAdjustment)
-        )
-
-        // 3) desired anchor = viewerOffset - seatLocalPos
         let newAnchorPos =  anchorEntity.position+oldSeatLocalPos-seatLocalPos
 
-        print("🪑 Moving to seat \(seatID): seatLocalPos=\(seatLocalPos), newAnchorPos=\(newAnchorPos)")
+        print("🪑 Moving to seat \(seatID) locally. This change will not be shared.")
 
-        // 4) apply absolutely, not additively
         withAnimation(.easeInOut(duration: 2)) {
             anchorEntity.position = newAnchorPos
         }
+
+        // The SharePlay block that sent the UserPositionUpdate message has been removed.
     }
     
     @MainActor
@@ -486,6 +507,47 @@ struct SpacesView: View {
         self.notificationPostTask = nil
         self.rootEntity = nil
     }
+    
+    private func updateParticipantEntities(participants: Set<Participant>) {
+        // Remove entities for participants who have left the session.
+        for (id, entity) in participantEntities {
+            if !participants.contains(where: { $0.id == id }) {
+                entity.removeFromParent()
+                participantEntities.removeValue(forKey: id)
+                print("SharePlay: Removed entity for participant \(id)")
+            }
+        }
+
+        // Add placeholder entities for new participants.
+        for participant in participants {
+            // We don't need an entity for ourself.
+            // Note: Check if this participant is the local user by comparing IDs or similar logic
+            // For now, we'll create entities for all participants
+            
+            if participantEntities[participant.id] == nil {
+                print("SharePlay: Creating placeholder for new participant \(participant.id)")
+                // This entity acts as an anchor. The system will automatically
+                // place the participant's actual Spatial Persona at this entity's location.
+                let placeholder = Entity()
+                placeholder.name = "participant-\(participant.id)"
+                
+                // Add it to our main scene anchor.
+                anchorEntity.addChild(placeholder)
+                participantEntities[participant.id] = placeholder
+            }
+        }
+    }
+
+    /// Handles updates to the local participant's spatial state
+    private func updateLocalParticipantState(state: SystemCoordinator.ParticipantState?) {
+        guard let state = state else { return }
+        
+        print("SharePlay: Local participant state updated - isSpatial: \(state.isSpatial)")
+        
+        // Handle local participant state changes here
+        // For example, you might want to show/hide UI elements based on spatial state
+    }
+
     
     private func cleanupView() {
         // --- Leave Space ---

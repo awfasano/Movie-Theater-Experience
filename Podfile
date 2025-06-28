@@ -10,4 +10,5 @@ target 'Movie Theater Experience' do
 	pod 'FirebaseAnalytics'
 	pod 'FirebaseAuth'
 	pod 'FirebaseCore'
+	pod 'FirebaseFirestore'
 end

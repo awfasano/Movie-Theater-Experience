@@ -8,6 +8,8 @@ class SpaceService: ObservableObject {
     @Published var spaces: [SpaceData] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var usersInCurrentSpace: [SharePlayUser] = []
+
     
     static let shared = SpaceService()
 
@@ -17,8 +19,7 @@ class SpaceService: ObservableObject {
     private var userPresenceRefs: [String: DocumentReference] = [:]
     private var heartbeatTimers: [String: Timer] = [:]
     private var entityCache: [String: Entity] = [:]
-
-    private let userId = UUID().uuidString
+    
     
     private init() {
         print("SpaceService initialized")
@@ -83,6 +84,33 @@ class SpaceService: ObservableObject {
                 }
             }
     }
+    
+    func fetchUsersInSpace(spaceId: String) async {
+        let usersRef = db.collection("Spaces").document(spaceId).collection("activeUsers")
+        do {
+            let snapshot = try await usersRef.getDocuments()
+            
+            // MODIFIED: Get the local user's ID from the AppModel to correctly filter them out.
+            let localUserId = await AppModel.shared.currentUserId
+            
+            let users = snapshot.documents.compactMap { doc -> SharePlayUser? in
+                let data = doc.data()
+                guard let userId = data["userId"] as? String,
+                      let userName = data["userName"] as? String else { // This part is correct
+                    return nil
+                }
+                // Correctly exclude the local user from the list.
+                return userId != localUserId ? SharePlayUser(id: userId, name: userName) : nil
+            }
+            await MainActor.run {
+                self.usersInCurrentSpace = users
+                print("Fetched \(users.count) other users in space \(spaceId)")
+            }
+        } catch {
+            print("Error fetching users in space: \(error)")
+        }
+    }
+    
     
     // MARK: - Entity Loading
     
@@ -321,6 +349,16 @@ class SpaceService: ObservableObject {
     }
     
     func joinSpace(_ spaceId: String) async -> Bool {
+        // MODIFIED: Get the canonical userId and a placeholder name.
+        let userId = await AppModel.shared.currentUserId
+        // In a real app, you would fetch the user's actual profile name.
+        let userName = "User_\(String(userId.prefix(4)))"
+
+        guard !userId.isEmpty else {
+            print("❌ Cannot join space: userId is empty.")
+            return false
+        }
+        
         do {
             let spaceRef = db.collection("Spaces").document(spaceId)
             try await spaceRef.updateData([
@@ -328,8 +366,11 @@ class SpaceService: ObservableObject {
             ])
             
             let userRef = spaceRef.collection("activeUsers").document(userId)
+            
+            // MODIFIED: Add the 'userName' field to the document.
             try await userRef.setData([
                 "userId": userId,
+                "userName": userName, // This is the new field.
                 "joinedAt": FieldValue.serverTimestamp(),
                 "lastActive": FieldValue.serverTimestamp(),
                 "deviceInfo": UIDevice.current.model
@@ -337,13 +378,54 @@ class SpaceService: ObservableObject {
             
             userPresenceRefs[spaceId] = userRef
             startHeartbeat(for: spaceId)
-            print("✅ Successfully joined space: \(spaceId)")
+            print("✅ Successfully joined space: \(spaceId) as user: \(userId)")
             return true
         } catch {
             print("❌ Failed to join space: \(error.localizedDescription)")
             return false
         }
     }
+    
+    func leaveSpace(_ spaceId: String) async {
+        // MODIFIED: Get the correct userId from the AppModel to ensure we remove the right document.
+        let userId = await AppModel.shared.currentUserId
+        guard !userId.isEmpty else { return }
+        
+        // Use the specific user's ref to leave, rather than a potentially incorrect cached one.
+        let userRef = db.collection("Spaces").document(spaceId).collection("activeUsers").document(userId)
+        
+        do {
+            let spaceRef = db.collection("Spaces").document(spaceId)
+            // Use a transaction to safely decrement the count
+            try await db.runTransaction({ (transaction, errorPointer) -> Any? in
+                let spaceDocument: DocumentSnapshot
+                do {
+                    try spaceDocument = transaction.getDocument(spaceRef)
+                } catch let fetchError as NSError {
+                    errorPointer?.pointee = fetchError
+                    return nil
+                }
+
+                guard let oldCount = spaceDocument.data()?["currentUserCount"] as? Int else {
+                    let error = NSError(domain: "AppErrorDomain", code: -1, userInfo: [ NSLocalizedDescriptionKey: "Unable to retrieve user count from snapshot." ])
+                    errorPointer?.pointee = error
+                    return nil
+                }
+                
+                // Decrement count only if it's greater than 0
+                transaction.updateData(["currentUserCount": FieldValue.increment(Int64(oldCount > 0 ? -1 : 0))], forDocument: spaceRef)
+                return nil
+            })
+
+            try await userRef.delete()
+            stopHeartbeat(for: spaceId)
+            userPresenceRefs.removeValue(forKey: spaceId)
+            print("✅ Successfully left space: \(spaceId)")
+        } catch {
+            print("❌ Failed to leave space: \(error.localizedDescription)")
+        }
+    }
+    
     
     func getCachedEntity(for spaceId: String) -> Entity? {
         return entityCache[spaceId]
@@ -387,26 +469,6 @@ class SpaceService: ObservableObject {
         })
         .share()
         .eraseToAnyPublisher()
-    }
-    
-    func leaveSpace(_ spaceId: String) async {
-        guard let userRef = userPresenceRefs[spaceId] else {
-            print("Not currently in space: \(spaceId)")
-            return
-        }
-        
-        do {
-            let spaceRef = db.collection("Spaces").document(spaceId)
-            try await spaceRef.updateData([
-                "currentUserCount": FieldValue.increment(Int64(-1))
-            ])
-            try await userRef.delete()
-            stopHeartbeat(for: spaceId)
-            userPresenceRefs.removeValue(forKey: spaceId)
-            print("✅ Successfully left space: \(spaceId)")
-        } catch {
-            print("❌ Failed to leave space: \(error.localizedDescription)")
-        }
     }
     
     private func startHeartbeat(for spaceId: String) {

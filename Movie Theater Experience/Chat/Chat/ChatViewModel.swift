@@ -8,7 +8,7 @@ class ChatViewModel: ObservableObject {
     @Published private(set) var messages: [ChatMessage] = []
     
     // Use dependency injection for the event manager.
-    private let eventManager: FirebaseEventManager
+    private let eventManager: EventManagerProtocol
     
     let eventId: String
     let date: Date
@@ -22,7 +22,7 @@ class ChatViewModel: ObservableObject {
     
     /// Injects an instance of FirebaseEventManager.
     /// You can supply one that's preconfigured for your context.
-    init(eventId: String, date: Date, eventManager: FirebaseEventManager = FirebaseEventManager.shared) {
+    init(eventId: String, date: Date, eventManager: EventManagerProtocol = FirebaseEventManager.shared) {
         self.eventId = eventId
         self.date = date
         self.eventManager = eventManager
@@ -50,7 +50,7 @@ class ChatViewModel: ObservableObject {
         }
     }
     
-    private func updateMessages() async {
+    func updateMessages() async {
         let currentMessages = await eventManager.messages
         if self.messages != currentMessages {
             self.messages = currentMessages

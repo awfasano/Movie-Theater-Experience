@@ -40,6 +40,13 @@ struct Movie_Theater_ExperienceApp: App {
     @StateObject private var emojiManager = EmojiManager.shared
     @StateObject private var spacesChatManager = SpacesChatManager.shared
 
+    @StateObject private var sharePlayManager = SharePlayManager.shared
+    
+    let publicSpaceActivityIdentifier = "com.yourcompany.yourapp.PublicSpaceActivity"
+    let directCallActivityIdentifier = "com.yourcompany.yourapp.DirectCallActivity"
+
+
+    
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openWindow) var openWindow
 
@@ -118,6 +125,15 @@ struct Movie_Theater_ExperienceApp: App {
         }
         .immersionStyle(selection: .constant(.full), in: .full)
         
+        
+        WindowGroup(id: "userListWindow") {
+            UserListView()
+                .environment(appModel)
+                // No need to inject .shared singletons if the view accesses them directly.
+        }
+        .defaultSize(width: 500, height: 600) // A good default size for the list.
+        .windowStyle(.plain)
+        
         // Immersive space window for Spaces.
         ImmersiveSpace(id: appModel.spacesID) {
             SpacesView(audioLoader: audioLoader)
@@ -126,7 +142,11 @@ struct Movie_Theater_ExperienceApp: App {
                 .environmentObject(spacesEntityWrapper)
                 .environmentObject(windowManager)
         }
+        .handlesExternalEvents(
+            matching: [publicSpaceActivityIdentifier, directCallActivityIdentifier]
+        )
         .immersionStyle(selection: .constant(.full), in: .full)
+
         
         WindowGroup("Audio Controls", id: "audioControls") {
             if let space = appModel.selectedSpace,

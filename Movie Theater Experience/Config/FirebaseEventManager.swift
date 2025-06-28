@@ -3,7 +3,7 @@ import FirebaseFirestore
 import Combine
 
 @Observable
-final class FirebaseEventManager: ObservableObject {
+final class FirebaseEventManager: ObservableObject, EventManagerProtocol {
     // MARK: - Properties
     
     static let shared = FirebaseEventManager()

@@ -60,6 +60,20 @@
 		C444C9272D540D550046F92D /* OccupancyProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C444C9262D540D550046F92D /* OccupancyProgressView.swift */; };
 		C444C9292D5446710046F92D /* LazyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C444C9282D5446710046F92D /* LazyView.swift */; };
 		C4474F182D80BC2000DA08A1 /* SpacePresenceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4474F172D80BC2000DA08A1 /* SpacePresenceManager.swift */; };
+		C44919142E107D3400C4B087 /* SeatPositionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C44919102E107D3400C4B087 /* SeatPositionTests.swift */; };
+		C44919152E107D3400C4B087 /* ChatViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C449190E2E107D3400C4B087 /* ChatViewModelTests.swift */; };
+		C44919162E107D3400C4B087 /* ImmersiveSpaceManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C449190F2E107D3400C4B087 /* ImmersiveSpaceManagerTests.swift */; };
+		C44919172E107D3400C4B087 /* SongServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C44919112E107D3400C4B087 /* SongServiceTests.swift */; };
+		C44919182E107D3400C4B087 /* SpatialAudioLoaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C44919122E107D3400C4B087 /* SpatialAudioLoaderTests.swift */; };
+		C44919192E107D3400C4B087 /* VideoPlayerManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C44919132E107D3400C4B087 /* VideoPlayerManagerTests.swift */; };
+		C449191E2E107F7600C4B087 /* CalendarEventTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C449191B2E107F7600C4B087 /* CalendarEventTests.swift */; };
+		C449191F2E107F7600C4B087 /* AppModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C449191A2E107F7600C4B087 /* AppModelTests.swift */; };
+		C44919202E107F7600C4B087 /* CalendarServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C449191C2E107F7600C4B087 /* CalendarServiceTests.swift */; };
+		C44919212E107F7600C4B087 /* SpaceDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C449191D2E107F7600C4B087 /* SpaceDataTests.swift */; };
+		C44919242E10811000C4B087 /* EventManagerProtocol 2.swift in Sources */ = {isa = PBXBuildFile; fileRef = C44919222E10811000C4B087 /* EventManagerProtocol 2.swift */; };
+		C44919272E109B9300C4B087 /* ShareplayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C44919262E109B9300C4B087 /* ShareplayManager.swift */; };
+		C44919292E109BD800C4B087 /* SpaceActivities.swift in Sources */ = {isa = PBXBuildFile; fileRef = C44919282E109BD800C4B087 /* SpaceActivities.swift */; };
+		C449192C2E109D1B00C4B087 /* UsersListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C449192B2E109D1B00C4B087 /* UsersListView.swift */; };
 		C44B306E2D4D6F59004CC38A /* ChatSettingsWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C44B306D2D4D6F59004CC38A /* ChatSettingsWindow.swift */; };
 		C45D346D2E073D5B004407F4 /* StoriesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C45D346C2E073D5B004407F4 /* StoriesListView.swift */; };
 		C45D346F2E073D72004407F4 /* FirebaseStoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C45D346E2E073D72004407F4 /* FirebaseStoryService.swift */; };
@@ -211,6 +225,7 @@
 		C416BA472E09DDA7006399D8 /* WaveformViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformViewModel.swift; sourceTree = "<group>"; };
 		C416BA492E0A4E35006399D8 /* BarePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarePlayerView.swift; sourceTree = "<group>"; };
 		C416BA4C2E0FCB87006399D8 /* StoryRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryRowView.swift; sourceTree = "<group>"; };
+		C416BA4E2E0FD9B4006399D8 /* GEMINI.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = GEMINI.md; sourceTree = "<group>"; };
 		C41817C72CBE319F00A94ADF /* Emitters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Emitters.swift; sourceTree = "<group>"; };
 		C41C81612E093B970050BCB3 /* InteractiveStoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveStoryViewModel.swift; sourceTree = "<group>"; };
 		C43DBA2D2CF5B9EB00E79D3F /* SpatialAudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpatialAudioManager.swift; sourceTree = "<group>"; };
@@ -228,6 +243,21 @@
 		C444C9262D540D550046F92D /* OccupancyProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OccupancyProgressView.swift; sourceTree = "<group>"; };
 		C444C9282D5446710046F92D /* LazyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LazyView.swift; sourceTree = "<group>"; };
 		C4474F172D80BC2000DA08A1 /* SpacePresenceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacePresenceManager.swift; sourceTree = "<group>"; };
+		C449190E2E107D3400C4B087 /* ChatViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModelTests.swift; sourceTree = "<group>"; };
+		C449190F2E107D3400C4B087 /* ImmersiveSpaceManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImmersiveSpaceManagerTests.swift; sourceTree = "<group>"; };
+		C44919102E107D3400C4B087 /* SeatPositionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeatPositionTests.swift; sourceTree = "<group>"; };
+		C44919112E107D3400C4B087 /* SongServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongServiceTests.swift; sourceTree = "<group>"; };
+		C44919122E107D3400C4B087 /* SpatialAudioLoaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpatialAudioLoaderTests.swift; sourceTree = "<group>"; };
+		C44919132E107D3400C4B087 /* VideoPlayerManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerManagerTests.swift; sourceTree = "<group>"; };
+		C449191A2E107F7600C4B087 /* AppModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelTests.swift; sourceTree = "<group>"; };
+		C449191B2E107F7600C4B087 /* CalendarEventTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarEventTests.swift; sourceTree = "<group>"; };
+		C449191C2E107F7600C4B087 /* CalendarServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarServiceTests.swift; sourceTree = "<group>"; };
+		C449191D2E107F7600C4B087 /* SpaceDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceDataTests.swift; sourceTree = "<group>"; };
+		C44919222E10811000C4B087 /* EventManagerProtocol 2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "EventManagerProtocol 2.swift"; sourceTree = "<group>"; };
+		C44919262E109B9300C4B087 /* ShareplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareplayManager.swift; sourceTree = "<group>"; };
+		C44919282E109BD800C4B087 /* SpaceActivities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceActivities.swift; sourceTree = "<group>"; };
+		C449192A2E109C3A00C4B087 /* Movie Theater Experience.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Movie Theater Experience.entitlements"; sourceTree = "<group>"; };
+		C449192B2E109D1B00C4B087 /* UsersListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsersListView.swift; sourceTree = "<group>"; };
 		C44B306D2D4D6F59004CC38A /* ChatSettingsWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSettingsWindow.swift; sourceTree = "<group>"; };
 		C45D346C2E073D5B004407F4 /* StoriesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoriesListView.swift; sourceTree = "<group>"; };
 		C45D346E2E073D72004407F4 /* FirebaseStoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseStoryService.swift; sourceTree = "<group>"; };
@@ -399,6 +429,7 @@
 				C4115ED22B994AF9007AD9B0 /* Packages */,
 				C4115EEB2B994AFA007AD9B0 /* Movie Theater ExperienceTests */,
 				C4115ED02B994AF9007AD9B0 /* Products */,
+				C416BA4E2E0FD9B4006399D8 /* GEMINI.md */,
 			);
 			sourceTree = "<group>";
 		};
@@ -414,6 +445,7 @@
 		C4115ED12B994AF9007AD9B0 /* Movie Theater Experience */ = {
 			isa = PBXGroup;
 			children = (
+				C449192A2E109C3A00C4B087 /* Movie Theater Experience.entitlements */,
 				C4F478BC2CEBD46300965502 /* GoogleService-Info.plist */,
 				C41817C92CBE3B3600A94ADF /* Sign Up */,
 				C4BFD5BA2CA5F63E007D20BE /* Calendar */,
@@ -451,6 +483,16 @@
 		C4115EEB2B994AFA007AD9B0 /* Movie Theater ExperienceTests */ = {
 			isa = PBXGroup;
 			children = (
+				C449191A2E107F7600C4B087 /* AppModelTests.swift */,
+				C449191B2E107F7600C4B087 /* CalendarEventTests.swift */,
+				C449191C2E107F7600C4B087 /* CalendarServiceTests.swift */,
+				C449191D2E107F7600C4B087 /* SpaceDataTests.swift */,
+				C449190E2E107D3400C4B087 /* ChatViewModelTests.swift */,
+				C449190F2E107D3400C4B087 /* ImmersiveSpaceManagerTests.swift */,
+				C44919102E107D3400C4B087 /* SeatPositionTests.swift */,
+				C44919112E107D3400C4B087 /* SongServiceTests.swift */,
+				C44919122E107D3400C4B087 /* SpatialAudioLoaderTests.swift */,
+				C44919132E107D3400C4B087 /* VideoPlayerManagerTests.swift */,
 				C40F1FCC2DE14B9700C98014 /* assetsForTests */,
 				C4115EEC2B994AFA007AD9B0 /* Movie_Theater_ExperienceTests.swift */,
 				C48090902DDE5F1E007FA1A7 /* VideoSyncServiceTests.swift */,
@@ -535,10 +577,8 @@
 			isa = PBXGroup;
 			children = (
 				C4D88CA92D752B87004F226E /* SpacesNavBarView.swift */,
+				C44919252E10978C00C4B087 /* SharePlay */,
 				C40BD7902E00AD2F0062623E /* TTS Storyteller */,
-				C444C9182D53FBDF0046F92D /* SpaceData.swift */,
-				C4790EB12DAEE35B0080BB7C /* SeatSelectionModel.swift */,
-				C4CEBBC52DA330CF00731652 /* SelectedSpace.swift */,
 				C413FA4D2DBC2E27008FABEB /* Audio */,
 				C4CEBBBE2DA32D7E00731652 /* Map */,
 				C4D88CA52D74F89A004F226E /* Space Tab */,
@@ -572,6 +612,16 @@
 				C4FE99B42D7F8F4F008AE0D6 /* SpacesChatViewModel.swift */,
 			);
 			path = "Space Chat";
+			sourceTree = "<group>";
+		};
+		C44919252E10978C00C4B087 /* SharePlay */ = {
+			isa = PBXGroup;
+			children = (
+				C44919262E109B9300C4B087 /* ShareplayManager.swift */,
+				C44919282E109BD800C4B087 /* SpaceActivities.swift */,
+				C449192B2E109D1B00C4B087 /* UsersListView.swift */,
+			);
+			path = SharePlay;
 			sourceTree = "<group>";
 		};
 		C48A9B922D528B3400C3B984 /* Core */ = {
@@ -639,6 +689,7 @@
 		C4C439FF2CA3540D001AC733 /* Config */ = {
 			isa = PBXGroup;
 			children = (
+				C44919222E10811000C4B087 /* EventManagerProtocol 2.swift */,
 				C473DCAE2D308BC7008AA51D /* FirebaseEventManager.swift */,
 				C4D88CAD2D7531AB004F226E /* EventManagerConfiguration.swift */,
 				C4FE99B22D7F8E5F008AE0D6 /* SpacesChatManager.swift */,
@@ -700,6 +751,9 @@
 		C4D88CA62D74F8C2004F226E /* Space Immersion */ = {
 			isa = PBXGroup;
 			children = (
+				C444C9182D53FBDF0046F92D /* SpaceData.swift */,
+				C4790EB12DAEE35B0080BB7C /* SeatSelectionModel.swift */,
+				C4CEBBC52DA330CF00731652 /* SelectedSpace.swift */,
 				C4DEA8CD2D87526F008F16F3 /* Seat Selection */,
 				C4E815572D55C982007FE604 /* SpacesView.swift */,
 				C4D88CA22D74F86B004F226E /* SpacesEntityWrapper.swift */,
@@ -913,6 +967,7 @@
 				C4DAB7EF2B9FF77500852029 /* CustomTextInput.swift in Sources */,
 				C45D34712E0740F0004407F4 /* InteractiveStoryView.swift in Sources */,
 				C4DEA8CF2D875286008F16F3 /* SeatSelectionWindow.swift in Sources */,
+				C44919272E109B9300C4B087 /* ShareplayManager.swift in Sources */,
 				C444C9232D53FDA10046F92D /* SpaceService.swift in Sources */,
 				C4413F622DC40644008A7BD8 /* OrbMaterials.swift in Sources */,
 				C4413F592DC028D7008A7BD8 /* Song.swift in Sources */,
@@ -948,6 +1003,7 @@
 				C40AE3D62D516C070075914F /* ChatSettingsNavBar.swift in Sources */,
 				C4E815582D55C982007FE604 /* SpacesView.swift in Sources */,
 				C405E58D2D4CAD2B00681E60 /* TimeLineline.swift in Sources */,
+				C44919242E10811000C4B087 /* EventManagerProtocol 2.swift in Sources */,
 				C405E58B2D4CACE900681E60 /* PositionedEvents.swift in Sources */,
 				C405E5852D4CABA800681E60 /* TimelineView.swift in Sources */,
 				C44B306E2D4D6F59004CC38A /* ChatSettingsWindow.swift in Sources */,
@@ -970,7 +1026,9 @@
 				C404A8012D430161000450D4 /* ImmersiveHelper.swift in Sources */,
 				C404A8032D430186000450D4 /* ImmersiveSpaceManager.swift in Sources */,
 				C4FE99B52D7F8F4F008AE0D6 /* SpacesChatViewModel.swift in Sources */,
+				C449192C2E109D1B00C4B087 /* UsersListView.swift in Sources */,
 				C4D88CA12D74E5EE004F226E /* SpaceBrowserIntegration.swift in Sources */,
+				C44919292E109BD800C4B087 /* SpaceActivities.swift in Sources */,
 				C4D88C9B2D74E519004F226E /* SpaceCard.swift in Sources */,
 				C416BA4D2E0FCB87006399D8 /* StoryRowView.swift in Sources */,
 				C4AF48A92C9E6D61006FE6C8 /* ToggleImmersiveSpaceButton.swift in Sources */,
@@ -993,6 +1051,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				C48090912DDE5F1E007FA1A7 /* VideoSyncServiceTests.swift in Sources */,
+				C44919142E107D3400C4B087 /* SeatPositionTests.swift in Sources */,
+				C449191E2E107F7600C4B087 /* CalendarEventTests.swift in Sources */,
+				C449191F2E107F7600C4B087 /* AppModelTests.swift in Sources */,
+				C44919202E107F7600C4B087 /* CalendarServiceTests.swift in Sources */,
+				C44919212E107F7600C4B087 /* SpaceDataTests.swift in Sources */,
+				C44919152E107D3400C4B087 /* ChatViewModelTests.swift in Sources */,
+				C44919162E107D3400C4B087 /* ImmersiveSpaceManagerTests.swift in Sources */,
+				C44919172E107D3400C4B087 /* SongServiceTests.swift in Sources */,
+				C44919182E107D3400C4B087 /* SpatialAudioLoaderTests.swift in Sources */,
+				C44919192E107D3400C4B087 /* VideoPlayerManagerTests.swift in Sources */,
 				C40F1FCB2DE14B7D00C98014 /* helpersTests.swift in Sources */,
 				C4115EED2B994AFA007AD9B0 /* Movie_Theater_ExperienceTests.swift in Sources */,
 			);
@@ -1135,6 +1203,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Movie Theater Experience/Movie Theater Experience.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "com.waitedco.Movie-Theater-Experience\n";
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -1167,6 +1236,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Movie Theater Experience/Movie Theater Experience.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "com.waitedco.Movie-Theater-Experience\n";
 				DEVELOPMENT_ASSET_PATHS = "";

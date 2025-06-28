@@ -54,18 +54,25 @@ struct SpacesNavBarView: View {
             }
             .buttonStyle(.bordered)
             
+            Button(action: {
+                openWindow(id: "userListWindow")
+            }) {
+                Label("Chat", systemImage: "person.2.fill")
+            }
+            .buttonStyle(.bordered)
+            
             // Open Chat Messages Window
             Button(action: {
                 openWindow(id: "spaceChatWindow")
             }) {
-                Label("Chat", systemImage: "message.fill")
+                Label("Message", systemImage: "message.fill")
             }
             .buttonStyle(.bordered)
             
             Button(action: {
               openWindow(id: "audioControls")
             }) {
-              Label("Volume", systemImage: "speaker.wave.2.fill")
+              Label("Music", systemImage: "speaker.wave.2.fill")
             }
             .buttonStyle(.bordered)
             

@@ -9,7 +9,7 @@ import Foundation
 import FirebaseFirestore
 import RealityKit
 
-struct SpaceData: Identifiable, Codable {
+struct SpaceData: Identifiable, Codable, Equatable {
     @DocumentID var id: String?
     var spaceName: String
     var description: String
