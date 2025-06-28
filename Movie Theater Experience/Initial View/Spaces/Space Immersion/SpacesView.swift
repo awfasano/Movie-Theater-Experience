@@ -155,6 +155,7 @@ struct SpacesView: View {
         }
     }
     
+    // Add this to initializeSpace() in SpacesView.swift
     private func initializeSpace() {
         // Reset notification state
         notificationSentForEntityID = nil
