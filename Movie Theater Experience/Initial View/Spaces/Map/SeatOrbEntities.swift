@@ -6,8 +6,8 @@
 //
 
 import Foundation
-import SwiftUICore
-import RealityFoundation
+import SwiftUI
+import RealityKit
 import SwiftUI
 import _RealityKit_SwiftUI
 

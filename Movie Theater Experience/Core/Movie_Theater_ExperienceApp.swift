@@ -17,9 +17,7 @@ struct Movie_Theater_ExperienceApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     
     // AppModel: Holds shared state including userId
-    @State private var appModel = AppModel() // Using a new instance, not AppModel.shared directly as @State
-                                          // If AppModel.shared is intended, ensure it's properly managed.
-                                          // For this example, a new @State instance is fine.
+    @State private var appModel = AppModel.shared
 
     // AppStorage for persisting userId
     // The key "userId" here must match the key you intend to use for persistence.
@@ -47,6 +45,12 @@ struct Movie_Theater_ExperienceApp: App {
 
 
     
+    
+    // AppStorage properties for persisting the stable userID and the user's display name.
+    @AppStorage("userID") private var userID: String = ""
+    @AppStorage("username") private var username: String = ""
+    
+    
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openWindow) var openWindow
 
@@ -58,12 +62,6 @@ struct Movie_Theater_ExperienceApp: App {
                 .environmentObject(immersiveSpaceManager)
                 .environmentObject(firebaseEventManager)
                 .environmentObject(windowManager) // Ensure WindowManager is available if ContentView needs it
-                .onAppear {
-                    // Initialize userId when the main ContentView appears.
-                    // This is the earliest reliable point in the UI lifecycle.
-                    print("🚀 [App] ContentView appeared. Initializing userId in AppModel.")
-                    appModel.initializeUserId(from: appStorageUserId, appStorage: _appStorageUserId)
-                }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .background {
                         Task {
@@ -99,7 +97,7 @@ struct Movie_Theater_ExperienceApp: App {
             }
         }
         .windowStyle(.volumetric)
-        .defaultSize(width: 600, height: 350)
+        .defaultSize(width: 0.5, height: 0.5, depth: 1, in: .meters)
         
         // Main Tab Bar window.
         WindowGroup("Tab Bar", id: "tabBar") {
@@ -135,6 +133,7 @@ struct Movie_Theater_ExperienceApp: App {
         .windowStyle(.plain)
         
         // Immersive space window for Spaces.
+        // In Movie_Theater_ExperienceApp.swift
         ImmersiveSpace(id: appModel.spacesID) {
             SpacesView(audioLoader: audioLoader)
                 .environment(appModel)
@@ -143,7 +142,7 @@ struct Movie_Theater_ExperienceApp: App {
                 .environmentObject(windowManager)
         }
         .handlesExternalEvents(
-            matching: [publicSpaceActivityIdentifier, directCallActivityIdentifier]
+            matching: [PublicSpaceActivity.activityIdentifier, DirectCallActivity.activityIdentifier]
         )
         .immersionStyle(selection: .constant(.full), in: .full)
 

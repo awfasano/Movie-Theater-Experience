@@ -156,7 +156,7 @@ struct EventView: View {
             updateEventAccessibility()
             updateCountdownTimer()
         }
-        .onChange(of: Date.now) { _ in
+        .onChange(of: Date.now) {
             updateEventAccessibility()
         }
     }

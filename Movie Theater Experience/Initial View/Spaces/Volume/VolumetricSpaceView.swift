@@ -6,6 +6,7 @@ import Combine
 struct VolumetricSpaceView: View {
     // MARK: - Properties
     let space: SpaceData
+    let onEnter: () -> Void
     @StateObject private var viewModel = VolumetricSpaceViewModel()
     
     // Environment access for immersive spaces
@@ -16,6 +17,7 @@ struct VolumetricSpaceView: View {
     @State private var scale: Float = 0.2
     @State private var rotationAngle: Angle = .zero
     @State private var showControls = true
+    @State private var showJoinFailedAlert = false
     
     // Timer for continuous rotation
     let rotationTimer = Timer.publish(every: 0.01, on: .main, in: .common).autoconnect()
@@ -92,6 +94,12 @@ struct VolumetricSpaceView: View {
         .onDisappear {
             viewModel.cleanup()
         }
+        .alert("Could Not Join Space", isPresented: $showJoinFailedAlert) {
+            Link("Open Settings", destination: URL(string: UIApplication.openSettingsURLString)!)
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Please go to the Settings app and set a username before joining a shared space.")
+        }
     }
     
     // MARK: - Subviews
@@ -140,7 +148,7 @@ struct VolumetricSpaceView: View {
             Button(action: enterImmersiveSpace) {
                 HStack {
                     Image(systemName: "visionpro")
-                    Text("Enter Immersive Space")
+                    Text("Enter Space")
                 }
                 .font(.headline)
                 .foregroundColor(.white)
@@ -251,35 +259,26 @@ struct VolumetricSpaceView: View {
         scale = min(1.0, scale + 0.05)
     }
     
-    /// Enter immersive space
     private func enterImmersiveSpace() {
-        print("🚀 Entering immersive space for: \(space.spaceName)")
-        
-        // Update app model with selected space
-        appModel.selectedSpace = space
-        
-        // Ensure entity is loaded and shared with the entity wrappers
-        if let entity = viewModel.entity {
-            // Make sure entity is properly set in shared wrappers
-            SpacesEntityWrapper.shared.setEntity(entity.clone(recursive: true))
-            SpacesEntityWrapper.shared.setSpaceEntity(entity.clone(recursive: true))
-            SpacesEntityWrapper.shared.setActiveSceneEntity(entity.clone(recursive: true))
+        // 1. Ask the ViewModel if we are allowed to enter.
+        if viewModel.canEnterSpace() {
+            // 2. If YES: Proceed with setting up the models and calling onEnter.
+            print("🚀 View is proceeding to enter space.")
             
-            print("✅ Entity set in shared wrapper")
-            SpacesEntityWrapper.shared.dumpEntityHierarchy(entity)
-        } else {
-            print("⚠️ Warning: Entity not loaded when entering immersive space")
-        }
-        
-        // Open the immersive space
-        Task {
-            do {
-                // Use the spaces ID from app model
-                try await openImmersiveSpace(id: appModel.spacesID)
-                print("✅ Immersive space opened successfully")
-            } catch {
-                print("❌ Failed to open immersive space: \(error)")
+            // This is your existing setup logic
+            appModel.selectedSpace = space
+            if let entity = viewModel.entity {
+                SpacesEntityWrapper.shared.setEntity(entity.clone(recursive: true))
+                SpacesEntityWrapper.shared.setSpaceEntity(entity.clone(recursive: true))
+                SpacesEntityWrapper.shared.setActiveSceneEntity(entity.clone(recursive: true))
+                print("✅ Entity set in shared wrapper.")
             }
+            
+            onEnter() // This triggers the immersive transition
+            
+        } else {
+            // 3. If NO: Show the alert. The immersive transition is never started.
+            showJoinFailedAlert = true
         }
     }
 }

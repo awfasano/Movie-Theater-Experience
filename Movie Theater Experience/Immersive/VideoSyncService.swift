@@ -680,7 +680,7 @@ class VideoSyncService {
         // before calling updateFirestorePlayState.
         let currentPosition = player.currentTime().seconds
         if isPlayingState != desiredPlayState || abs(self.currentTime - currentPosition) > 0.1 { // Update if play state or time changed significantly
-            await updateLocalPlayState(isPlaying: desiredPlayState, position: currentPosition)
+            updateLocalPlayState(isPlaying: desiredPlayState, position: currentPosition)
         }
 
 

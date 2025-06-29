@@ -20,6 +20,8 @@ class SpaceService: ObservableObject {
     private var heartbeatTimers: [String: Timer] = [:]
     private var entityCache: [String: Entity] = [:]
     
+    private let appModel = AppModel.shared
+    
     
     private init() {
         print("SpaceService initialized")
@@ -89,10 +91,10 @@ class SpaceService: ObservableObject {
         let usersRef = db.collection("Spaces").document(spaceId).collection("activeUsers")
         do {
             let snapshot = try await usersRef.getDocuments()
-            
+
             // MODIFIED: Get the local user's ID from the AppModel to correctly filter them out.
-            let localUserId = await AppModel.shared.currentUserId
-            
+            let localUserId = await appModel.currentUserId
+
             let users = snapshot.documents.compactMap { doc -> SharePlayUser? in
                 let data = doc.data()
                 guard let userId = data["userId"] as? String,
@@ -180,18 +182,18 @@ class SpaceService: ObservableObject {
                     try FileManager.default.copyItem(at: fileURL, to: destinationURL)
                     print("📁 File copied to: \(destinationURL)")
                     
-                    Task {
+                    Task { @MainActor in
                         do {
                             let loadedEntity = try await Entity(contentsOf: destinationURL, withName: nil)
                             
                             // Add name to entity if none exists
-                            if loadedEntity.name.isEmpty {
+                            if await loadedEntity.name.isEmpty {
                                 loadedEntity.name = space.spaceName
                             }
                             
                             // Log Root entity presence but return the complete entity
-                            if let rootEntity = loadedEntity.findEntity(named: "Root") {
-                                print("✅ Found root entity: \(rootEntity.name)")
+                            if let rootEntity = await loadedEntity.findEntity(named: "Root") {
+                                print("✅ Found root entity: \(await rootEntity.name)")
                                 
                                 // Ensure Root entity is enabled
                                 rootEntity.isEnabled = true
@@ -203,7 +205,7 @@ class SpaceService: ObservableObject {
                             print("✅ Entity loaded successfully with complete hierarchy")
                             
                             if let spaceId = space.id {
-                                self.entityCache[spaceId] = loadedEntity.clone(recursive: true)
+                                self.entityCache[spaceId] = await loadedEntity.clone(recursive: true)
                             }
                             
                             promise(.success(loadedEntity))
@@ -348,47 +350,63 @@ class SpaceService: ObservableObject {
         }
     }
     
-    func joinSpace(_ spaceId: String) async -> Bool {
-        // MODIFIED: Get the canonical userId and a placeholder name.
-        let userId = await AppModel.shared.currentUserId
-        // In a real app, you would fetch the user's actual profile name.
-        let userName = "User_\(String(userId.prefix(4)))"
+    // In SpaceService.swift
 
-        guard !userId.isEmpty else {
-            print("❌ Cannot join space: userId is empty.")
+    func joinSpace(_ spaceId: String) async -> Bool {
+        // 1. Is the function even being called?
+        print("➡️ [Debug] 1. joinSpace called with spaceId: \(spaceId)")
+
+        let user = await appModel.currentUser
+        
+        // 2. Is the user identity valid in the AppModel?
+        print("➡️ [Debug] 2. Checking user: ID = '\(user.id)', Name = '\(user.name)'")
+
+        guard !user.name.isEmpty else {
+            print("❌ EXIT: Username is empty.")
             return false
         }
         
+        guard !user.id.isEmpty else {
+            print("❌ EXIT: UserID is empty.")
+            return false
+        }
+        
+        print("✅ [Debug] User identity is valid. Proceeding to database write.")
+        
         do {
             let spaceRef = db.collection("Spaces").document(spaceId)
-            try await spaceRef.updateData([
-                "currentUserCount": FieldValue.increment(Int64(1))
-            ])
             
-            let userRef = spaceRef.collection("activeUsers").document(userId)
+            // 3. Trying the first database write...
+            print("➡️ [Debug] 3. Attempting to increment currentUserCount...")
+            try await spaceRef.updateData(["currentUserCount": FieldValue.increment(Int64(1))])
+            print("✅ [Debug] Successfully incremented currentUserCount.")
             
-            // MODIFIED: Add the 'userName' field to the document.
+            let userRef = spaceRef.collection("activeUsers").document(user.id)
+            
+            // 4. Trying the second database write...
+            print("➡️ [Debug] 4. Attempting to set data for active user...")
             try await userRef.setData([
-                "userId": userId,
-                "userName": userName, // This is the new field.
+                "userId": user.id,
+                "userName": user.name,
                 "joinedAt": FieldValue.serverTimestamp(),
-                "lastActive": FieldValue.serverTimestamp(),
-                "deviceInfo": UIDevice.current.model
+                // ... etc
             ])
+            print("✅ [Debug] Successfully set data for active user.")
             
             userPresenceRefs[spaceId] = userRef
             startHeartbeat(for: spaceId)
-            print("✅ Successfully joined space: \(spaceId) as user: \(userId)")
+            print("✅ Successfully joined space: \(spaceId) as user: \(user.name) (\(user.id))")
             return true
         } catch {
-            print("❌ Failed to join space: \(error.localizedDescription)")
+            // 5. If we land here, a database error occurred.
+            print("❌ DATABASE ERROR: Failed to join space: \(error.localizedDescription)")
             return false
         }
     }
     
     func leaveSpace(_ spaceId: String) async {
         // MODIFIED: Get the correct userId from the AppModel to ensure we remove the right document.
-        let userId = await AppModel.shared.currentUserId
+        let userId = await appModel.currentUserId
         guard !userId.isEmpty else { return }
         
         // Use the specific user's ref to leave, rather than a potentially incorrect cached one.

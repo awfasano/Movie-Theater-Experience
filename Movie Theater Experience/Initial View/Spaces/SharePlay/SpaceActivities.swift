@@ -1,10 +1,3 @@
-//
-//  SpaceActivities.swift
-//  Movie Theater Experience
-//
-//  Created by Anthony Fasano on 6/28/25.
-//
-
 import GroupActivities
 import Foundation
 
@@ -17,45 +10,63 @@ struct SharePlayUser: Codable, Hashable {
 
 /// The activity for the public, drop-in call for an entire space.
 struct PublicSpaceActivity: GroupActivity {
-    /// The unique ID of the space this call belongs to.
+    // This static identifier is how the system recognizes this specific activity.
+    static let activityIdentifier = "com.waitedco.Movie-Theater-Experience.PublicSpaceActivity"
+    
     let spaceId: String
     let spaceName: String
 
     var metadata: GroupActivityMetadata {
         var metadata = GroupActivityMetadata()
-        metadata.title = NSLocalizedString("Public Call in \(spaceName)", comment: "Title for a public SharePlay call in a specific space.")
-        metadata.subtitle = NSLocalizedString("Join the conversation!", comment: "Subtitle inviting users to a public call.")
+        metadata.title = "Public Call in \(spaceName)"
+        metadata.subtitle = "Join the conversation!"
+        
+        // MODIFIED: Use .conversation for communication-based activities.
         metadata.type = .generic
-        // A fallback URL for users who get an invitation but don't have the app installed.
-        metadata.fallbackURL = URL(string: "https://your-app-website.com/spaces/\(spaceId)")
+        
+        // NEW: This tells SharePlay that this activity is associated with a specific scene
+        // (your ImmersiveSpace) identified by the string.
+        metadata.sceneAssociationBehavior = .content(Self.activityIdentifier)
+        
+        metadata.fallbackURL = URL(string: "https://waitedco.com/spaces/\(spaceId)")
         return metadata
     }
 }
 
 /// The activity for a direct 1-on-1 call.
 struct DirectCallActivity: GroupActivity {
+    // This static identifier is how the system recognizes this specific activity.
+    static let activityIdentifier = "com.waitedco.Movie-Theater-Experience.DirectCallActivity"
+    
     let spaceId: String
     let inviter: SharePlayUser
     let invitee: SharePlayUser
 
     var metadata: GroupActivityMetadata {
         var metadata = GroupActivityMetadata()
-        metadata.title = NSLocalizedString("\(inviter.name) is calling you", comment: "Title for a direct SharePlay call invitation.")
-        metadata.subtitle = NSLocalizedString("Join the call in the space.", comment: "Subtitle for a direct call invitation.")
+        metadata.title = "\(inviter.name) is calling you"
+        metadata.subtitle = "Join the call in the space"
+        
+        // MODIFIED: Use .conversation for communication-based activities.
         metadata.type = .generic
-        metadata.fallbackURL = URL(string: "https://your-app-website.com/spaces/\(spaceId)")
+        
+        // NEW: Associate this activity with its unique identifier.
+        metadata.sceneAssociationBehavior = .content(Self.activityIdentifier)
+        
+        metadata.fallbackURL = URL(string: "https://waitedco.com/spaces/\(spaceId)")
         return metadata
     }
 }
 
-/// A Codable message for synchronizing seat changes.
+// These structs below are correct and need no changes.
+
+/// A Codable message for synchronizing seat changes (if you ever need it).
 struct UserPositionUpdate: Codable {
     let userId: String
     let newSeatId: String
 }
 
+/// A Codable message for syncing world state (good to have for future features).
 struct WorldStateSyncMessage: Codable {
-    // Add any properties that define the current state of your shared world.
-    // For now, it can be empty if you're just syncing positions via SystemCoordinator.
     let timestamp: Date
 }

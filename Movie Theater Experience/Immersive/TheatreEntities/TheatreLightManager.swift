@@ -99,7 +99,7 @@ class TheatreLightingManager: ObservableObject {
             let nextInterval = Double.random(in: self.flickerMinInterval...self.flickerMaxInterval)
             
             Task { @MainActor [weak self] in
-                guard let self = self else { return }
+                guard self != nil else { return }
                 if let material = volumetricBeam.model?.materials.first as? UnlitMaterial {
                     var updatedMaterial = material
                     updatedMaterial.blending = .transparent(opacity: randomOpacity)
@@ -246,7 +246,7 @@ class TheatreLightingManager: ObservableObject {
         
         if let gradientTexture = generateGradientTexture(length: beamLength)?.cgImage {
             do {
-                let texture = try TextureResource.generate(from: gradientTexture, options: .init(semantic: .color))
+                let texture = try TextureResource(image: gradientTexture, options: .init(semantic: .color))
                 material.color = .init(texture: .init(texture))
             } catch {
                 print("⚠️ Failed to generate RealityKit texture. Using fallback color.")

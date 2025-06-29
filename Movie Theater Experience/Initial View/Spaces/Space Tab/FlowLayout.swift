@@ -6,8 +6,8 @@
 //
 
 import Foundation
-import RealityFoundation
-import SwiftUICore
+import RealityKit
+import SwiftUI
 
 /// A layout that flows items like a tag cloud
 struct FlowLayout: Layout {

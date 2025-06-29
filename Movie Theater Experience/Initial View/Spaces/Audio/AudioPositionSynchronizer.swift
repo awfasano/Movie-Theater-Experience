@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import RealityFoundation
+import RealityKit
 import AVFAudio
 
 // Helper class to synchronize AVAudioPlayer position with RealityKit entity

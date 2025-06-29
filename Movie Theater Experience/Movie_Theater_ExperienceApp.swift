@@ -13,14 +13,23 @@ struct Movie_Theater_ExperienceApp: App {
         }
         
         // Window for volumetric space preview
-        WindowGroup("Volume", id: "volume") {
-            if let selectedSpace = appModel.selectedSpace {
-                VolumetricSpaceView(space: selectedSpace)
+        WindowGroup("Volume", id: "volume", for: String.self) { spaceId in
+            if let spaceId = spaceId, let selectedSpace = SpaceService.shared.spaces.first(where: { $0.id == spaceId }) {
+                VolumetricSpaceView(space: selectedSpace, onEnter: {
+                    Task {
+                        do {
+                            try await openImmersiveSpace(id: appModel.spacesID)
+                            print("✅ Immersive space opened successfully")
+                        } catch {
+                            print("❌ Failed to open immersive space: \(error)")
+                        }
+                    }
+                })
                     .environment(appModel)
                     .environmentObject(immersiveSpaceManager)
                     .environmentObject(sharedSpaceSeatSelection)
             } else {
-                Text("No space selected")
+                Text("No space selected or invalid space ID")
             }
         }
         
@@ -33,6 +42,8 @@ struct Movie_Theater_ExperienceApp: App {
         }
         
         // Immersive spaces
+        
+        
         ImmersiveSpace(id: appModel.spacesID) {
             SpacesView()
                 .environment(appModel)

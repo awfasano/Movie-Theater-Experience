@@ -129,7 +129,7 @@ struct MovieWindow: View {
             let videoURL = appModel.selectedVideoURL,
             let event = appModel.currentEvent
         else {
-            await presentAccessDenied("Missing video URL or event.")
+            presentAccessDenied("Missing video URL or event.")
             return
         }
 
@@ -155,7 +155,7 @@ struct MovieWindow: View {
                                                    event: event)
             else {
                 // This is the required else block for the guard statement
-                await presentAccessDenied("This event isn’t available right now (sync config failed).")
+                presentAccessDenied("This event isn’t available right now (sync config failed).")
                 return // Exit the setupVideo method if configureSync fails
             }
             print("✅ [MovieWindow] Sync configured for event \(eid)") // This line will only be reached if configureSync succeeds
@@ -194,7 +194,7 @@ struct MovieWindow: View {
         } else if newPlayer.status == .failed || (newPlayer.currentItem != nil && newPlayer.currentItem!.status == .failed) {
              print("❌ [MovieWindow] Player or item failed after startSync attempt.")
              let errorDesc = newPlayer.error?.localizedDescription ?? newPlayer.currentItem?.error?.localizedDescription ?? "Unknown player error"
-             await presentAccessDenied("Cannot play this video (\(errorDesc)).")
+            presentAccessDenied("Cannot play this video (\(errorDesc)).")
              return // Critical failure
         } else {
              print("⏳ [MovieWindow] Player might still be loading or duration pending after startSync call. UI will update via VideoSyncService state.")

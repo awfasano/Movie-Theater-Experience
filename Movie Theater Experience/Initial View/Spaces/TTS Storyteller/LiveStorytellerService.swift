@@ -13,7 +13,7 @@ private struct StorytellerConfig: Codable {
 
 
 import Foundation
-import AVFoundation
+@preconcurrency import AVFoundation
 import Accelerate                              // vDSP_rmsqv, vDSP_Length
 import Combine
 

@@ -13,10 +13,7 @@ class ChatViewModel: ObservableObject {
     let eventId: String
     let date: Date
     
-    // Retrieve the current user's name from user settings.
-    @AppStorage("username") var currentUsername: String = "User"
-    // Persist the userId using AppStorage.
-    @AppStorage("userId") var currentUserId: String = ""
+    private let appModel = AppModel.shared
     
     // MARK: - Initializer
     
@@ -36,7 +33,7 @@ class ChatViewModel: ObservableObject {
     
     private func startListening() async {
         // Start the event manager listener.
-        await eventManager.startListening(eventId: eventId, date: date)
+        eventManager.startListening(eventId: eventId, date: date)
         
         // Initialize messages and observe changes.
         await updateMessages()
@@ -51,7 +48,7 @@ class ChatViewModel: ObservableObject {
     }
     
     func updateMessages() async {
-        let currentMessages = await eventManager.messages
+        let currentMessages = eventManager.messages
         if self.messages != currentMessages {
             self.messages = currentMessages
         }
@@ -71,20 +68,18 @@ class ChatViewModel: ObservableObject {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
         
-        // Use the stored userId from AppStorage. If it's empty, generate a new one.
-        var senderId = currentUserId
-        if senderId.isEmpty {
-            senderId = UUID().uuidString
-            currentUserId = senderId
-            print("Generated new userId: \(senderId)")
-        } else {
-            print("Using existing userId: \(senderId)")
-        }
+        // --- GET USER FROM AppModel INSTEAD OF GENERATING A NEW ONE ---
+        let senderId = appModel.currentUserId
+        let senderName = appModel.username
         
-        let senderName = currentUsername
+        // This is a critical check
+        guard !senderId.isEmpty && !senderName.isEmpty else {
+            print("❌ Cannot send message. User ID or Username is missing from AppModel.")
+            return
+        }
+
         print("ChatViewModel.sendMessage -> senderId: \(senderId), senderName: \(senderName)")
         
-        // Pass the message along with senderId and senderName to the event manager.
         eventManager.sendMessage(trimmedText,
                                  senderId: senderId,
                                  senderName: senderName,

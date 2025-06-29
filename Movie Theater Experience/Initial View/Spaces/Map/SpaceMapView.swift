@@ -90,8 +90,8 @@ struct SpaceMapView: View {
                     // Scale factor maps SwiftUI points (pixels) to RealityKit meters.
                     // Example: Make the RealityKit scene match the SwiftUI map width in meters (adjust as needed)
                     let sceneScale: Float = 1.0 / Float(mapDisplayWidth) // e.g., 1600 points = 1.0 meter
-                    let worldWidth = Float(mapDisplayWidth) * sceneScale
-                    let worldHeight = Float(mapDisplayHeight) * sceneScale
+                    //let worldWidth = Float(mapDisplayWidth) * sceneScale
+                    //let worldHeight = Float(mapDisplayHeight) * sceneScale
 
                     // Create an entity for each seat
                     for seat in seats {
@@ -487,13 +487,13 @@ struct SpaceMapView: View {
         Task {
              do {
                  print("  🔼 Moving UP for \(sphere.name) to scale \(upTransform.scale)")
-                 await sphere.move(to: upTransform, relativeTo: parent, duration: OrbMaterials.durUp, timingFunction: .easeOut)
+                sphere.move(to: upTransform, relativeTo: parent, duration: OrbMaterials.durUp, timingFunction: .easeOut)
 
                  print("  🔽 Moving DOWN for \(sphere.name) to scale \(downTransform.scale)")
-                 await sphere.move(to: downTransform, relativeTo: parent, duration: OrbMaterials.durDn, timingFunction: .easeInOut)
+                sphere.move(to: downTransform, relativeTo: parent, duration: OrbMaterials.durDn, timingFunction: .easeInOut)
 
                  print("  ⏹️ Moving END for \(sphere.name) to scale \(endTransform.scale)")
-                 await sphere.move(to: endTransform, relativeTo: parent, duration: OrbMaterials.durSet, timingFunction: .easeIn)
+                sphere.move(to: endTransform, relativeTo: parent, duration: OrbMaterials.durSet, timingFunction: .easeIn)
 
                  print("✅ Bounce animation finished for \(sphere.name)")
 

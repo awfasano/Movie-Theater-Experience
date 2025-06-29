@@ -27,6 +27,8 @@ final class EmojiManager: ObservableObject {
     private let db: Firestore
     private let theatreWrapper = TheatreEntityWrapper.shared
     
+    private let appModel = AppModel.shared
+    
     @MainActor var isOnCooldown = false
     private let cooldownDuration: TimeInterval = 2.0
     
@@ -87,10 +89,10 @@ final class EmojiManager: ObservableObject {
     
     /// Sends the emoji data to Firebase using the configured Firestore path.
     private func sendToFirebase(emojiNumber: Int, eventId: String, date: Date) async {
-        let emojiData: [String: Any] = [
+        let emojiData: [String: Any] = await [
             "timestamp": Timestamp(date: Date()),
-            "senderId": "currentUserId",
-            "senderName": "Anthony",
+            "senderId": appModel.currentUserId,
+            "senderName": appModel.username,
             "emoji": emojiNumber,
             "seatOrTheatre": false,
             "type": false

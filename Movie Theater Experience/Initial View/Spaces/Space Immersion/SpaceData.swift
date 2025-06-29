@@ -1,10 +1,3 @@
-//
-//  SceneData.swift
-//  Movie Theater Experience
-//
-//  Created by Anthony Fasano on 2/5/25.
-//
-
 import Foundation
 import FirebaseFirestore
 import RealityKit
@@ -22,10 +15,19 @@ struct SpaceData: Identifiable, Codable, Equatable {
     var introEntityName: String?
     var currentSeat:String?
     
+    // ✅ RENAMED: Property is now more specific.
+    var initialTargetEntityForVolume: String?
+    
     // Viewer position adjustments
     var viewerXAdjustment: Double = 0.0
     var viewerYAdjustment: Double = 0.0
     var viewerZAdjustment: Double = 0.0
+    
+    var volumeInitialScale: Double?
+    var volumeOffsetX: Double?
+    var volumeOffsetY: Double?
+    var volumeOffsetZ: Double?
+    
     
     // User count tracking
     var currentUserCount: Int = 0

@@ -6,10 +6,11 @@ import Combine
 
 struct SpacesView: View {
     // MARK: - Properties
-    @ObservedObject var spaceService = SpaceService.shared
-    @ObservedObject var entityWrapper = SpacesEntityWrapper.shared
+    @StateObject private var spaceService = SpaceService.shared
+    @StateObject private var entityWrapper = SpacesEntityWrapper.shared
     @Environment(AppModel.self) private var appModel
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
     @Environment(\.realityKitScene) private var realityKitScene
     //@EnvironmentObject var audioLoader: SpatialAudioLoader
     
@@ -19,7 +20,6 @@ struct SpacesView: View {
     @State private var errorMessage: String?
     @State private var lastSpaceID: Entity.ID? = nil   // memo
 
-    
     // Anchor for placing content in the scene
     @State private var anchorEntity = AnchorEntity()
     
@@ -48,6 +48,14 @@ struct SpacesView: View {
         self.audioLoader = audioLoader
     }
     
+    private var sharePlayParticipantManager: some View {
+        Color.clear
+            .onChange(of: sharePlayManager.participants) { _, newParticipants in
+                updateParticipantEntities(participants: newParticipants)
+            }
+    }
+    
+    
     // MARK: - Body
     var body: some View {
         ZStack {
@@ -71,9 +79,9 @@ struct SpacesView: View {
             // Volume control toggle button
             volumeToggleButton
         }
-        .onAppear {
+        .task {
             print("📱 SpacesView appeared")
-            initializeSpace()
+            await initializeSpace()
         }
         .onChange(of: sharePlayManager.isSessionActive) { _, isActive in
             if isActive {
@@ -173,32 +181,38 @@ struct SpacesView: View {
     }
     
     // Add this to initializeSpace() in SpacesView.swift
-    private func initializeSpace() {
-        // Reset notification state
+    // In SpacesView.swift
+
+    // ✅ Mark as @MainActor and async
+    @MainActor
+    private func initializeSpace() async {
+        // --- Initial State Reset ---
         notificationSentForEntityID = nil
         notificationPostTask?.cancel()
-        
-        // Reset view state
-        isLoading = false
+        isLoading = true // Start loading immediately
         errorMessage = nil
         rootEntity = nil
-        
-        // Stop any existing audio
         audioLoader.stopAllAudio()
-
-        // --- Join Space ---
-        // Join the space as soon as the view is initialized
-        if let spaceId = appModel.selectedSpace?.id {
-            Task {
-                let success = await spaceService.joinSpace(spaceId)
-                if success {
-                    print("✅ Successfully joined space: \(spaceId)")
-                } else {
-                    print("⚠️ Failed to join space: \(spaceId)")
-                }
-            }
+        
+        // --- Join Space & Handle Failure ---
+        guard let spaceId = appModel.selectedSpace?.id else {
+            print("❌ Cannot initialize space, no space ID found. Dismissing.")
+            await dismissImmersiveSpace()
+            return
         }
-        // --- End Join Space ---
+
+        // ✅ Await the result of joinSpace directly (no Task needed here)
+        let success = await spaceService.joinSpace(spaceId)
+
+        // ✅ If join fails, dismiss the immersive space and stop.
+        guard success else {
+            print("❌ Failed to join space backend. Dismissing immersive space.")
+            await dismissImmersiveSpace()
+            return
+        }
+
+        // --- If join succeeds, proceed with the rest of your setup ---
+        print("✅ Successfully joined space backend: \(spaceId)")
 
         // Ensure the current seat is always set to "seat_1" for a new space
         if let currentSpace = appModel.selectedSpace {
@@ -207,24 +221,24 @@ struct SpacesView: View {
             }
         }
 
+        // Check if the entity is already cached and ready
         if let currentSpace = appModel.selectedSpace,
-           let entity       = entityWrapper.getSpaceEntity(),
+           let entity = entityWrapper.getSpaceEntity(),
            entity.name == currentSpace.spaceName {
-
+            
             selectedSpace = currentSpace
             openWindowsIfNeeded()
 
-            // 🚀
-            Task { @MainActor in
-                ensureEntityIsParented(entity)
-                applyViewerOffset(for: entity)
-                await audioLoader.loadAudioForSpace(rootEntity: entity)
-            }
+            // Entity is cached, just set it up
+            ensureEntityIsParented(entity)
+            applyViewerOffset(for: entity)
+            await audioLoader.loadAudioForSpace(rootEntity: entity)
             
-            return // important: skip the call to loadSpace()
-        }
-        
-        else {
+            // We're done, so we can turn off the loading indicator
+            isLoading = false
+
+        } else {
+            // If entity is not cached, load it from scratch
             loadSpace()
         }
     }
@@ -258,17 +272,6 @@ struct SpacesView: View {
         entityWrapper.setActiveSceneEntity(nil)
         anchorEntity.children.removeAll()
         openWindowsIfNeeded()
-    }
-    
-    // NEW: This "invisible" view manages the participant lifecycle.
-    private var sharePlayParticipantManager: some View {
-        Color.clear
-            .onChange(of: sharePlayManager.participants) { _, newParticipants in
-                updateParticipantEntities(participants: newParticipants)
-            }
-            .onChange(of: sharePlayManager.localParticipantState) { _, newState in
-                updateLocalParticipantState(state: newState)
-            }
     }
     
     private func fetchSpacesAndLoadFirst() {
@@ -508,32 +511,37 @@ struct SpacesView: View {
         self.rootEntity = nil
     }
     
+    // In SpacesView.swift
+
     private func updateParticipantEntities(participants: Set<Participant>) {
-        // Remove entities for participants who have left the session.
-        for (id, entity) in participantEntities {
+        // Ensure we can identify the local user to avoid creating an entity for ourselves.
+        guard let localParticipantID = sharePlayManager.localParticipantID else {
+            print("SharePlay: localParticipantID not available yet.")
+            return
+        }
+
+        // Remove entities for participants who have left.
+        for id in participantEntities.keys {
             if !participants.contains(where: { $0.id == id }) {
-                entity.removeFromParent()
+                participantEntities[id]?.removeFromParent()
                 participantEntities.removeValue(forKey: id)
                 print("SharePlay: Removed entity for participant \(id)")
             }
         }
 
-        // Add placeholder entities for new participants.
+        // Add entities for new participants.
         for participant in participants {
-            // We don't need an entity for ourself.
-            // Note: Check if this participant is the local user by comparing IDs or similar logic
-            // For now, we'll create entities for all participants
+            // Don't create an entity for the local user.
+            guard participant.id != localParticipantID else { continue }
             
             if participantEntities[participant.id] == nil {
-                print("SharePlay: Creating placeholder for new participant \(participant.id)")
-                // This entity acts as an anchor. The system will automatically
-                // place the participant's actual Spatial Persona at this entity's location.
                 let placeholder = Entity()
                 placeholder.name = "participant-\(participant.id)"
                 
-                // Add it to our main scene anchor.
+                // Add the new entity to the main scene anchor.
                 anchorEntity.addChild(placeholder)
                 participantEntities[participant.id] = placeholder
+                print("SharePlay: Created placeholder for new participant \(participant.id)")
             }
         }
     }

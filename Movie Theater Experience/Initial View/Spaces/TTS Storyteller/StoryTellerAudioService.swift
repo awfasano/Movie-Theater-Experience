@@ -42,52 +42,56 @@ class StorytellerAudioService {
     }
     
     /// Call once with the narration URL.
-    func loadMedia(from url: URL) {
-        let asset = AVURLAsset(url: url)
+        func loadMedia(from url: URL) {
+            let asset = AVURLAsset(url: url)
 
-        asset.loadTracks(withMediaType: .audio) { [weak self] tracks, error in
-            guard let self = self, let track = tracks?.first else {
-                print("No audio track: \(error?.localizedDescription ?? "(unknown)")")
-                return
-            }
+            asset.loadTracks(withMediaType: .audio) { [weak self] tracks, error in
+                guard let self = self, let track = tracks?.first else {
+                    print("No audio track: \(error?.localizedDescription ?? "(unknown)")")
+                    return
+                }
 
-            let item       = AVPlayerItem(asset: asset)
-            let clientInfo = Unmanaged.passUnretained(self).toOpaque()
+                let item       = AVPlayerItem(asset: asset)
+                let clientInfo = Unmanaged.passUnretained(self).toOpaque()
 
-            var callbacks = MTAudioProcessingTapCallbacks(
-                version: kMTAudioProcessingTapCallbacksVersion_0,
-                clientInfo: clientInfo,
-                init: tapInit,
-                finalize: tapFinalize,
-                prepare: tapPrepare,
-                unprepare: tapUnprepare,
-                process: tapProcess
-            )
+                var callbacks = MTAudioProcessingTapCallbacks(
+                    version: kMTAudioProcessingTapCallbacksVersion_0,
+                    clientInfo: clientInfo,
+                    init: tapInit,
+                    finalize: tapFinalize,
+                    prepare: tapPrepare,
+                    unprepare: tapUnprepare,
+                    process: tapProcess
+                )
 
-            var unmanaged: Unmanaged<MTAudioProcessingTap>?
-            let err = MTAudioProcessingTapCreate(
-                kCFAllocatorDefault,
-                &callbacks,
-                kMTAudioProcessingTapCreationFlag_PostEffects,
-                &unmanaged
-            )
-            guard err == noErr, let u = unmanaged else {
-                print("Audio-tap creation failed: \(err)")
+                // --- CORRECTED SECTION START ---
+
+                var createdTap: MTAudioProcessingTap? // 1. Declare the correct type
+                let err = MTAudioProcessingTapCreate(
+                    kCFAllocatorDefault,
+                    &callbacks,
+                    kMTAudioProcessingTapCreationFlag_PostEffects,
+                    &createdTap                      // 2. Pass a pointer to it
+                )
+                guard err == noErr, let tap = createdTap else { // 3. Safely unwrap
+                    print("Audio-tap creation failed: \(err)")
+                    DispatchQueue.main.async { self.player.replaceCurrentItem(with: item) }
+                    return
+                }
+
+                self.tap = tap // 4. Assign directly. Swift manages memory.
+
+                // --- CORRECTED SECTION END ---
+
+                let mix   = AVMutableAudioMix()
+                let input = AVMutableAudioMixInputParameters(track: track)
+                input.audioTapProcessor = self.tap
+                mix.inputParameters = [input]
+                item.audioMix       = mix
+
                 DispatchQueue.main.async { self.player.replaceCurrentItem(with: item) }
-                return
             }
-
-            self.tap = u.takeRetainedValue()
-
-            let mix   = AVMutableAudioMix()
-            let input = AVMutableAudioMixInputParameters(track: track)
-            input.audioTapProcessor = self.tap
-            mix.inputParameters = [input]
-            item.audioMix       = mix
-
-            DispatchQueue.main.async { self.player.replaceCurrentItem(with: item) }
         }
-    }
 
     // MARK: - Internal / storage --------------------------------------------
     /// Size of the bar array exposed to the UI.

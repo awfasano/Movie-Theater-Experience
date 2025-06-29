@@ -8,7 +8,7 @@
 import Foundation
 import RealityKit
 import Combine
-import SwiftUICore
+import SwiftUI
 
 // MARK: - ViewModel
 /// View model for the VolumetricSpaceView
@@ -91,6 +91,18 @@ class VolumetricSpaceViewModel: ObservableObject {
         enableAllEntities(containerEntity)
         
         return containerEntity
+    }
+    
+    @MainActor
+    func canEnterSpace() -> Bool {
+        // Access the singleton directly using .shared
+        guard !AppModel.shared.username.isEmpty else {
+            print("❌ [ViewModel] Entry check FAILED: Username is not set.")
+            return false
+        }
+        
+        print("✅ [ViewModel] Entry check PASSED.")
+        return true
     }
     
     /// Center an entity at the origin

@@ -6,20 +6,33 @@
 //
 
 import Foundation
-import SwiftUICore
 import SwiftUI
 
 /// A detailed view for a single space
 struct SpaceDetailView: View {
     let space: SpaceData
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openImmersiveSpace) private var openImmersiveSpace
+    @Environment(AppModel.self) private var appModel
     
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     // Volumetric view
-                    VolumetricSpaceView(space: space)
+                    VolumetricSpaceView(space: space, onEnter: {
+                        // This closure will be called when the "Enter Space" button is tapped
+                        // in VolumetricSpaceView.
+                        // We need to open the immersive space here.
+                        Task {
+                            do {
+                                try await openImmersiveSpace(id: appModel.spacesID)
+                                print("✅ Immersive space opened successfully from SpaceDetailView")
+                            } catch {
+                                print("❌ Failed to open immersive space from SpaceDetailView: \(error)")
+                            }
+                        }
+                    })
                         .frame(height: 400)
                     
                     VStack(alignment: .leading, spacing: 12) {
@@ -93,3 +106,4 @@ struct SpaceDetailView: View {
         return formatter.string(from: date)
     }
 }
+

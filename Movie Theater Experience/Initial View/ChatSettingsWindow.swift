@@ -1,18 +1,14 @@
-//
-//  ChatSettingsWindow.swift
-//  Movie Theater Experience
-//
-//  Created by Anthony Fasano on 1/31/25.
-//
-
 import SwiftUI
 
 struct ChatSettingsWindow: View {
+    // 1. Get a reference to the AppModel from the environment
+    @Environment(AppModel.self) private var appModel // <<-- ADDED
+
     // Persist the username using AppStorage.
     @AppStorage("username") private var username: String = ""
     
     // Persist colors as hex strings.
-    @AppStorage("sentMessageColorHex") private var sentMessageColorHex: String = "#0000FF"   // Default blue.
+    @AppStorage("sentMessageColorHex") private var sentMessageColorHex: String = "#0000FF"  // Default blue.
     @AppStorage("receivedMessageColorHex") private var receivedMessageColorHex: String = "#808080" // Default gray.
     
     // Create Bindings to convert hex strings to Color and vice versa.
@@ -68,6 +64,11 @@ struct ChatSettingsWindow: View {
                 }
                 .frame(width: geometry.size.width * 0.33)
                 .padding([.top, .leading, .bottom])
+                // 2. Sync the username to the AppModel whenever it changes
+                .onChange(of: username) { _, newUsername in // <<-- ADDED
+                    appModel.username = newUsername
+                    print("🔄 [ChatSettingsWindow] Synced AppModel username to: \(newUsername)")
+                }
                 
                 Divider()
                 
@@ -135,5 +136,7 @@ struct ChatSettingsWindow: View {
 struct ChatSettingsWindow_Previews: PreviewProvider {
     static var previews: some View {
         ChatSettingsWindow()
+            // Add a dummy AppModel for the preview to work correctly
+            .environment(AppModel.shared)
     }
 }

@@ -310,13 +310,13 @@ struct ImmersiveView: View {
         print("🎥 [ImmersiveView] configureVideoWithSync for screen: \(screenEntity.name), URL: \(url.lastPathComponent)")
 
         guard let currentEvent = appModel.currentEvent else {
-            await handleSyncFailure("Cannot configure video without a selected event.")
+            handleSyncFailure("Cannot configure video without a selected event.")
             return
         }
         
         let userId = appModel.currentUserId
         guard !userId.isEmpty else {
-            await handleSyncFailure("User identification error. Cannot sync video.")
+            handleSyncFailure("User identification error. Cannot sync video.")
             return
         }
         let eventId = currentEvent.id ?? ""
@@ -324,7 +324,7 @@ struct ImmersiveView: View {
         if !videoSyncService.isConfigured(for: eventId, userId: userId) {
             print("🔄 [ImmersiveView] VideoSyncService not configured. Configuring now...")
             guard await videoSyncService.configureSync(eventId: eventId, userId: userId, event: currentEvent) else {
-                await handleSyncFailure("Failed to configure video synchronization service.")
+                handleSyncFailure("Failed to configure video synchronization service.")
                 return
             }
         }

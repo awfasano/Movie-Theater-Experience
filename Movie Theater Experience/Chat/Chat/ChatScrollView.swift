@@ -31,7 +31,7 @@ struct ChatScrollView: View {
                         await updateOpacities()
                     }
                 }
-                .onChange(of: messages.count) { newCount in
+                .onChange(of: messages.count) {
                     shouldScrollToBottom = true
                 }
                 .onChange(of: shouldScrollToBottom) { newValue in
@@ -112,7 +112,7 @@ struct ChatScrollView: View {
     
     private func calculateOpacity(for messageId: String) -> Double {
         let topFadeThreshold: CGFloat = 150
-        let bottomFadeThreshold: CGFloat = viewHeight - 200
+        //let bottomFadeThreshold: CGFloat = viewHeight - 200
         
         guard let messageFrame = positionTracker.getFrame(for: messageId) else { return 1.0 }
         

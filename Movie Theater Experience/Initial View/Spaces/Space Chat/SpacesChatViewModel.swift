@@ -10,6 +10,9 @@ class SpacesChatViewModel: ChatViewModel {
     private let spacesManager = SpacesChatManager.shared
     private var updateTask: Task<Void, Never>?
     
+    private let appModel = AppModel.shared
+
+    
     // Shadow storage for messages that we will return in the override
     private var spacesMessages: [ChatMessage] = []
     
@@ -41,35 +44,40 @@ class SpacesChatViewModel: ChatViewModel {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
         
-        // Get the current user ID and name
-        var senderId = currentUserId
-        if senderId.isEmpty {
-            senderId = UUID().uuidString
-            currentUserId = senderId
-            print("Generated new userId for spaces: \(senderId)")
-        } else {
-            print("Using existing userId for spaces: \(senderId)")
+        // --- REMOVED: The logic that generated its own UUID ---
+        /*
+         var senderId = currentUserId
+         if senderId.isEmpty { ... }
+         let senderName = currentUsername
+        */
+
+        // +++ ADDED: Get the user identity reliably from the AppModel +++
+        let user = appModel.currentUser
+        
+        // Add checks to make sure user identity is valid before sending
+        guard !user.id.isEmpty, !user.name.isEmpty else {
+            print("❌ Cannot send message. User ID or Username is missing from AppModel.")
+            return
         }
         
-        let senderName = currentUsername
-        print("SpacesChatViewModel.sendMessage -> senderId: \(senderId), senderName: \(senderName)")
+        print("SpacesChatViewModel.sendMessage -> senderId: \(user.id), senderName: \(user.name)")
         
-        // Send the message through the spaces manager
+        // Send the message through the spaces manager using the correct user data
         spacesManager.sendMessage(
             trimmedText,
-            senderId: senderId,
-            senderName: senderName,
+            senderId: user.id,
+            senderName: user.name,
             spaceId: eventId // Using eventId from parent class to store spaceId
         )
     }
     
     // Override opacity methods to use spaces manager
     override func getOpacity(for id: String) async -> Double {
-        return await spacesManager.getMessageOpacity(for: id)
+        return spacesManager.getMessageOpacity(for: id)
     }
     
     override func updateMessageOpacity(id: String, opacity: Double) async {
-        await spacesManager.updateMessageOpacity(id: id, opacity: opacity)
+        spacesManager.updateMessageOpacity(id: id, opacity: opacity)
     }
     
     // MARK: - Private Methods
@@ -79,13 +87,13 @@ class SpacesChatViewModel: ChatViewModel {
         print("Starting spaces chat listener for space ID: \(spaceId)")
         
         // Start the spaces manager listener
-        await spacesManager.startListening(spaceId: spaceId)
+        spacesManager.startListening(spaceId: spaceId)
         
         // Keep updating messages from spaces manager
         updateTask = Task {
             while !Task.isCancelled {
                 // Get messages from the spaces manager
-                let newMessages = await spacesManager.messages
+                let newMessages = spacesManager.messages
                 
                 // Update our shadow property
                 if self.spacesMessages != newMessages {

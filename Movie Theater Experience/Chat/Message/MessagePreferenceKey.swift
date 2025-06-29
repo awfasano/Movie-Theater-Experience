@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import SwiftUICore
+import SwiftUI
 
 struct MessagePositionPreferenceKey: PreferenceKey {
     static var defaultValue: [MessagePosition] = []

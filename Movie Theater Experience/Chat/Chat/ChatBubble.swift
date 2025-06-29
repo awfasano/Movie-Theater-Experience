@@ -1,4 +1,3 @@
-import SwiftUICore
 import SwiftUI
 
 struct ChatBubble: View {
@@ -7,10 +6,7 @@ struct ChatBubble: View {
     let isFirstInSequence: Bool
     let opacity: Double
     
-    // Retrieve the current user’s name.
-    @AppStorage("username") private var currentUserName: String = "User"
-    // Retrieve the current user's unique identifier.
-    @AppStorage("userId") private var currentUserId: String = ""
+    @Environment(AppModel.self) private var appModel
     
     // Retrieve the persisted bubble colors.
     @AppStorage("sentMessageColorHex") private var sentMessageColorHex: String = "#0000FF"
@@ -27,8 +23,9 @@ struct ChatBubble: View {
     
     // Computed property for display name.
     private var displayName: String {
-        if message.senderId == currentUserId {
-            return currentUserName
+        // +++ USE AppModel FOR THE CHECK +++
+        if message.senderId == appModel.currentUserId {
+            return appModel.username // Use the name from the model
         } else {
             return message.senderName
         }
@@ -36,7 +33,7 @@ struct ChatBubble: View {
     
     // Compute isIncoming based on whether the senderId matches the current user's id.
     private var isIncoming: Bool {
-        return message.senderId != currentUserId
+        return message.senderId != appModel.currentUserId
     }
     
     var body: some View {
@@ -78,15 +75,17 @@ struct ChatBubble: View {
     }
     
     private var senderAvatar: some View {
-        // Determine which name to use: for current user use currentUserName, otherwise message.senderName.
-        let name = message.senderId == currentUserId ? currentUserName : message.senderName
+        // --- FIX IS HERE ---
+        // We now get the user's name and ID from the appModel.
+        let name = message.senderId == appModel.currentUserId ? appModel.username : message.senderName
         let initial = name.prefix(1).uppercased()
         
         return Text(initial)
             .font(.system(size: 20, weight: .medium))
             .foregroundColor(.white)
             .frame(width: 40, height: 40)
-            .background(message.senderId == currentUserId ? sentMessageColor : receivedMessageColor)
+            // And we use the appModel here as well for the background color check.
+            .background(message.senderId == appModel.currentUserId ? sentMessageColor : receivedMessageColor)
             .clipShape(Circle())
     }
 }

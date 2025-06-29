@@ -30,8 +30,17 @@ class AppModel { // Removed ObservableObject as @Observable is the modern approa
     var wasPlayingOnSwitch: Bool = false
     // var currentPlaybackTime: CMTime? // This is handled by VideoSyncService.currentTime
     var currentActiveSpace: String?
-    var currentUserId: String = ""
+    
+    private(set) var currentUserId: String = ""
+    
+    // ADDED: This will hold the user-facing name.
+    var username: String = ""
 
+    // ADDED: A convenient computed property to get the current user for SharePlay.
+    var currentUser: SharePlayUser {
+        SharePlayUser(id: self.currentUserId, name: self.username)
+    }
+    
     var resumePlaybackAfterTransition: Bool = false
     
     // Window Opening Request
@@ -48,8 +57,25 @@ class AppModel { // Removed ObservableObject as @Observable is the modern approa
     
     // MARK: - Initialization
     init() {
-        // The initializeUserId should be called from the App struct's onAppear
-        print("📱 AppModel initialized. Ensure initializeUserId is called from App's onAppear.")
+        // --- THIS IS THE NEW, ROBUST INITIALIZATION ---
+        print("📱 AppModel initializing...")
+        
+        // Read username directly from storage
+        self.username = UserDefaults.standard.string(forKey: "username") ?? ""
+        
+        // Read stable userID from storage, or create one if it's missing
+        let storedUserId = UserDefaults.standard.string(forKey: "userID") ?? ""
+        if !storedUserId.isEmpty {
+            self.currentUserId = storedUserId
+        } else {
+            // If no ID exists, create a new one and save it back.
+            let newId = UUID().uuidString
+            self.currentUserId = newId
+            UserDefaults.standard.set(newId, forKey: "userID")
+            print("🔑 [AppModel] Generated and saved new permanent userID.")
+        }
+        
+        print("✅ AppModel initialized with UserID = '\(self.currentUserId)', Username = '\(self.username)'")
     }
 
     // MARK: - Update Methods for SpaceData (Struct)
@@ -163,18 +189,18 @@ class AppModel { // Removed ObservableObject as @Observable is the modern approa
     }
     
     func handleEventSelection(_ event: CalendarEvent) async -> Bool {
-        print("⏳ [AppModel] Preparing for event selection: \(event.title ?? "Untitled Event")")
+        print("⏳ [AppModel] Preparing for event selection: \(event.title)")
         while ImmersiveSpaceManager.shared.isCleaningUp {
             print("⏳ [AppModel] Waiting for ImmersiveSpaceManager cleanup...")
             try? await Task.sleep(for: .milliseconds(100))
         }
         
         guard await ImmersiveSpaceManager.shared.prepareForOpening() else {
-            print("❌ [AppModel] Failed to prepare ImmersiveSpaceManager for event: \(event.title ?? "Untitled Event")")
+            print("❌ [AppModel] Failed to prepare ImmersiveSpaceManager for event: \(event.title)")
             return false
         }
         
-        print("📅 [AppModel] Setting up event: \(event.title ?? "Untitled Event")")
+        print("📅 [AppModel] Setting up event: \(event.title)")
         currentEvent = event
         selectedVideoURL = event.videoURLObject // Assuming videoURLObject is the URL
         return true
