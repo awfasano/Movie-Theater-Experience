@@ -34,4 +34,33 @@ class WindowManager: ObservableObject {
     func windowClosed(_ type: WindowType) {
         activeWindows.remove(type)
     }
+    
+    func closeAllWindows() {
+        // Clear all active windows
+        for windowType in WindowType.allCases {
+            windowClosed(windowType)
+        }
+        
+        // Clear the entire set as well
+        activeWindows.removeAll()
+        
+        print("🧹 WindowManager: All windows closed")
+    }
+    
+    // Additional helper to close specific window IDs that aren't in WindowType enum
+    func closeSpaceWindows() {
+        // These are specific to spaces that might not be in your WindowType enum
+        let spaceWindowTypes: [String] = [
+            "spaceNavBar",
+            "spaceMap",
+            "spaceChatWindow",
+            "spaceEmojiWindow",
+            "audioControls",
+            "storytellerWindow",
+            "userListWindow"
+        ]
+        
+        // You might need to track these separately or add them to your WindowType enum
+        print("🧹 Closing space-specific windows")
+    }
 }

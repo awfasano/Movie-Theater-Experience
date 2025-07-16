@@ -25,6 +25,9 @@ class StorytellerAudioService {
     /// 128-bucket instantaneous spectrum. UI pulls via `getSpectrum()`.
     func getSpectrum()      -> [Float]    { specLock.withLock  { latestSpectrum } }
 
+    func loadAsset(_ asset: AVURLAsset) {
+        loadMedia(from: asset.url)   // reuse your existing pipeline
+    }
     
     func stop() {
         player.pause()

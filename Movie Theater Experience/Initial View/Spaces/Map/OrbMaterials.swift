@@ -1,6 +1,10 @@
 import SwiftUI // For Color, UIColor
 import RealityKit
 
+// MARK: - Reusable resources for SpaceMapView
+/// Cached meshes & materials so we don’t recreate them every time the view appears
+
+
 // MARK: - Materials and Constants
 struct OrbMaterials {
     static let haloFactor: Float = 1.5   // halo is 1.4× sphere radius

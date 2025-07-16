@@ -33,7 +33,6 @@ struct Movie_Theater_ExperienceApp: App {
     @StateObject private var theatreEntityWrapper = TheatreEntityWrapper.shared
     @StateObject private var windowManager = WindowManager() // Assuming WindowManager is an ObservableObject
     @StateObject private var spacesEntityWrapper = SpacesEntityWrapper.shared
-    @StateObject private var audioLoader = SpatialAudioLoader()
     @StateObject private var firebaseEventManager = FirebaseEventManager.shared
     @StateObject private var emojiManager = EmojiManager.shared
     @StateObject private var spacesChatManager = SpacesChatManager.shared
@@ -56,12 +55,12 @@ struct Movie_Theater_ExperienceApp: App {
 
     var body: some Scene {
         // Main content window.
-        WindowGroup {
+        WindowGroup(id: "mainContent") {  // <-- Add this ID
             ContentView()
-                .environment(appModel) // Pass the AppModel instance
+                .environment(appModel)
                 .environmentObject(immersiveSpaceManager)
                 .environmentObject(firebaseEventManager)
-                .environmentObject(windowManager) // Ensure WindowManager is available if ContentView needs it
+                .environmentObject(windowManager)
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .background {
                         Task {
@@ -71,6 +70,7 @@ struct Movie_Theater_ExperienceApp: App {
                     }
                 }
         }
+        .defaultSize(width: 1000, height: 600)  // <-- Optional: Add default size
         
         // Volumetric preview window - using appModel.selectedSpace.
         WindowGroup("Volume", id: "volume") {
@@ -135,7 +135,7 @@ struct Movie_Theater_ExperienceApp: App {
         // Immersive space window for Spaces.
         // In Movie_Theater_ExperienceApp.swift
         ImmersiveSpace(id: appModel.spacesID) {
-            SpacesView(audioLoader: audioLoader)
+            SpacesView()
                 .environment(appModel)
                 .environmentObject(ImmersiveSpaceManager.shared)
                 .environmentObject(spacesEntityWrapper)
@@ -150,11 +150,7 @@ struct Movie_Theater_ExperienceApp: App {
         WindowGroup("Audio Controls", id: "audioControls") {
             if let space = appModel.selectedSpace,
                let entity = spacesEntityWrapper.getSpaceEntity() {
-                VolumeControlView(
-                    audioLoader: audioLoader,
-                    spaceEntity: entity,
-                    spaceMeta: space
-                )
+                VolumeControlView()
                 .environment(appModel) // Pass appModel if needed
                 .environmentObject(spacesEntityWrapper)
                 .background(.clear)
@@ -186,7 +182,7 @@ struct Movie_Theater_ExperienceApp: App {
                 .environment(appModel)
                 .environmentObject(ImmersiveSpaceManager.shared)
                 .environmentObject(sharedSelection)
-                .environmentObject(theatreEntityWrapper) // This might be specific to movie theatre, check if needed for SpacesNavBar
+                .environmentObject(spacesEntityWrapper)
                 .environmentObject(windowManager)
                 .onDisappear {
                     windowManager.windowClosed(.navBar) // Assuming .navBar corresponds to "spaceNavBar"
@@ -296,6 +292,14 @@ struct Movie_Theater_ExperienceApp: App {
         }
         .defaultSize(width: 1250, height: 800)
         .windowStyle(.plain)
+        
+        WindowGroup(id: "movementControl") {
+            MovementControlView()
+                .environment(appModel)
+        }
+        .windowStyle(.volumetric)
+        .defaultSize(width: 0.4, height: 0.4, depth: 0.4, in: .meters)
+        
         
         // Exiting window.
         WindowGroup(id: "exitingWindow", for: WatchStats.self) { stats in

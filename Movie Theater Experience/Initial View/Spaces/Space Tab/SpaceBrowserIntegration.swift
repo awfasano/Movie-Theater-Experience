@@ -7,6 +7,7 @@ struct SpaceBrowserIntegration: View {
     @Environment(AppModel.self) private var appModel
     @EnvironmentObject private var windowManager: WindowManager
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismissWindow) private var dismissWindow  // Add this
     @Environment(\.openImmersiveSpace) private var openImmersiveSpace
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
     
@@ -203,6 +204,10 @@ struct SpaceBrowserIntegration: View {
             // Brief pause to show completion
             try await Task.sleep(for: .milliseconds(500))
             
+            // Dismiss the main content window after everything is loaded
+            dismissWindow(id: "mainContent")
+            print("🚪 Dismissed ContentView window")
+            
         } catch {
             print("❌ Failed to enter immersive space: \(error)")
             loadError = error
@@ -270,9 +275,10 @@ struct SpaceBrowserIntegration: View {
     
     private func openCompanionWindows() {
         // Open any windows that should appear with the immersive space
-        // For example:
-        // openWindow(id: "spaceNavBar")
+        // You can add other windows here if needed:
         // openWindow(id: "audioControls")
+        
+        print("🪟 Opened companion windows for immersive space")
     }
     
     @MainActor

@@ -28,8 +28,11 @@ class AppModel { // Removed ObservableObject as @Observable is the modern approa
     var isMovieWindowOpen = false
     var lastKnownPlaybackTime: CMTime = .zero
     var wasPlayingOnSwitch: Bool = false
+    var viewTransparency: Double = 0.0
     // var currentPlaybackTime: CMTime? // This is handled by VideoSyncService.currentTime
     var currentActiveSpace: String?
+    var isPortalOpen: Bool = false
+
     
     private(set) var currentUserId: String = ""
     

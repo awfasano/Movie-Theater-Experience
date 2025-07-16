@@ -1,24 +1,28 @@
 import SwiftUI
 import FirebaseFirestore
+import Combine
 
-// This extends your existing ChatViewModel to handle spaces data
 @MainActor
 class SpacesChatViewModel: ChatViewModel {
     // MARK: - Properties
     
-    // The spaces manager to handle Firebase operations for spaces
     private let spacesManager = SpacesChatManager.shared
     private var updateTask: Task<Void, Never>?
-    
     private let appModel = AppModel.shared
-
     
-    // Shadow storage for messages that we will return in the override
+    // Shadow storage for messages
     private var spacesMessages: [ChatMessage] = []
+    
+    // Combine publishers for efficient updates
+    private var cancellables = Set<AnyCancellable>()
+    private let messageUpdateSubject = PassthroughSubject<[ChatMessage], Never>()
+    
+    // Throttle updates to prevent excessive redraws
+    private let updateThrottle: TimeInterval = 0.3
+    private var lastUpdateTime: Date = .distantPast
     
     // MARK: - Initialization
     
-    // Instead of eventId and date, initialize with spaceId
     init(spaceId: String) {
         // Create a dummy FirebaseEventManager that won't be used
         let dummyEventManager = FirebaseEventManager.shared
@@ -26,35 +30,47 @@ class SpacesChatViewModel: ChatViewModel {
         // Call super with empty values and the dummy event manager
         super.init(eventId: spaceId, date: Date(), eventManager: dummyEventManager)
         
-        // Start our custom listening logic
+        // Set up efficient message updates
+        setupMessageUpdates()
+        
+        // Start listening after a brief delay to prevent initial stuttering
         Task {
+            try? await Task.sleep(for: .milliseconds(100))
             await startSpacesListening(spaceId: spaceId)
         }
     }
     
+    // MARK: - Setup
+    
+    private func setupMessageUpdates() {
+        // Throttle message updates to prevent excessive redraws
+        messageUpdateSubject
+            .throttle(for: .milliseconds(300), scheduler: DispatchQueue.main, latest: true)
+            .sink { [weak self] newMessages in
+                guard let self = self else { return }
+                
+                // Only update if messages actually changed
+                if self.spacesMessages != newMessages {
+                    self.spacesMessages = newMessages
+                    self.objectWillChange.send()
+                }
+            }
+            .store(in: &cancellables)
+    }
+    
     // MARK: - Overridden Properties and Methods
     
-    // Override the messages getter to use our shadow property instead
     override var messages: [ChatMessage] {
         return spacesMessages
     }
     
-    // Override sendMessage to use spaces-specific implementation
     override func sendMessage(text: String) {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
         
-        // --- REMOVED: The logic that generated its own UUID ---
-        /*
-         var senderId = currentUserId
-         if senderId.isEmpty { ... }
-         let senderName = currentUsername
-        */
-
-        // +++ ADDED: Get the user identity reliably from the AppModel +++
         let user = appModel.currentUser
         
-        // Add checks to make sure user identity is valid before sending
+        // Validate user identity
         guard !user.id.isEmpty, !user.name.isEmpty else {
             print("❌ Cannot send message. User ID or Username is missing from AppModel.")
             return
@@ -62,16 +78,19 @@ class SpacesChatViewModel: ChatViewModel {
         
         print("SpacesChatViewModel.sendMessage -> senderId: \(user.id), senderName: \(user.name)")
         
-        // Send the message through the spaces manager using the correct user data
-        spacesManager.sendMessage(
-            trimmedText,
-            senderId: user.id,
-            senderName: user.name,
-            spaceId: eventId // Using eventId from parent class to store spaceId
-        )
+        // Send message asynchronously to prevent UI blocking
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self = self else { return }
+            
+            await self.spacesManager.sendMessage(
+                trimmedText,
+                senderId: user.id,
+                senderName: user.name,
+                spaceId: self.eventId
+            )
+        }
     }
     
-    // Override opacity methods to use spaces manager
     override func getOpacity(for id: String) async -> Double {
         return spacesManager.getMessageOpacity(for: id)
     }
@@ -82,51 +101,62 @@ class SpacesChatViewModel: ChatViewModel {
     
     // MARK: - Private Methods
     
-    // Custom listening method for spaces
     private func startSpacesListening(spaceId: String) async {
         print("Starting spaces chat listener for space ID: \(spaceId)")
         
         // Start the spaces manager listener
         spacesManager.startListening(spaceId: spaceId)
         
-        // Keep updating messages from spaces manager
-        updateTask = Task {
+        // Use a more efficient update mechanism
+        updateTask = Task { [weak self] in
+            guard let self = self else { return }
+            
+            // Initial update
+            let initialMessages = await spacesManager.getMessages()
+            self.messageUpdateSubject.send(initialMessages)
+            
+            // Set up periodic updates with adaptive timing
+            var consecutiveEmptyUpdates = 0
+            var updateInterval: TimeInterval = 0.1
+            
             while !Task.isCancelled {
-                // Get messages from the spaces manager
-                let newMessages = spacesManager.messages
+                let newMessages = await spacesManager.getMessages()
                 
-                // Update our shadow property
+                // Check if there are actual changes
                 if self.spacesMessages != newMessages {
-                    self.spacesMessages = newMessages
+                    self.messageUpdateSubject.send(newMessages)
+                    consecutiveEmptyUpdates = 0
+                    updateInterval = 0.1 // Reset to fast updates when active
+                } else {
+                    consecutiveEmptyUpdates += 1
                     
-                    // Manually trigger objectWillChange to notify observers
-                    self.objectWillChange.send()
+                    // Gradually increase interval if no updates
+                    if consecutiveEmptyUpdates > 10 {
+                        updateInterval = min(updateInterval * 1.5, 1.0) // Cap at 1 second
+                    }
                 }
                 
-                try? await Task.sleep(for: .milliseconds(100))
+                try? await Task.sleep(for: .milliseconds(Int(updateInterval * 1000)))
             }
         }
     }
     
     // MARK: - Cleanup
     
-    // Method to clean up resources
     func cleanup() {
-        // Cancel update task
+        // Cancel all tasks and subscriptions
         updateTask?.cancel()
         updateTask = nil
+        cancellables.removeAll()
         
-        // Stop listener in SpacesChatManager
         Task {
             await spacesManager.stopListening()
         }
     }
     
-    // MARK: - Deinitializer
-    
     deinit {
-        // Cancel update task
         updateTask?.cancel()
+        cancellables.removeAll()
         print("SpacesChatViewModel deinit")
     }
 }

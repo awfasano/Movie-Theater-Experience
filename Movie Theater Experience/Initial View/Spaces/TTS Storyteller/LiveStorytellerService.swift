@@ -1,414 +1,627 @@
 //
-//  LiveStorytellerService.swift
+//  LiveStorytellerService.swift - Enhanced Debugging Version
 //  Movie Theater Experience
 //
-//  Created by Anthony Fasano on 6/21/25.
-//  Fully revised 26 Jun 25
-//
-
-private struct StorytellerConfig: Codable {
-    let voice: String
-    let instruction: String
-}
-
 
 import Foundation
 @preconcurrency import AVFoundation
-import Accelerate                              // vDSP_rmsqv, vDSP_Length
+import Accelerate
 import Combine
-
 
 @MainActor
 final class LiveStorytellerService: ObservableObject {
 
-    // MARK: – Public status --------------------------------------------------
     enum Status: Equatable {
-        case idle
-        case connecting
-        case connected
-        case error(String)
+        case idle, connecting, connected, permissionDenied, error(String)
     }
+    
     @Published private(set) var status: Status = .idle
-
-    // MARK: – WebSocket + audio engine --------------------------------------
-    private var webSocketTask: URLSessionWebSocketTask?
-    private var voice: String = "Zephyr" // Default value
-    private var instruction: String = "You are a helpful assistant." // Default value
-    
-    private var task: URLSessionWebSocketTask?
-    private let urlSession = URLSession(configuration: .default)
-    
-    // MARK: - Public Properties (for UI updates)
-    // Use Combine publishers to notify the ViewModel of new data.
-    let audioDataPublisher = PassthroughSubject<Data, Never>()
+    @Published private(set) var isMicrophoneAvailable: Bool = false
     let transcriptPublisher = PassthroughSubject<String, Never>()
+
+    // MARK: - WebSocket + Audio Engine
+    private var webSocketTask: URLSessionWebSocketTask?
+    private var voice: String = "Zephyr"
+    private var instruction: String = "You are a helpful assistant."
+    private var lastEngineRestart = Date(timeIntervalSince1970: 0)
+    private var needsPrime = true
+
+
+    private var micInputConverter: AVAudioConverter?
+    private var playbackConverter: AVAudioConverter?
     
+    private var audioBufferQueue: [AVAudioPCMBuffer] = []
+    private var isPlayingFromQueue = false
+    private let pcmQueue = DispatchQueue(label: "pcmQueue")
+    
+    // MARK: - Audio System Components
     private let audioSession  = AVAudioSession.sharedInstance()
     private let audioEngine   = AVAudioEngine()
     private let audioPlayer   = AVAudioPlayerNode()
 
-    // Mic → 16-k Hz converter (needed on VisionOS / iOS)
-    private var audioConverter: AVAudioConverter?
+    // FIXED: Corrected recording format - backend expects 16kHz mono PCM
     private let recordingFormat = AVAudioFormat(commonFormat: .pcmFormatInt16,
-                                                sampleRate: 16_000,
-                                                channels: 1,
-                                                interleaved: true)!
+                                                  sampleRate: 16_000,
+                                                  channels: 1,
+                                                  interleaved: true)!
 
-    private var playbackFormat: AVAudioFormat?   // cached mixer format
-    
-    // MARK: – Audio metering (UI pulls these) --------------------------------
-    private var currentLevel:   Float   = 0
+    // MARK: - Audio Metering (UI pulls these)
+    private var currentLevel: Float = 0
     private var latestSpectrum: [Float] = Array(repeating: 0, count: 128)
 
-    func getCurrentLevel() -> Float         { currentLevel }
-    func getSpectrum()     -> [Float]       { latestSpectrum }
+    func getCurrentLevel() -> Float { currentLevel }
+    func getSpectrum() -> [Float] { latestSpectrum }
+    
+    // MARK: - Public Methods
+    
+    func configure(voice: String, instruction: String) {
+        self.voice = voice
+        self.instruction = instruction
+        print("[DEBUG] Configured with voice: \(voice)")
+    }
 
-    /// Establishes the WebSocket connection, sends the configuration, and starts listening.
     func connectAndStart(urlString: String) {
-        guard let url = URL(string: urlString) else {
-            status = .error("Invalid WebSocket URL"); return
+        checkMicrophonePermission { [weak self] hasPermission in
+            guard let self = self, hasPermission else {
+                return
+            }
+            
+            print("[DEBUG] Attempting to connect to: \(urlString)")
+            
+            guard let url = URL(string: urlString) else {
+                print("[DEBUG] Invalid URL: \(urlString)")
+                self.status = .error("Invalid WebSocket URL")
+                return
+            }
+            
+            self.disconnect()
+            self.status = .connecting
+            print("[Live] Starting connection...")
+            
+            // Setup audio BEFORE WebSocket connection
+            self.setupAudioEngine()
+            
+            // Small delay to ensure audio is ready
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                // Create WebSocket with custom configuration for debugging
+                var request = URLRequest(url: url)
+                request.timeoutInterval = 30
+                
+                // Add headers if needed (some servers require Origin header)
+                request.setValue("https://storyteller-457201302256.us-east5.run.app", forHTTPHeaderField: "Origin")
+                
+                self.webSocketTask = URLSession.shared.webSocketTask(with: request)
+                self.webSocketTask?.resume()
+                
+                print("[DEBUG] WebSocket task created and resumed")
+                
+                // Start listening for messages
+                self.listenForMessages()
+                
+                // Send a ping to verify connection is established, then send config
+                self.webSocketTask?.sendPing { [weak self] error in
+                    guard let self = self else { return }
+                    
+                    if let error = error {
+                        print("[DEBUG] Ping failed: \(error)")
+                        self.status = .error("Connection failed: \(error.localizedDescription)")
+                        self.disconnect()
+                    } else {
+                        print("[DEBUG] Ping successful - connection established")
+                        // Now send the config
+                        Task { @MainActor in
+                            self.sendConfig()
+                        }
+                    }
+                }
+            }
         }
-
-        disconnect()
-        
-        status = .connecting
-        print("[Live] Starting connection...")
-
-        setupAudioEngine()
-        
-        webSocketTask = URLSession.shared.webSocketTask(with: url)
-        
-        // Start listening for server messages.
-        listenForMessages()
-        
-        // Open the connection.
-        webSocketTask?.resume()
-        
-        // **DEADLOCK FIX**: Send the configuration immediately after resuming the task.
-        // Do NOT wait for a message from the server first.
-        sendConfig()
     }
     
-    private func setupAudioEngine() {
-        do {
-            try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: .defaultToSpeaker)
-            try audioSession.setActive(true)
-        } catch {
-            status = .error("Audio session error: \(error.localizedDescription)")
-            return
-        }
-
-        audioEngine.attach(audioPlayer)
-        audioEngine.connect(audioPlayer, to: audioEngine.mainMixerNode, format: nil)
-
-        do {
-            audioEngine.prepare()
-            try audioEngine.start()
-            audioPlayer.play()
-            startMicrophone() // Mic tap starts after engine is running
-        } catch {
-            status = .error("Audio engine error: \(error.localizedDescription)")
-            disconnect()
+    private func checkMicrophonePermission(completion: @escaping (Bool) -> Void) {
+        switch AVAudioSession.sharedInstance().recordPermission {
+            
+        case .granted:
+            completion(true)
+            
+        case .denied:
+            print("[Permission] Microphone access was denied.")
+            status = .permissionDenied
+            completion(false)
+            
+        case .undetermined:
+            AVAudioSession.sharedInstance().requestRecordPermission { granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        print("[Permission] Microphone access granted.")
+                        completion(true)
+                    } else {
+                        print("[Permission] Microphone access was denied.")
+                        self.status = .permissionDenied
+                        completion(false)
+                    }
+                }
+            }
+            
+        @unknown default:
+            status = .permissionDenied
+            completion(false)
         }
     }
     
+
+    func disconnect(silent: Bool = false) {
+        print("[DEBUG] Disconnect called")
+
+        if audioEngine.isRunning {
+            audioEngine.inputNode.removeTap(onBus: 0)
+            audioEngine.mainMixerNode.removeTap(onBus: 0)   // <-- add this
+            audioEngine.stop()
+            audioPlayer.stop()
+        }
+
+        webSocketTask?.cancel(with: .goingAway, reason: nil)
+        webSocketTask = nil
+
+        pcmQueue.sync {
+            audioBufferQueue.removeAll()
+            isPlayingFromQueue = false
+        }
+
+        try? audioSession.setActive(false)
+
+        if !silent && status != .idle {          // <- only publish change if not silent
+            status = .idle
+        }
+    }
+
     
-    /// A recursive function that continuously listens for the next message from the server.
+    // MARK: - WebSocket Communication
+
     private func listenForMessages() {
-           webSocketTask?.receive { result in
-               Task { @MainActor [weak self] in
-                   guard let self = self else { return }
+        webSocketTask?.receive { result in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                
+                switch result {
+                case .success(let message):
+                    print("[DEBUG] Received message")
+                    self.processMessage(message)
+                    self.listenForMessages()
 
-                   switch result {
-                   case .success(let message):
-                       // We are now safely on the Main Actor.
-                       if self.status == .connecting {
-                           self.status = .connected
-                           print("[Live] Connection established.")
-                       }
+                case .failure(let error):
+                    if (error as NSError).code != NSURLErrorCancelled {
+                        print("[WS] Receive error: \(error.localizedDescription)")
+                        print("[DEBUG] Error domain: \((error as NSError).domain)")
+                        print("[DEBUG] Error code: \((error as NSError).code)")
+                        self.status = .error("Connection failed: \(error.localizedDescription)")
+                        self.disconnect()
+                    }
+                }
+            }
+        }
+    }
 
-                       switch message {
-                       case .string(let text):
-                           self.transcriptPublisher.send(text)
-                       case .data(let data):
-                           self.handleIncomingPCM(data)
-                       @unknown default:
-                           break
-                       }
-                       // Recursively call listen for the next message.
-                       self.listenForMessages()
-
-                   case .failure(let error):
-                       if (error as NSError).code != NSURLErrorCancelled {
-                           print("[WS] Receive error: \(error.localizedDescription)")
-                           self.disconnect()
-                       }
-                   }
-               }
-           }
-       }
+    private func processMessage(_ message: URLSessionWebSocketTask.Message) {
+        switch message {
+        case .string(let text):
+            print("[DEBUG] Received string message: \(text)")
+            
+            // Handle JSON status messages from backend
+            if let data = text.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                
+                if let status = json["status"] as? String {
+                    print("[DEBUG] Received status: \(status)")
+                    if status == "ready" {
+                        print("[Live] Backend ready for audio streaming")
+                        self.status = .connected
+                    }
+                } else if let transcript = json["transcript"] as? String {
+                    self.transcriptPublisher.send(transcript)
+                }
+            } else {
+                // Regular transcript text
+                self.transcriptPublisher.send(text)
+            }
+            
+        case .data(let data):
+            print("[DEBUG] Received audio data: \(data.count) bytes")
+            self.handleIncomingPCM(data)
+            
+        @unknown default:
+            print("[DEBUG] Received unknown message type")
+            break
+        }
+    }
     
-    
-    /// Encodes the stored configuration into JSON and sends it as a string message.
     private func sendConfig() {
         let config = StorytellerConfig(voice: self.voice, instruction: self.instruction)
         
         do {
             let jsonData = try JSONEncoder().encode(config)
-            guard let jsonString = String(data: jsonData, encoding: .utf8) else { return }
+            let jsonString = String(data: jsonData, encoding: .utf8)!
+            
+            print("[DEBUG] Sending config: \(jsonString)")
             
             webSocketTask?.send(.string(jsonString)) { error in
                 if let error {
-                    print("LiveStorytellerService: Error sending configuration: \(error)")
-                    // If sending the config fails, we can't proceed.
-                    Task { await self.disconnect() }
+                    print("[ERROR] Failed to send configuration: \(error)")
+                    Task { @MainActor in
+                        self.status = .error("Failed to send config: \(error.localizedDescription)")
+                        self.disconnect()
+                    }
                 } else {
-                    print("LiveStorytellerService: Configuration sent successfully.")
+                    print("[DEBUG] Configuration sent successfully")
                 }
             }
         } catch {
-            print("LiveStorytellerService: Failed to encode configuration: \(error)")
-            Task { await self.disconnect() }
+            print("[ERROR] Failed to encode config: \(error)")
+            status = .error("Failed to encode configuration")
         }
     }
-
     
-
-    // MARK: – Open WebSocket, start engine, attach player
-    private func setupAndConnect(urlString: String) {
-        // — 0. Validate URL ----------------------------------------------------
-        guard let url = URL(string: urlString) else {
-            status = .error("Invalid WebSocket URL")
+    func send(text: String) {
+        guard status == .connected else {
+            print("[WS] Cannot send text - not connected (status: \(status))")
             return
         }
-
-        // — 1. Configure AVAudioSession ---------------------------------------
-        do {
-            try audioSession.setCategory(.playAndRecord,
-                                         mode: .voiceChat,
-                                         options: .defaultToSpeaker)
-            try audioSession.setActive(true)
-        } catch {
-            status = .error("Audio-session error: \(error.localizedDescription)")
-            return
-        }
-
-        // — 2. Prepare AVAudioEngine graph ------------------------------------
-        audioEngine.attach(audioPlayer)
         
-        // Let the engine determine the connection format.
-        audioEngine.connect(audioPlayer, to: audioEngine.mainMixerNode, format: nil)
+        print("[DEBUG] Sending text: \(text)")
+        
+        webSocketTask?.send(.string(text)) { err in
+            if let err {
+                print("[WS] text send error:", err)
+            } else {
+                print("[DEBUG] Text sent successfully")
+            }
+        }
+    }
+    
+    // MARK: - Audio Engine & Processing
+    // In LiveStorytellerService.swift
 
-        do {
-            audioEngine.prepare()
-            try audioEngine.start()
-            audioPlayer.play()
-        } catch {
-            status = .error("Audio-engine error: \(error.localizedDescription)")
+    private func setupAudioEngine() {
+
+        // 1️⃣ Wire up the graph (cheap, can stay here)
+        audioEngine.attach(audioPlayer)
+        audioEngine.connect(audioPlayer,
+                            to: audioEngine.mainMixerNode,
+                            format: nil)
+        audioEngine.prepare()
+
+        // 2️⃣ Start the engine and configure the session OFF the main thread
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self else { return }
+
+            // --- MOVE AUDIO SESSION SETUP HERE ---
+            do {
+                /* Audio-session configuration (now on a background thread) */
+                try self.audioSession.setCategory(.playAndRecord,
+                                             mode: .voiceChat,
+                                             options: [.defaultToSpeaker, .allowBluetooth, .allowBluetoothA2DP])
+                try self.audioSession.setPreferredIOBufferDuration(0.04) // 40 ms
+                try self.audioSession.setActive(true)
+                print("[DEBUG] Audio session configured successfully (async)")
+            } catch {
+                print("[WARNING] Audio session error:", error)
+                // Handle error appropriately...
+            }
+            // --- END OF MOVED CODE ---
+
+            do {
+                try self.audioEngine.start() // ⏳ heavy call
+                print("[DEBUG] Audio engine started (async)")
+
+                await MainActor.run {
+                    self.audioPlayer.play()
+                    self.startMicrophone()
+                    self.startOutputMetering()
+                    self.installEngineObservers()
+                }
+            } catch {
+                print("[ERROR] Audio engine start failed:", error)
+                // Handle fallback...
+            }
+        }
+    }
+
+
+    private func handleIncomingPCM(_ data: Data) {
+        let backendSampleRate: Double = 24_000      // matches server
+
+        guard let srcFormat = AVAudioFormat(commonFormat: .pcmFormatInt16,
+                                            sampleRate: backendSampleRate,
+                                            channels: 1,
+                                            interleaved: true),
+              let srcBuf = data.toPCMBuffer(format: srcFormat)
+        else {
+            print("[Audio] Failed to create PCM buffer from incoming data")
             return
         }
 
-        // — 3. Open WebSocket --------------------------------------------------
-        status = .connecting
-        webSocketTask = URLSession.shared.webSocketTask(with: url)
-        webSocketTask?.resume()
+        updateMeters(from: srcBuf)
 
-        listenForMessages()
-        startMicrophone()
-        print("[Live] WebSocket connecting …")
-    }
-    
-    func configure(voice: String, instruction: String) {
-        self.voice = voice
-        self.instruction = instruction
-    }
+        let dstFormat = audioEngine.mainMixerNode.outputFormat(forBus: 0)
 
-
-    func disconnect() {
-        if audioEngine.isRunning {
-            audioEngine.inputNode.removeTap(onBus: 0)
-            audioEngine.stop()
-            audioPlayer.stop()
+        if playbackConverter == nil {
+            playbackConverter = AVAudioConverter(from: srcFormat, to: dstFormat)
+            print("[DEBUG] Created playback converter \(srcFormat.sampleRate) → \(dstFormat.sampleRate)")
         }
-        webSocketTask?.cancel(with: .goingAway, reason: nil)
-        webSocketTask = nil
+        guard let converter = playbackConverter else { return }
 
-        try? audioSession.setActive(false)
-        if status != .idle {
-             status = .idle
-             print("[Live] Disconnected.")
-        }
-    }
-
-    // MARK: – Play incoming PCM + compute meters ----------------------------
-    // MARK: – Play incoming PCM + compute meters --------------------------------
-    private func handleIncomingPCM(_ data: Data) {
-        //-----------------------------------------------------------------------
-        // 0)  Define the source format (what Gemini sends)
-        //-----------------------------------------------------------------------
-        guard let srcFormat = AVAudioFormat(commonFormat: .pcmFormatInt16,
-                                            sampleRate: 24_000,
-                                            channels: 1,
-                                            interleaved: false),
-              let srcBuf    = data.toPCMBuffer(format: srcFormat)
-        else { return }
-
-        //-----------------------------------------------------------------------
-        // 1)  Get (or cache) the *destination* format – whatever the main mixer
-        //     is actually using on this device / simulator (e.g. 48-k Hz stereo
-        //     Float32).  We query once and keep it.
-        //-----------------------------------------------------------------------
-        let dstFormat: AVAudioFormat
-        if let cached = self.playbackFormat {         // <- add this stored prop:
-            dstFormat = cached                        //    `private var playbackFormat: AVAudioFormat?`
-        } else {
-            dstFormat = audioEngine.mainMixerNode.outputFormat(forBus: 0)
-            self.playbackFormat = dstFormat
-        }
-
-        //-----------------------------------------------------------------------
-        // 2)  Convert source → destination with AVAudioConverter  ̄\_(ツ)_/
-        //-----------------------------------------------------------------------
+        let dstCap = AVAudioFrameCount(Double(srcBuf.frameLength) *
+                                       (dstFormat.sampleRate / srcFormat.sampleRate))
         guard let dstBuf = AVAudioPCMBuffer(pcmFormat: dstFormat,
-                                            frameCapacity: AVAudioFrameCount(
-                                                Double(srcBuf.frameLength)
-                                              * dstFormat.sampleRate
-                                              / srcFormat.sampleRate))
-        else { return }
+                                            frameCapacity: dstCap) else { return }
 
-        let converter = AVAudioConverter(from: srcFormat, to: dstFormat)!
         var error: NSError?
-        converter.convert(to: dstBuf, error: &error) { _, outStatus in
+        let status = converter.convert(to: dstBuf, error: &error) { _, outStatus in
             outStatus.pointee = .haveData
             return srcBuf
         }
-        if let error { print("[Live] convert error:", error); return }
+        if status != .haveData { return }
 
-        //-----------------------------------------------------------------------
-        // 3)  Queue for playback  (formats now *always* match the player node)
-        //-----------------------------------------------------------------------
-        audioPlayer.scheduleBuffer(dstBuf)
-
-        //-----------------------------------------------------------------------
-        // 4)  Re-derive meters from the **converted** float data --------------
-        //-----------------------------------------------------------------------
-        guard let floatPtr = dstBuf.floatChannelData?.pointee else { return }
-        let frames = Int(dstBuf.frameLength)
-
-        // RMS loudness
-        var rms: Float = 0
-        vDSP_rmsqv(floatPtr, 1, &rms, vDSP_Length(frames))
-        let level = pow(rms, 0.5) * 2                                   // boost
-
-        // 128-bucket snapshot
-        let bucketCount = latestSpectrum.isEmpty ? 128 : latestSpectrum.count
-
-        var snap = Array(repeating: 0.0 as Float,   // 👈 Float, not Int
-                         count: bucketCount)
-
-        let stride = max(1, frames / bucketCount)   // avoids divide-by-zero
-        for i in 0..<bucketCount {
-            snap[i] = fabsf(floatPtr[i * stride])
+        // ---------- enqueue & kick the scheduler ----------
+        pcmQueue.async {
+            self.audioBufferQueue.append(dstBuf)
+            if !self.isPlayingFromQueue {
+                self.isPlayingFromQueue = true
+                DispatchQueue.main.async { self.playNextBufferFromQueue() }
+            }
         }
+    }
+    
+    // LiveStorytellerService.swift (anywhere inside the class)
 
-        // Commit on MainActor so UI can read safely
-        Task { @MainActor in
-            self.currentLevel   = level
-            self.latestSpectrum = snap              // always `bucketCount` floats
+    private func startOutputMetering() {
+        let mix = audioEngine.mainMixerNode
+        mix.removeTap(onBus: 0)                         // <-- safe even if no tap
+
+        let fmt = mix.outputFormat(forBus: 0)
+        let bufferSize: AVAudioFrameCount = 1_024
+
+        mix.installTap(onBus: 0,
+                       bufferSize: bufferSize,
+                       format: fmt) { [weak self] buf, _ in
+            self?.updateMeters(from: buf)
         }
     }
 
+    
 
-    // MARK: – Mic capture & stream ------------------------------------------
-    private func startMicrophone() {
-            let inputNode   = audioEngine.inputNode
-            let inputFormat = inputNode.outputFormat(forBus: 0)
+    
+    @MainActor
+    private func attemptEngineRestart() {
+        guard !audioEngine.isRunning,
+              Date().timeIntervalSince(lastEngineRestart) > 1 else { return }
 
-            guard inputFormat.sampleRate  > 0,
-                  inputFormat.channelCount > 0
-            else {
-                status = .error("No valid microphone.")
+        do   { try audioEngine.start(); lastEngineRestart = Date() }
+        catch { print("[Audio] Engine restart failed: \(error)") }
+    }
+    
+    
+    private func installEngineObservers() {
+        NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange,
+            object: audioEngine,
+            queue: .main
+        ) { [weak self] _ in
+            self?.attemptEngineRestart()
+        }
+    }
+
+    @MainActor
+    private func playNextBufferFromQueue() {
+
+        attemptEngineRestart()
+
+        if !audioPlayer.isPlaying {
+            audioPlayer.play()
+        }
+
+        pcmQueue.async { [weak self] in
+            guard let self = self else { return }
+
+            // ----- dequeue first buffer -----
+            if self.audioBufferQueue.isEmpty {
+                self.isPlayingFromQueue = false
+                self.needsPrime = true
                 return
             }
+            let firstBuf = self.audioBufferQueue.removeFirst()
 
-            audioConverter = AVAudioConverter(from: inputFormat, to: recordingFormat)
+            let buffersToSchedule = self.needsPrime ? 2 : 1
+            self.needsPrime = false
 
-            inputNode.installTap(onBus: 0,
-                                 bufferSize: 1024,
-                                 format: inputFormat) { [weak self] buffer, _ in
-                guard let self = self else { return }
+            for i in 0..<buffersToSchedule {
+                let buf = (i == 0) ? firstBuf :
+                          (self.audioBufferQueue.isEmpty ? firstBuf
+                                                         : self.audioBufferQueue.removeFirst())
 
-                // --- SOLUTION: Safely capture the web socket task ---
-                // Create a strong local reference. If `disconnect()` was called,
-                // this will be nil and we will safely exit the closure.
-                guard let task = self.webSocketTask,
-                      let converter = self.audioConverter
+                self.audioPlayer.scheduleBuffer(buf) { [weak self] in
+                    Task { @MainActor in self?.playNextBufferFromQueue() }
+                }
+            }
+        }
+    }
+
+    
+    // FIXED: Improved microphone processing with better debugging
+    private func startMicrophone() {
+        let inputNode = audioEngine.inputNode
+        let inputFormat = inputNode.outputFormat(forBus: 0)
+        
+        guard inputFormat.sampleRate > 0, inputFormat.channelCount > 0 else {
+            print("[WARNING] No valid microphone format - continuing without microphone")
+            print("[WARNING] Sample rate: \(inputFormat.sampleRate), channels: \(inputFormat.channelCount)")
+            isMicrophoneAvailable = false
+            // Don't set error status - we can still receive audio
+            return
+        }
+        
+        print("[Audio] Input format: \(inputFormat.sampleRate)Hz, \(inputFormat.channelCount) channels")
+        print("[Audio] Target format: \(recordingFormat.sampleRate)Hz, \(recordingFormat.channelCount) channels")
+        
+        micInputConverter = AVAudioConverter(from: inputFormat, to: recordingFormat)
+        guard micInputConverter != nil else {
+            print("[WARNING] Failed to create microphone converter - continuing without microphone")
+            isMicrophoneAvailable = false
+            return
+        }
+        
+        // Use smaller buffer size for lower latency
+        let bufferSize: AVAudioFrameCount = 512
+        
+        do {
+            inputNode.removeTap(onBus: 0)   // right before you install the new tap
+            inputNode.installTap(onBus: 0, bufferSize: bufferSize, format: inputFormat) { [weak self] buffer, _ in
+                guard let self = self,
+                      let task = self.webSocketTask,
+                      let converter = self.micInputConverter,
+                      self.status == .connected
                 else { return }
-
-                // Convert to 16-k Hz Int16 mono
-                let frameCap = AVAudioFrameCount(self.recordingFormat.sampleRate
-                                                 * Double(buffer.frameLength)
-                                                 / inputFormat.sampleRate)
-
-                guard let convBuf = AVAudioPCMBuffer(pcmFormat: recordingFormat,
-                                                     frameCapacity: frameCap)
-                else { return }
-
+                
+                let frameCap = AVAudioFrameCount(self.recordingFormat.sampleRate * Double(buffer.frameLength) / inputFormat.sampleRate)
+                guard let convBuf = AVAudioPCMBuffer(pcmFormat: self.recordingFormat, frameCapacity: frameCap) else {
+                    print("[Audio] Failed to create conversion buffer")
+                    return
+                }
+                
                 var error: NSError?
-                converter.convert(to: convBuf, error: &error) { _, outStatus in
+                let convStatus = converter.convert(to: convBuf, error: &error) { _, outStatus in
                     outStatus.pointee = .haveData
                     return buffer
                 }
-                if error != nil { return }
-
-                if let d = convBuf.toData() {
-                    // Use the safely captured `task` variable, NOT `self.webSocketTask`.
-                    // This is now thread-safe.
-                    task.send(.data(d)) { err in
-                        if let err { print("[WS] send error:", err.localizedDescription) }
+                
+                if let error {
+                    print("[Audio] Mic conversion error: \(error)")
+                    return
+                }
+                
+                if convStatus != .haveData {
+                    print("[Audio] Mic conversion failed with status: \(convStatus)")
+                    return
+                }
+                
+                if let data = convBuf.toData() {
+                    // Only log occasionally to avoid spam
+                    var logCounter = 0
+                    logCounter += 1
+                    if logCounter % 100 == 0 {
+                        print("[Audio] Sending audio data (sample \(logCounter))")
+                    }
+                    
+                    task.send(.data(data)) { err in
+                        if let err {
+                            print("[WS] Mic data send error:", err.localizedDescription)
+                        }
                     }
                 }
             }
-
-            status = .connected
-            print("[Live] Mic tap installed; streaming.")
-        }
-
-    // MARK: – Text / mic helpers --------------------------------------------
-    func send(text: String) {
-        webSocketTask?.send(.string(text)) { err in
-            if let err { print("[WS] text send error:", err) }
+            
+            print("[DEBUG] Microphone tap installed successfully")
+            isMicrophoneAvailable = true
+        } catch {
+            print("[WARNING] Failed to install microphone tap: \(error) - continuing without microphone")
+            isMicrophoneAvailable = false
         }
     }
 
     func setMic(active: Bool) {
-        audioEngine.inputNode.volume = active ? 1 : 0      // simple software mute
+        // Check if we actually have a microphone before trying to set volume
+        let inputNode = audioEngine.inputNode
+        let inputFormat = inputNode.outputFormat(forBus: 0)
+        
+        if inputFormat.sampleRate > 0 && inputFormat.channelCount > 0 {
+            print("[DEBUG] Setting mic active: \(active)")
+            audioEngine.inputNode.volume = active ? 1 : 0
+        } else {
+            print("[DEBUG] No microphone available - ignoring mic activation request")
+        }
+    }
+    
+    // FIXED: Improved metering with bounds checking
+    // MARK: - Improved metering that supports Float32 *and* Int16
+    private func updateMeters(from pcmBuffer: AVAudioPCMBuffer) {
+
+        let frames = Int(pcmBuffer.frameLength)
+        guard frames > 0 else { return }
+
+        let bucketCount = latestSpectrum.count
+        let stride      = max(1, frames / bucketCount)
+
+        var snap  = [Float](repeating: 0, count: bucketCount)
+        var sqSum: Float = 0
+
+        switch pcmBuffer.format.commonFormat {
+
+        case .pcmFormatFloat32:
+            guard let floatPtr = pcmBuffer.floatChannelData?.pointee else { return }
+
+            for i in 0..<bucketCount {
+                let sample = floatPtr[i * stride]          // already −1…+1
+                snap[i]  = fabsf(sample)
+                sqSum   += sample * sample
+            }
+
+        case .pcmFormatInt16:
+            guard let intPtr = pcmBuffer.int16ChannelData?.pointee else { return }
+            let scale: Float = 1.0 / Float(Int16.max)      // convert to −1…+1
+
+            for i in 0..<bucketCount {
+                let sample = Float(intPtr[i * stride]) * scale
+                snap[i]  = fabsf(sample)
+                sqSum   += sample * sample
+            }
+
+        default:                                           // unsupported format
+            return
+        }
+
+        let rms = sqrtf(sqSum / Float(bucketCount))
+
+        DispatchQueue.main.async {                         // UI thread
+            self.latestSpectrum = snap
+            self.currentLevel   = min(rms * 1.5, 1.0)
+        }
     }
 }
 
-// MARK: – Buffer/Data helpers -----------------------------------------------
+// MARK: - Configuration struct
+private struct StorytellerConfig: Codable {
+    let voice: String
+    let instruction: String
+}
+
+// MARK: - Buffer/Data helpers (FIXED)
 extension AVAudioPCMBuffer {
     func toData() -> Data? {
         guard let chData = int16ChannelData else { return nil }
-        let bytesPerFrame = format.streamDescription.pointee.mBytesPerFrame
-        return Data(bytes: chData[0], count: Int(frameLength) * Int(bytesPerFrame))
+        let frameLength = Int(self.frameLength)
+        let bytesPerFrame = Int(self.format.streamDescription.pointee.mBytesPerFrame)
+        let totalBytes = frameLength * bytesPerFrame
+        
+        return Data(bytes: chData[0], count: totalBytes)
     }
 }
 
 extension Data {
     func toPCMBuffer(format: AVAudioFormat) -> AVAudioPCMBuffer? {
-        let bytesPerFrame = format.streamDescription.pointee.mBytesPerFrame
-        let frames = UInt32(count) / bytesPerFrame
-        guard let buf = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames) else { return nil }
-        buf.frameLength = frames
-
+        let bytesPerFrame = Int(format.streamDescription.pointee.mBytesPerFrame)
+        let frameLength = UInt32(self.count) / UInt32(bytesPerFrame)
+        
+        guard frameLength > 0,
+              let buf = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameLength) else { return nil }
+        
+        buf.frameLength = frameLength
+        
         guard let dst = buf.int16ChannelData else { return nil }
-        _ = withUnsafeBytes { srcPtr in
+        
+        self.withUnsafeBytes { srcPtr in
             guard let src = srcPtr.baseAddress else { return }
-            dst[0].assign(from: src.assumingMemoryBound(to: Int16.self),
-                          count: Int(frames))
+            dst[0].assign(from: src.assumingMemoryBound(to: Int16.self), count: Int(frameLength))
         }
         return buf
     }
 }
-

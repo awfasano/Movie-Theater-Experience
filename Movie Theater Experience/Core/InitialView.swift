@@ -1,4 +1,3 @@
-
 import SwiftUI
 import RealityKit
 
@@ -23,18 +22,18 @@ struct InitialView: View {
                     )
                     container.addChild(sphere)
 
-                    // Add a simple animation to each sphere
+                    // Add a simple animation to each sphere.
                     let animation = FromToByAnimation<Transform>(
                         from: Transform(scale: .one, rotation: simd_quatf(angle: 0, axis: [0,1,0]), translation: sphere.position),
                         to: Transform(scale: .one, rotation: simd_quatf(angle: .pi * 2, axis: [Float.random(in: 0...1), Float.random(in: 0...1), Float.random(in: 0...1)]), translation: sphere.position),
                         duration: TimeInterval.random(in: 10...20),
-                        timing: .linear,
-                        bind: { target, value in
-                            target.transform = value
-                        },
-                        repeat: .forever
+                        timing: .linear
                     )
+                    
+                    // Generate a reusable animation resource from the definition.
                     let animationResource = try! AnimationResource.generate(with: animation)
+                    
+                    // Play the animation on the sphere and set it to loop.
                     sphere.playAnimation(animationResource)
                 }
                 content.add(container)

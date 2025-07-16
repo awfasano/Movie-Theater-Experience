@@ -31,6 +31,12 @@ class SpaceService: ObservableObject {
             name: UIApplication.willTerminateNotification,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAppTermination),
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil
+        )
     }
     
     deinit {
@@ -492,7 +498,7 @@ class SpaceService: ObservableObject {
     private func startHeartbeat(for spaceId: String) {
         stopHeartbeat(for: spaceId)
         
-        let timer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { [weak self] _ in
+        let timer = Timer.scheduledTimer(withTimeInterval: 300.0, repeats: true) { [weak self] _ in
             guard let userRef = self?.userPresenceRefs[spaceId] else { return }
             userRef.updateData([
                 "lastActive": FieldValue.serverTimestamp()
