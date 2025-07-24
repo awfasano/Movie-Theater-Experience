@@ -395,7 +395,7 @@ class SpaceService: ObservableObject {
                 "userId": user.id,
                 "userName": user.name,
                 "joinedAt": FieldValue.serverTimestamp(),
-                // ... etc
+                "lastUpdate": FieldValue.serverTimestamp() // Add this line
             ])
             print("✅ [Debug] Successfully set data for active user.")
             
@@ -501,7 +501,7 @@ class SpaceService: ObservableObject {
         let timer = Timer.scheduledTimer(withTimeInterval: 300.0, repeats: true) { [weak self] _ in
             guard let userRef = self?.userPresenceRefs[spaceId] else { return }
             userRef.updateData([
-                "lastActive": FieldValue.serverTimestamp()
+                "lastUpdate": FieldValue.serverTimestamp()
             ]) { error in
                 if let error = error {
                     print("❌ Failed to update heartbeat: \(error.localizedDescription)")

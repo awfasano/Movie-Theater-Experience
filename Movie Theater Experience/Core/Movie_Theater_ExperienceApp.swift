@@ -139,20 +139,22 @@ struct Movie_Theater_ExperienceApp: App {
                 .environment(appModel)
                 .environmentObject(ImmersiveSpaceManager.shared)
                 .environmentObject(spacesEntityWrapper)
-                .environmentObject(windowManager)
+                .environmentObject(windowManager) // ✅ This was missing!
         }
         .handlesExternalEvents(
             matching: [PublicSpaceActivity.activityIdentifier, DirectCallActivity.activityIdentifier]
         )
         .immersionStyle(selection: .constant(.full), in: .full)
 
+
         
         WindowGroup("Audio Controls", id: "audioControls") {
             if let space = appModel.selectedSpace,
                let entity = spacesEntityWrapper.getSpaceEntity() {
                 VolumeControlView()
-                .environment(appModel) // Pass appModel if needed
+                .environment(appModel)
                 .environmentObject(spacesEntityWrapper)
+                .environmentObject(windowManager) // ✅ Add this
                 .background(.clear)
             } else {
                 Text("No space loaded")
@@ -169,9 +171,6 @@ struct Movie_Theater_ExperienceApp: App {
                 .environment(appModel)
                 .environmentObject(ImmersiveSpaceManager.shared)
                 .environmentObject(windowManager)
-                .onDisappear {
-                    windowManager.windowClosed(.seatMap) // Assuming .seatMap corresponds to "spaceMap"
-                }
         }
         .defaultSize(width: 1600, height: 1300)
         .windowStyle(.plain)
@@ -184,9 +183,6 @@ struct Movie_Theater_ExperienceApp: App {
                 .environmentObject(sharedSelection)
                 .environmentObject(spacesEntityWrapper)
                 .environmentObject(windowManager)
-                .onDisappear {
-                    windowManager.windowClosed(.navBar) // Assuming .navBar corresponds to "spaceNavBar"
-                }
         }
         .windowStyle(.plain)
         .defaultSize(width: 1200, height: 25)
@@ -196,9 +192,6 @@ struct Movie_Theater_ExperienceApp: App {
             SpacesChatWindow()
                 .environment(appModel)
                 .environmentObject(windowManager)
-                .onDisappear {
-                    windowManager.windowClosed(.chat) // Assuming .chat corresponds to "spaceChatWindow"
-                }
         }
         .defaultSize(width: 400, height: 600)
         .windowStyle(.plain)
@@ -208,9 +201,6 @@ struct Movie_Theater_ExperienceApp: App {
             SpacesEmojiWindow()
                 .environment(appModel)
                 .environmentObject(windowManager)
-                .onDisappear {
-                    windowManager.windowClosed(.emoji) // Assuming .emoji corresponds to "spaceEmojiWindow"
-                }
         }
         .defaultSize(width: 300, height: 180)
         .windowStyle(.plain)
@@ -220,9 +210,6 @@ struct Movie_Theater_ExperienceApp: App {
             ChatSettingsNavBar()
                 .environment(appModel)
                 .environmentObject(windowManager)
-                .onDisappear {
-                    windowManager.windowClosed(.chatSettings)
-                }
         }
         .defaultSize(width: 350, height: 225)
         
@@ -232,9 +219,6 @@ struct Movie_Theater_ExperienceApp: App {
                 EmojiButtonView(eventId: event.id ?? "", date: event.date)
                     .environmentObject(emojiManager)
                     .background(Color.clear)
-                    .onDisappear {
-                        windowManager.windowClosed(.emoji)
-                    }
             }
         }
         .defaultSize(width: 300, height: 100)
@@ -249,9 +233,6 @@ struct Movie_Theater_ExperienceApp: App {
                     eventManager: firebaseEventManager
                 ))
                 .environment(appModel) // Pass appModel if ChatView needs it
-                .onDisappear {
-                    windowManager.windowClosed(.chat)
-                }
             }
         }
         .defaultSize(width: 400, height: 600)
@@ -265,9 +246,6 @@ struct Movie_Theater_ExperienceApp: App {
                 .environmentObject(sharedSelection)
                 .environmentObject(theatreEntityWrapper)
                 .environmentObject(windowManager)
-                .onDisappear {
-                    windowManager.windowClosed(.navBar)
-                }
         }
         .windowStyle(.plain)
         .defaultSize(width: 600, height: 50)
@@ -278,17 +256,14 @@ struct Movie_Theater_ExperienceApp: App {
                 .environment(appModel)
                 .environmentObject(ImmersiveSpaceManager.shared) // Pass if MovieWindow needs it
                 .environmentObject(windowManager)
-                .onDisappear {
-                    windowManager.windowClosed(.movie)
-                }
         }
         .defaultSize(width: 600, height: 1500) // Height seems large, adjust if needed
         .windowStyle(.plain)
         
         WindowGroup("Storyteller", id: "storytellerWindow") {
-            // The root view for this window is the list of stories.
             StoriesListView()
-                .environment(appModel) // Pass the appModel if needed.
+                .environment(appModel)
+                .environmentObject(windowManager) // ✅ Add this
         }
         .defaultSize(width: 1250, height: 800)
         .windowStyle(.plain)
@@ -300,15 +275,18 @@ struct Movie_Theater_ExperienceApp: App {
         .windowStyle(.volumetric)
         .defaultSize(width: 0.4, height: 0.4, depth: 0.4, in: .meters)
         
+        WindowGroup("Web Browser", id: "webBrowserWindow") {
+            WebBrowserView()
+                .environmentObject(windowManager) // ✅ Add this
+        }
+        .defaultSize(width: 1200, height: 800)
+        .windowStyle(.plain)
         
         // Exiting window.
         WindowGroup(id: "exitingWindow", for: WatchStats.self) { stats in
             if let unwrappedStats = stats.wrappedValue {
                 ExitingWindow(stats: unwrappedStats)
                     .environment(appModel) // Pass appModel if needed
-                    .onDisappear {
-                        windowManager.windowClosed(.exitingWindow)
-                    }
             }
         }
         .defaultSize(width: 600, height: 800)

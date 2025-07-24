@@ -7,7 +7,7 @@ struct SpaceBrowserIntegration: View {
     @Environment(AppModel.self) private var appModel
     @EnvironmentObject private var windowManager: WindowManager
     @Environment(\.openWindow) private var openWindow
-    @Environment(\.dismissWindow) private var dismissWindow  // Add this
+    @Environment(\.dismissWindow) private var dismissWindow
     @Environment(\.openImmersiveSpace) private var openImmersiveSpace
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
     
@@ -19,6 +19,77 @@ struct SpaceBrowserIntegration: View {
     @State private var loadError: Error?
     @State private var loadingProgress: Double = 0.0
     @State private var loadingMessage: String = ""
+
+    // MARK: - Child Views
+
+    private var spaceGrid: some View {
+        ScrollView {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 300))], spacing: 24) {
+                ForEach(Array(service.spaces.enumerated()), id: \.element.id) { index, space in
+                    SpaceCard(space: space) {
+                        // Define the action for the info button here.
+                        // For example, you could open a detail window:
+                        // openWindow(value: space.id)
+                        print("Info tapped for \(space.spaceName)")
+                    }
+                    .opacity(isLoadingSpace ? 0.6 : 1.0)
+                    .allowsHitTesting(!isLoadingSpace)
+                    .onTapGesture {
+                        Task {
+                            await enterImmersiveSpace(space: space)
+                        }
+                    }
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                    .animation(.spring(duration: 0.5).delay(Double(index) * 0.05), value: service.spaces)
+                }
+            }
+            .padding(24)
+        }
+    }
+    
+    private var loadingOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.5).ignoresSafeArea()
+            
+            VStack(spacing: 20) {
+                Image(systemName: "cube.transparent.fill")
+                    .font(.system(size: 50))
+                    .foregroundColor(.white)
+                    .symbolEffect(.pulse, options: .repeating)
+                
+                Text(loadingMessage)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .animation(.easeInOut, value: loadingMessage)
+                
+                ProgressView(value: loadingProgress)
+                    .progressViewStyle(LinearProgressViewStyle())
+                    .tint(.white)
+                    .scaleEffect(y: 2)
+                    .frame(width: 200)
+                
+                Text("\(Int(loadingProgress * 100))%")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.8))
+                    .monospacedDigit()
+                
+                Button("Cancel") {
+                    cancelLoading()
+                }
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.8))
+                .padding(.top, 10)
+            }
+            .padding(40)
+            .background(.ultraThinMaterial.opacity(0.9))
+            .cornerRadius(20)
+            .shadow(radius: 10)
+        }
+        .transition(.opacity)
+        .animation(.easeInOut(duration: 0.3), value: isLoadingSpace)
+    }
+
+    // MARK: - Body
     
     var body: some View {
         VStack {
@@ -51,21 +122,7 @@ struct SpaceBrowserIntegration: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                ScrollView {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 250))], spacing: 16) {
-                        ForEach(service.spaces) { space in
-                            SpaceCard(space: space)
-                                .opacity(isLoadingSpace ? 0.6 : 1.0)
-                                .allowsHitTesting(!isLoadingSpace)
-                                .onTapGesture {
-                                    Task {
-                                        await enterImmersiveSpace(space: space)
-                                    }
-                                }
-                        }
-                    }
-                    .padding()
-                }
+                spaceGrid
             }
         }
         .toolbar {
@@ -91,85 +148,35 @@ struct SpaceBrowserIntegration: View {
         }
         .overlay {
             if isLoadingSpace {
-                ZStack {
-                    Color.black.opacity(0.5)
-                        .ignoresSafeArea()
-                    
-                    VStack(spacing: 20) {
-                        // Animated icon
-                        Image(systemName: "cube.transparent.fill")
-                            .font(.system(size: 50))
-                            .foregroundColor(.white)
-                            .symbolEffect(.pulse, options: .repeating)
-                        
-                        // Loading message
-                        Text(loadingMessage)
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .animation(.easeInOut, value: loadingMessage)
-                        
-                        // Progress bar
-                        ProgressView(value: loadingProgress)
-                            .progressViewStyle(LinearProgressViewStyle())
-                            .tint(.white)
-                            .scaleEffect(y: 2)
-                            .frame(width: 200)
-                        
-                        // Percentage
-                        Text("\(Int(loadingProgress * 100))%")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.8))
-                            .monospacedDigit()
-                        
-                        // Cancel button (optional)
-                        Button("Cancel") {
-                            cancelLoading()
-                        }
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.8))
-                        .padding(.top, 10)
-                    }
-                    .padding(40)
-                    .background(.ultraThinMaterial.opacity(0.9))
-                    .cornerRadius(20)
-                    .shadow(radius: 10)
-                }
-                .transition(.opacity)
-                .animation(.easeInOut(duration: 0.3), value: isLoadingSpace)
+                loadingOverlay
             }
         }
     }
     
+    // MARK: - Functions
+    
     @MainActor
     private func enterImmersiveSpace(space: SpaceData) async {
-        // Check if user can enter space
         guard !appModel.username.isEmpty else {
             showJoinFailedAlert = true
             return
         }
         
-        // Reset and show loading state
         isLoadingSpace = true
         loadError = nil
         loadingProgress = 0.0
         loadingMessage = "Initializing..."
         
         do {
-            // Stage 1: Set up app state (10%)
             await updateProgress(0.1, message: "Preparing space...")
             appModel.selectedSpace = space
-            
-            // Small delay for visual feedback
             try await Task.sleep(for: .milliseconds(200))
             
-            // Stage 2: Load the space entity (10% -> 50%)
             await updateProgress(0.2, message: "Downloading \(space.spaceName)...")
-            
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask {
                     try await self.loadSpaceEntity(space: space) { progress in
                         Task { @MainActor in
-                            // Map entity loading progress from 20% to 50%
                             let mappedProgress = 0.2 + (progress * 0.3)
                             self.loadingProgress = mappedProgress
                         }
@@ -181,7 +188,6 @@ struct SpaceBrowserIntegration: View {
             await updateProgress(0.5, message: "Processing 3D content...")
             try await Task.sleep(for: .milliseconds(300))
             
-            // Stage 3: Prepare immersive space (50% -> 70%)
             await updateProgress(0.6, message: "Preparing immersive environment...")
             let success = await appModel.switchToSpace(appModel.spacesID)
             guard success else {
@@ -191,32 +197,23 @@ struct SpaceBrowserIntegration: View {
             await updateProgress(0.7, message: "Setting up scene...")
             try await Task.sleep(for: .milliseconds(200))
             
-            // Stage 4: Open immersive space (70% -> 90%)
             await updateProgress(0.8, message: "Entering space...")
             await openImmersiveSpace(id: appModel.spacesID)
             
             await updateProgress(0.9, message: "Finalizing...")
-            
-            // Stage 5: Open companion windows (90% -> 100%)
             openCompanionWindows()
             await updateProgress(1.0, message: "Welcome to \(space.spaceName)!")
-            
-            // Brief pause to show completion
             try await Task.sleep(for: .milliseconds(500))
             
-            // Dismiss the main content window after everything is loaded
             dismissWindow(id: "mainContent")
             print("🚪 Dismissed ContentView window")
             
         } catch {
             print("❌ Failed to enter immersive space: \(error)")
             loadError = error
-            
-            // Show error alert
             await showErrorAlert(error: error)
         }
         
-        // Hide loading state
         withAnimation {
             isLoadingSpace = false
         }
@@ -228,13 +225,11 @@ struct SpaceBrowserIntegration: View {
             self.loadingProgress = progress
             self.loadingMessage = message
         }
-        // Small delay to ensure UI updates
         try? await Task.sleep(for: .milliseconds(50))
     }
     
     private func loadSpaceEntity(space: SpaceData, progressHandler: @escaping (Double) -> Void) async throws {
         return try await withCheckedThrowingContinuation { continuation in
-            // Simulate progress updates during loading
             let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
                 let currentProgress = self.loadingProgress
                 if currentProgress < 0.45 {
@@ -247,10 +242,7 @@ struct SpaceBrowserIntegration: View {
                 
                 switch result {
                 case .success(let entity):
-                    // Complete the loading progress for this stage
                     progressHandler(1.0)
-                    
-                    // Store the entity in the shared wrapper
                     SpacesEntityWrapper.shared.setEntity(entity.clone(recursive: true))
                     SpacesEntityWrapper.shared.setSpaceEntity(entity.clone(recursive: true))
                     SpacesEntityWrapper.shared.setActiveSceneEntity(entity.clone(recursive: true))
@@ -274,10 +266,6 @@ struct SpaceBrowserIntegration: View {
     }
     
     private func openCompanionWindows() {
-        // Open any windows that should appear with the immersive space
-        // You can add other windows here if needed:
-        // openWindow(id: "audioControls")
-        
         print("🪟 Opened companion windows for immersive space")
     }
     
@@ -296,6 +284,8 @@ struct SpaceBrowserIntegration: View {
         }
     }
 }
+
+// MARK: - Error Enum
 
 enum SpaceLoadError: LocalizedError {
     case transitionFailed

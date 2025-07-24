@@ -144,7 +144,7 @@ class VideoSyncServiceTests: XCTestCase {
             let hostDocRef = firestore.document("\(basePath)/host")
             try await hostDocRef.setData([
                 "hostId": hostIdToSet, "status": "active",
-                "timestamp": FieldValue.serverTimestamp(), "lastActive": FieldValue.serverTimestamp()
+                "timestamp": FieldValue.serverTimestamp(), "lastUpdate": FieldValue.serverTimestamp()
             ])
             // print("🧪 Helper: Created host document at \(hostDocRef.path) with host: \(hostIdToSet)")
 
@@ -394,7 +394,7 @@ class VideoSyncServiceTests: XCTestCase {
             let hostDocPath = "Public Rooms/\(dateString)/Events/\(eventId)/sync/host"
             try await self.mockFirestore.document(hostDocPath).setData([
                 "hostId": otherUserId, "status": "active", // Make the other user the host
-                "timestamp": FieldValue.serverTimestamp(), "lastActive": FieldValue.serverTimestamp()
+                "timestamp": FieldValue.serverTimestamp(), "lastUpdate": FieldValue.serverTimestamp()
             ])
 
             var hostStatusChanged = false; attempts = 0
@@ -1132,7 +1132,7 @@ class VideoSyncServiceTests: XCTestCase {
             "hostId": originalHostId,
             "status": "active",
             "timestamp": FieldValue.serverTimestamp(),
-            "lastActive": FieldValue.serverTimestamp()
+            "lastUpdate": FieldValue.serverTimestamp()
         ])
         // 2. Set up UserA's presence (joined earlier)
         try await originalHostPresenceRef.setData([
@@ -1300,7 +1300,7 @@ class VideoSyncServiceTests: XCTestCase {
             "hostId": actualHostId,
             "status": "active",
             "timestamp": FieldValue.serverTimestamp(),
-            "lastActive": FieldValue.serverTimestamp()
+            "lastUpdate": FieldValue.serverTimestamp()
         ])
         // Create presence for actualHostId so election logic could find them if it ran fully
          try await self.mockFirestore.document("\(syncBasePath)/presence/activeViewers/\(actualHostId)").setData([

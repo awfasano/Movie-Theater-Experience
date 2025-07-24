@@ -31,7 +31,7 @@ final class SpatialAudioLoader: ObservableObject {
     // ────────── Private stored state
     private let storage = Storage.storage()
     private var songs: [Song]        = []          // fed by SongService
-     var masterVolume: Float   = 0.4
+     var masterVolume: Float   = 0.75
 
     private var speakerEntities: [Entity] = []        // cached after first load
     private var controllers: [AudioPlaybackController] = []

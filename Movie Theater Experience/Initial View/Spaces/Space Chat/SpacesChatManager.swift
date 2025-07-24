@@ -53,6 +53,7 @@ class SpacesChatManager: ObservableObject {
         listener = db.collection(messagesPath)
             .order(by: "timestamp", descending: false)
             .addSnapshotListener(includeMetadataChanges: false) { [weak self] snapshot, error in
+                print("DEBUG: Firebase listener received an update.") // NEW LOG
                 guard let self = self else { return }
                 
                 if let error = error {
@@ -195,6 +196,7 @@ class SpacesChatManager: ObservableObject {
     
     @MainActor
     private func handleEmoji(_ doc: QueryDocumentSnapshot, timestamp: Timestamp, changeType: DocumentChangeType) {
+        print("STEP 1: Remote emoji event received from Firebase.") // LOGGING
         guard changeType == .added else {
             print("📝 Skipping non-added emoji event in spaces: \(changeType)")
             return
@@ -219,12 +221,20 @@ class SpacesChatManager: ObservableObject {
             return
         }
         
+        let appModel = AppModel.shared
+        print("DEBUG: Incoming senderId: \(senderId), Local userId: \(appModel.currentUser.id)") // DETAILED LOGGING
+        guard senderId != appModel.currentUser.id else {
+            print("Skipping own emoji event")
+            return
+        }
+        
         let emojiImageName = emojiToImageName(emojiNumber)
+        print("STEP 2: Triggering emitter with image '\(emojiImageName)' and isLooping: false.") // LOGGING
         print("🚀 Processing space emoji: \(emojiImageName)")
         
         // Update visual emitter asynchronously
         Task.detached(priority: .userInitiated) {
-            await SpacesEntityWrapper.shared.updateVolumetricEmojiTexture(with: emojiImageName)
+            await SpacesEntityWrapper.shared.updateVolumetricEmojiTexture(with: emojiImageName, isLooping: false)
         }
     }
     

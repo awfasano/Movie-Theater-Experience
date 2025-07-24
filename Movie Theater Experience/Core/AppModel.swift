@@ -1,3 +1,4 @@
+
 import SwiftUI
 import RealityKit // Keep if other parts of AppModel use it
 import AVFoundation // For CMTime
@@ -16,7 +17,7 @@ struct WindowOpeningRequest: Identifiable {
 
 @MainActor
 @Observable // Using Swift Observation
-class AppModel { // Removed ObservableObject as @Observable is the modern approach
+class AppModel: ObservableObject { // Removed ObservableObject as @Observable is the modern approach
     // MARK: - Constants
     static let shared = AppModel() // If you intend to use it as a singleton
     let immersiveSpaceID = "ImmersiveSpace" // Matches your ImmersiveSpace ID

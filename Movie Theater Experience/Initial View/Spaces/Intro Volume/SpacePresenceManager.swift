@@ -49,7 +49,7 @@ class SpacePresenceManager {
             let userPresenceRef = spaceRef.collection("activeUsers").document(userId)
             try await userPresenceRef.setData([
                 "joinedAt": FieldValue.serverTimestamp(),
-                "lastActive": FieldValue.serverTimestamp(),
+                "lastUpdate": FieldValue.serverTimestamp(),
                 "deviceId": userId
             ])
             
@@ -59,7 +59,7 @@ class SpacePresenceManager {
                 if snapshot?.data() == nil {
                     try? userPresenceRef.setData([
                         "joinedAt": FieldValue.serverTimestamp(),
-                        "lastActive": FieldValue.serverTimestamp(),
+                        "lastUpdate": FieldValue.serverTimestamp(),
                         "deviceId": self?.userId ?? ""
                     ])
                 }
@@ -113,7 +113,7 @@ class SpacePresenceManager {
             
             // Update lastActive timestamp
             presenceRef.updateData([
-                "lastActive": FieldValue.serverTimestamp()
+                "lastUpdate": FieldValue.serverTimestamp()
             ]) { error in
                 if let error = error {
                     print("Error updating heartbeat: \(error.localizedDescription)")

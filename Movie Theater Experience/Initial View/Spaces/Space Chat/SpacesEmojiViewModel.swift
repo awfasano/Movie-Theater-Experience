@@ -1,3 +1,4 @@
+
 //
 //  SpacesEmojiViewModel.swift
 //  Movie Theater Experience
@@ -11,21 +12,21 @@ import SwiftUI
 @MainActor
 class SpacesEmojiViewModel: ObservableObject {
     @Published var isOnCooldown = false
-    @Published var cooldownProgress: Double = 0.0
+    @Published var isEmitting = false
     @Published var activeEmoji: String? = nil
     
     // Static emoji types to avoid recreation
     let emojiTypes: [EmojiType] = [
-        EmojiType(unicode: "❤️", number: 0, assetName: "heart"),
-        EmojiType(unicode: "😢", number: 1, assetName: "crying"),
-        EmojiType(unicode: "😍", number: 2, assetName: "heart eyes"),
-        EmojiType(unicode: "😂", number: 3, assetName: "laughter"),
-        EmojiType(unicode: "😮", number: 4, assetName: "oh")
+        EmojiType(unicode: "❤️", number: 0, assetName: "heart", isLooping: false),
+        EmojiType(unicode: "😢", number: 1, assetName: "crying", isLooping: false),
+        EmojiType(unicode: "😍", number: 2, assetName: "heart eyes", isLooping: false),
+        EmojiType(unicode: "😂", number: 3, assetName: "laughter", isLooping: false),
+        EmojiType(unicode: "😮", number: 4, assetName: "oh", isLooping: false)
     ]
     
     private var spaceId: String?
-    private let cooldownDuration: TimeInterval = 2.0
-    var cooldownTask: Task<Void, Never>?
+    private let emissionDuration: TimeInterval = 5.0
+    private let cooldownDuration: TimeInterval = 5.0
     
     // App model reference for user info
     private let appModel = AppModel.shared
@@ -36,6 +37,7 @@ class SpacesEmojiViewModel: ObservableObject {
         let unicode: String
         let number: Int
         let assetName: String
+        let isLooping: Bool
     }
     
     func setSpaceId(_ spaceId: String) {
@@ -58,18 +60,14 @@ class SpacesEmojiViewModel: ObservableObject {
             return
         }
         
-        // Set active emoji for animation
+        // Set states for emission period
+        isOnCooldown = true // Disables all buttons
+        isEmitting = true
         activeEmoji = emoji
         
-        // Start cooldown immediately
-        isOnCooldown = true
-        cooldownProgress = 1.0
-        
-        // Update visual emitter on a background queue to prevent blocking
-        Task.detached(priority: .userInitiated) { [weak self] in
-            await SpacesEntityWrapper.shared.updateVolumetricEmojiTexture(with: emojiType.assetName)
-            
-            // Send to Firebase
+        // Update visual emitter and send to Firebase
+        Task.detached(priority: .userInitiated) {
+            await SpacesEntityWrapper.shared.updateVolumetricEmojiTexture(with: emojiType.assetName, isLooping: emojiType.isLooping)
             await SpacesChatManager.shared.sendEmoji(
                 emoji: emojiType.number,
                 spaceId: spaceId,
@@ -78,41 +76,26 @@ class SpacesEmojiViewModel: ObservableObject {
             )
         }
         
-        // Animate cooldown
-        startCooldownAnimation()
-    }
-    
-    func startCooldownAnimation() {
-        // Cancel any existing cooldown
-        cooldownTask?.cancel()
-        
-        cooldownTask = Task { [weak self] in
+        // Schedule the end of the emission and the start of the cooldown UI
+        Task { @MainActor [weak self] in
             guard let self = self else { return }
             
-            let steps = 20
-            let stepDuration = self.cooldownDuration / Double(steps)
+            // Wait for the emission to complete
+            try? await Task.sleep(for: .seconds(self.emissionDuration))
             
-            for i in 0..<steps {
-                if Task.isCancelled { break }
-                
-                await MainActor.run {
-                    self.cooldownProgress = Double(steps - i - 1) / Double(steps)
-                }
-                
-                try? await Task.sleep(for: .seconds(stepDuration))
-            }
+            // End emission state
+            self.isEmitting = false
+            self.activeEmoji = nil
             
-            if !Task.isCancelled {
-                await MainActor.run {
-                    self.isOnCooldown = false
-                    self.cooldownProgress = 0.0
-                    self.activeEmoji = nil
-                }
-            }
+            // Wait for the cooldown to complete
+            try? await Task.sleep(for: .seconds(self.cooldownDuration))
+            
+            // End cooldown state
+            self.isOnCooldown = false
         }
     }
     
     deinit {
-        cooldownTask?.cancel()
+        // No tasks to cancel as they are short-lived
     }
 }

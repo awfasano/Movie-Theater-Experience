@@ -361,18 +361,15 @@ struct ImmersiveView: View {
                 }
                 print("🧹 [ImmersiveView] Initiating cleanup and window dismissal after video end.")
                 await self.spaceManager.initiateCleanup()
-                self.dismissWindow(id: "chatWindow"); self.windowManager.windowClosed(.chat)
-                self.dismissWindow(id: "emojiWindow"); self.windowManager.windowClosed(.emoji)
-                self.dismissWindow(id: "seatMap"); self.windowManager.windowClosed(.seatMap)
-                self.dismissWindow(id: "chatSettings"); self.windowManager.windowClosed(.chatSettings)
-                self.dismissWindow(id: "navBar"); self.windowManager.windowClosed(.navBar)
+                self.dismissWindow(id: "chatWindow")
+                self.dismissWindow(id: "emojiWindow")
+                self.dismissWindow(id: "seatMap")
+                self.dismissWindow(id: "chatSettings")
+                self.dismissWindow(id: "navBar")
 
                 let stats = await self.videoSyncService.getWatchStats()
                 try? await Task.sleep(for: .milliseconds(200))
-                if !self.windowManager.isWindowOpen(.exitingWindow) {
-                    self.openWindow(id: WindowType.exitingWindow.rawValue, value: stats)
-                    self.windowManager.windowOpened(.exitingWindow)
-                }
+                self.openWindow(id: WindowType.exitingWindow.rawValue, value: stats)
             }
         }
     }

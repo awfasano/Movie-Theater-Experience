@@ -38,9 +38,6 @@ struct SpacesEmojiWindow: View {
         .task {
             await initializeWindow()
         }
-        .onDisappear {
-            viewModel.cooldownTask?.cancel()
-        }
     }
     
     // MARK: - Subviews
@@ -84,24 +81,11 @@ struct SpacesEmojiWindow: View {
     
     private var cooldownIndicator: some View {
         Group {
-            if viewModel.isOnCooldown {
+            if viewModel.isOnCooldown && !viewModel.isEmitting {
                 VStack(spacing: 4) {
                     // Progress bar
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            // Background
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(Color.gray.opacity(0.2))
-                                .frame(height: 4)
-                            
-                            // Progress
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(Color.blue.opacity(0.6))
-                                .frame(width: geometry.size.width * viewModel.cooldownProgress, height: 4)
-                                .animation(.linear(duration: 0.1), value: viewModel.cooldownProgress)
-                        }
-                    }
-                    .frame(height: 4)
+                    ProgressView()
+                        .progressViewStyle(.linear)
                     
                     Text("Cooldown...")
                         .font(.caption2)

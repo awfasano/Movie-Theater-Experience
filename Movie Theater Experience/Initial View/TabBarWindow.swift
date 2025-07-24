@@ -15,9 +15,9 @@ struct TabBarWindow: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             // CalendarView Tab
-            CalendarView(calendarService: calendarService)
+            WelcomeView(selectedTab: $selectedTab)
                 .tabItem {
-                    Label("Current Showings", systemImage: "calendar")
+                    Label("Home", systemImage: "house.fill")
                 }
                 .tag(0)
                 .padding(.horizontal, 20)
@@ -37,8 +37,8 @@ struct TabBarWindow: View {
                 }
                 .tag(2)
         }
-        .onAppear {
-            calendarService.fetchAllEvents()
-        }
+        //.onAppear {
+       //     calendarService.fetchAllEvents()
+   //     }
     }
 }

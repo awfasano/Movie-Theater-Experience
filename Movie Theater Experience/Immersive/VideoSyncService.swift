@@ -1165,7 +1165,7 @@ class VideoSyncService {
             // If host, update the main host document's lastActive timestamp
             if isHost {
                 try await hostRef.setData([
-                    "lastActive": FieldValue.serverTimestamp(),
+                    "lastUpdate": FieldValue.serverTimestamp(),
                     "hostId": userId, // Ensure hostId is correct
                     "status": "active" // Ensure status is active
                     ], merge: true)
@@ -1300,7 +1300,7 @@ class VideoSyncService {
                     transaction.setData([
                         "hostId":     newHost,
                         "timestamp":  FieldValue.serverTimestamp(),
-                        "lastActive": FieldValue.serverTimestamp(),
+                        "lastUpdate": FieldValue.serverTimestamp(),
                         "status":     "active"
                     ], forDocument: hostRef, merge: true)
                 } else {
@@ -1360,7 +1360,7 @@ class VideoSyncService {
                 transaction.setData([
                     "hostId": userId,
                     "timestamp": FieldValue.serverTimestamp(),
-                    "lastActive": FieldValue.serverTimestamp(),
+                    "lastUpdate": FieldValue.serverTimestamp(),
                     "status": "active"
                 ], forDocument: hostRef) // Overwrite/Set data
 
@@ -1428,7 +1428,7 @@ class VideoSyncService {
                                 "hostId": "",
                                 "status": "inactive",
                                 "timestamp": FieldValue.serverTimestamp(),
-                                "lastActive": FieldValue.serverTimestamp()
+                                "lastUpdate": FieldValue.serverTimestamp()
                             ], forDocument: hostRef)
 
                             // 2. PlayState Document

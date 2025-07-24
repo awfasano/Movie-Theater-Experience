@@ -16,7 +16,7 @@ class TheatreEntityWrapper: ObservableObject {
     @Published private(set) var entity: Entity?
     @Published var screenEntity: ModelEntity?
     @Published var videoPlayerManager: VideoPlayerManager?
-    @AppStorage("showEmojis") private var showEmojis = true
+    @AppStorage("showEmojis") var showEmojis = true
     @Published private(set) var isEmitting = false
     @Published private var spaceEntity: Entity?
 

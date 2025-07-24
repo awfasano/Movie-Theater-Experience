@@ -110,10 +110,7 @@ struct NavBarView: View {
     // MARK: - Chat Button
     private var chatButton: some View {
         Button {
-            if !windowManager.isWindowOpen(.chat) {
-                openWindow(id: WindowType.chat.rawValue)
-                windowManager.windowOpened(.chat)
-            }
+            openWindow(id: WindowType.chat.rawValue)
         } label: {
             Image(systemName: "message.fill")
                 .resizable()
@@ -125,10 +122,7 @@ struct NavBarView: View {
     // MARK: - Emoji Button
     private var emojiButton: some View {
         Button {
-            if !windowManager.isWindowOpen(.emoji) {
-                openWindow(id: WindowType.emoji.rawValue)
-                windowManager.windowOpened(.emoji)
-            }
+            openWindow(id: WindowType.emoji.rawValue)
         } label: {
             Image(systemName: "face.smiling.fill")
                 .resizable()
@@ -170,7 +164,6 @@ struct NavBarView: View {
                         appModel.resumePlaybackAfterTransition = true
 
                         dismissWindow(id: WindowType.movie.rawValue)
-                        windowManager.windowClosed(.movie)
                         // Corrected: Fully qualify the enum case
                         if spaceManager.state != ImmersiveSpaceState.open {
                              _ = await ImmersiveSpaceManager.shared.openImmersiveSpace()
@@ -180,7 +173,6 @@ struct NavBarView: View {
                         await videoSyncService.switchToView(.movieWindow)
                         appModel.isMovieWindowOpen = true
                         openWindow(id: WindowType.movie.rawValue)
-                        windowManager.windowOpened(.movie)
                     }
                 }
             }
@@ -196,10 +188,7 @@ struct NavBarView: View {
     // MARK: - Seat Map Button
     private var seatMapButton: some View {
         Button {
-            if !windowManager.isWindowOpen(.seatMap) {
-                openWindow(id: WindowType.seatMap.rawValue)
-                windowManager.windowOpened(.seatMap)
-            }
+            openWindow(id: WindowType.seatMap.rawValue)
         } label: {
             Image(systemName: "chair.fill")
                 .resizable()
@@ -226,10 +215,7 @@ struct NavBarView: View {
     // MARK: - Chat Settings Button
     private var chatSettingsButton: some View {
         Button {
-            if !windowManager.isWindowOpen(.chatSettings) {
-                openWindow(id: WindowType.chatSettings.rawValue)
-                windowManager.windowOpened(.chatSettings)
-            }
+            openWindow(id: WindowType.chatSettings.rawValue)
         } label: {
             Image(systemName: "paintbrush.fill")
                 .resizable()
@@ -262,20 +248,15 @@ struct NavBarView: View {
         await spaceManager.initiateCleanup()
 
         for windowType in WindowType.allCases where windowType != .exitingWindow {
-            if windowManager.isWindowOpen(windowType) {
-                print("🚪 Closing window: \(windowType.rawValue)")
-                dismissWindow(id: windowType.rawValue)
-                windowManager.windowClosed(windowType)
-            }
+            print("🚪 Closing window: \(windowType.rawValue)")
+            dismissWindow(id: windowType.rawValue)
         }
         
         try? await Task.sleep(for: .milliseconds(200))
 
-        if !windowManager.isWindowOpen(.exitingWindow) {
-            print("🚪 Opening exiting window with stats.")
-            openWindow(id: WindowType.exitingWindow.rawValue, value: stats)
-            windowManager.windowOpened(.exitingWindow)
-        }
+        print("🚪 Opening exiting window with stats.")
+        openWindow(id: WindowType.exitingWindow.rawValue, value: stats)
+        
         print("✅ NavBar exit sequence complete.")
     }
 }

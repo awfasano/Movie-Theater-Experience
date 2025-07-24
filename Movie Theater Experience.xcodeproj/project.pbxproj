@@ -94,6 +94,9 @@
 		C4AF48492C9E65CE006FE6C8 /* TheatreEntityWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AF48482C9E65CE006FE6C8 /* TheatreEntityWrapper.swift */; };
 		C4AF48A92C9E6D61006FE6C8 /* ToggleImmersiveSpaceButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AF48A82C9E6D61006FE6C8 /* ToggleImmersiveSpaceButton.swift */; };
 		C4AF48AB2C9E7288006FE6C8 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AF48AA2C9E7288006FE6C8 /* AppModel.swift */; };
+		C4AFB1EA2E2EB98B0067EA66 /* WebBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AFB1E92E2EB98B0067EA66 /* WebBrowserView.swift */; };
+		C4AFB1EF2E2ED19F0067EA66 /* BookmarkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AFB1ED2E2ED19F0067EA66 /* BookmarkManager.swift */; };
+		C4AFB1F02E2ED19F0067EA66 /* BookmarksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AFB1EE2E2ED19F0067EA66 /* BookmarksView.swift */; };
 		C4BFD5B92CA5F628007D20BE /* CalendarEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4BFD5B82CA5F628007D20BE /* CalendarEvent.swift */; };
 		C4BFD5BC2CA5F645007D20BE /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4BFD5BB2CA5F645007D20BE /* CalendarView.swift */; };
 		C4BFD5BE2CA5F664007D20BE /* EventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4BFD5BD2CA5F664007D20BE /* EventView.swift */; };
@@ -159,7 +162,7 @@
 		C4FA39F22E218939004BB564 /* VolumetricView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA39F12E218939004BB564 /* VolumetricView.swift */; };
 		C4FA39F42E24498C004BB564 /* AudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA39F32E24498C004BB564 /* AudioService.swift */; };
 		C4FA39F62E24B044004BB564 /* TransparencyControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA39F52E24B044004BB564 /* TransparencyControlView.swift */; };
-		C4FA39F82E274855004BB564 /* InitialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA39F72E274855004BB564 /* InitialView.swift */; };
+		C4FA39F82E274855004BB564 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA39F72E274855004BB564 /* WelcomeView.swift */; };
 		C4FE99B52D7F8F4F008AE0D6 /* SpacesChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE99B42D7F8F4F008AE0D6 /* SpacesChatViewModel.swift */; };
 		C4FE99B92D7F9D80008AE0D6 /* SpacesChatWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE99B82D7F9D80008AE0D6 /* SpacesChatWindow.swift */; };
 		C4FE99BB2D7F9DA8008AE0D6 /* SpacesEmojiWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE99BA2D7F9DA8008AE0D6 /* SpacesEmojiWindow.swift */; };
@@ -281,6 +284,9 @@
 		C4AF48482C9E65CE006FE6C8 /* TheatreEntityWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TheatreEntityWrapper.swift; sourceTree = "<group>"; };
 		C4AF48A82C9E6D61006FE6C8 /* ToggleImmersiveSpaceButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToggleImmersiveSpaceButton.swift; sourceTree = "<group>"; };
 		C4AF48AA2C9E7288006FE6C8 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		C4AFB1E92E2EB98B0067EA66 /* WebBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebBrowserView.swift; sourceTree = "<group>"; };
+		C4AFB1ED2E2ED19F0067EA66 /* BookmarkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkManager.swift; sourceTree = "<group>"; };
+		C4AFB1EE2E2ED19F0067EA66 /* BookmarksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarksView.swift; sourceTree = "<group>"; };
 		C4BFD5B82CA5F628007D20BE /* CalendarEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarEvent.swift; sourceTree = "<group>"; };
 		C4BFD5BB2CA5F645007D20BE /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarView.swift; sourceTree = "<group>"; };
 		C4BFD5BD2CA5F664007D20BE /* EventView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventView.swift; sourceTree = "<group>"; };
@@ -322,7 +328,7 @@
 		C4FA39F12E218939004BB564 /* VolumetricView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumetricView.swift; sourceTree = "<group>"; };
 		C4FA39F32E24498C004BB564 /* AudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioService.swift; sourceTree = "<group>"; };
 		C4FA39F52E24B044004BB564 /* TransparencyControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransparencyControlView.swift; sourceTree = "<group>"; };
-		C4FA39F72E274855004BB564 /* InitialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InitialView.swift; sourceTree = "<group>"; };
+		C4FA39F72E274855004BB564 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		C4FE99B42D7F8F4F008AE0D6 /* SpacesChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesChatViewModel.swift; sourceTree = "<group>"; };
 		C4FE99B82D7F9D80008AE0D6 /* SpacesChatWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesChatWindow.swift; sourceTree = "<group>"; };
 		C4FE99BA2D7F9DA8008AE0D6 /* SpacesEmojiWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesEmojiWindow.swift; sourceTree = "<group>"; };
@@ -586,6 +592,7 @@
 			children = (
 				C4D88CA92D752B87004F226E /* SpacesNavBarView.swift */,
 				C4FA39F52E24B044004BB564 /* TransparencyControlView.swift */,
+				C4AFB1E62E2EB9250067EA66 /* Web Browser */,
 				C4FA39EE2E218911004BB564 /* Movement */,
 				C44919252E10978C00C4B087 /* SharePlay */,
 				C40BD7902E00AD2F0062623E /* TTS Storyteller */,
@@ -638,7 +645,7 @@
 		C48A9B922D528B3400C3B984 /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				C4FA39F72E274855004BB564 /* InitialView.swift */,
+				C4FA39F72E274855004BB564 /* WelcomeView.swift */,
 				C4AF48AA2C9E7288006FE6C8 /* AppModel.swift */,
 				C4115ED62B994AF9007AD9B0 /* Movie_Theater_ExperienceApp.swift */,
 				C4AF48A82C9E6D61006FE6C8 /* ToggleImmersiveSpaceButton.swift */,
@@ -668,6 +675,16 @@
 				C40AE3D52D516C070075914F /* ChatSettingsNavBar.swift */,
 			);
 			path = "Nav Bar";
+			sourceTree = "<group>";
+		};
+		C4AFB1E62E2EB9250067EA66 /* Web Browser */ = {
+			isa = PBXGroup;
+			children = (
+				C4AFB1ED2E2ED19F0067EA66 /* BookmarkManager.swift */,
+				C4AFB1EE2E2ED19F0067EA66 /* BookmarksView.swift */,
+				C4AFB1E92E2EB98B0067EA66 /* WebBrowserView.swift */,
+			);
+			path = "Web Browser";
 			sourceTree = "<group>";
 		};
 		C4B5CD152BA26E8C00F524EC /* Chat */ = {
@@ -1000,6 +1017,8 @@
 				C4CEBBC62DA330CF00731652 /* SelectedSpace.swift in Sources */,
 				C404A8092D46CB00000450D4 /* MessagePosition.swift in Sources */,
 				C413FA4C2DBC2E0D008FABEB /* SpatialAudioLoader.swift in Sources */,
+				C4AFB1EF2E2ED19F0067EA66 /* BookmarkManager.swift in Sources */,
+				C4AFB1F02E2ED19F0067EA66 /* BookmarksView.swift in Sources */,
 				C444C9272D540D550046F92D /* OccupancyProgressView.swift in Sources */,
 				C404A7F52D3B7038000450D4 /* TimeoutError.swift in Sources */,
 				C404A7FF2D41D325000450D4 /* WatchStats.swift in Sources */,
@@ -1017,7 +1036,7 @@
 				C4D88C9F2D74E56E004F226E /* SpaceDetailView.swift in Sources */,
 				C473DCAF2D308BC7008AA51D /* FirebaseEventManager.swift in Sources */,
 				C416BA4A2E0A4E35006399D8 /* BarePlayerView.swift in Sources */,
-				C4FA39F82E274855004BB564 /* InitialView.swift in Sources */,
+				C4FA39F82E274855004BB564 /* WelcomeView.swift in Sources */,
 				C4115EDB2B994AF9007AD9B0 /* ImmersiveView.swift in Sources */,
 				C4F478C12CED41B700965502 /* EmojiManager.swift in Sources */,
 				C4474F182D80BC2000DA08A1 /* SpacePresenceManager.swift in Sources */,
@@ -1037,6 +1056,7 @@
 				C45D346D2E073D5B004407F4 /* StoriesListView.swift in Sources */,
 				C404A7F72D3DC69D000450D4 /* ExitingWindow.swift in Sources */,
 				C41C81622E093B970050BCB3 /* InteractiveStoryViewModel.swift in Sources */,
+				C4AFB1EA2E2EB98B0067EA66 /* WebBrowserView.swift in Sources */,
 				C4AF48AB2C9E7288006FE6C8 /* AppModel.swift in Sources */,
 				C444C9192D53FBDF0046F92D /* SpaceData.swift in Sources */,
 				C405E57F2D498D2700681E60 /* VideoPlayerManager.swift in Sources */,
@@ -1241,14 +1261,14 @@
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "$(TARGET_NAME)/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = Spaces;
+				INFOPLIST_KEY_CFBundleDisplayName = Spiera;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "To allow you to speak with the interactive storyteller.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.waitedco.Movie-Theater-Experience";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.waitedco.spiera;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1275,14 +1295,14 @@
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "$(TARGET_NAME)/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = Spaces;
+				INFOPLIST_KEY_CFBundleDisplayName = Spiera;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "To allow you to speak with the interactive storyteller.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.waitedco.Movie-Theater-Experience";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.waitedco.spiera;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1307,7 +1327,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Movie Theater Experience.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Movie Theater Experience";
-				XROS_DEPLOYMENT_TARGET = 2.0;
+				XROS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Debug;
 		};
@@ -1326,7 +1346,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Movie Theater Experience.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Movie Theater Experience";
-				XROS_DEPLOYMENT_TARGET = 2.0;
+				XROS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Release;
 		};

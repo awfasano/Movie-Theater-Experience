@@ -91,7 +91,7 @@ class AudioPositionSynchronizer {
         
         // Apply distance-based attenuation
         let maxDistance: Float = 10.0  // Maximum audible distance
-        let rolloffFactor: Float = 1.0 // How quickly volume drops with distance
+        let rolloffFactor: Float = 0.70 // How quickly volume drops with distance
         
         if distance <= maxDistance {
             // Inverse square law attenuation formula (more realistic than linear)

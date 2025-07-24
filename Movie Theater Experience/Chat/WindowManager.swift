@@ -1,66 +1,66 @@
+
+// WindowManager.swift
 import SwiftUI
 
-// Simple enum to identify window types
-import SwiftUI
-
-// Simple enum to identify window types
-// ADD CaseIterable conformance here
-enum WindowType: String, CaseIterable { // <--- Added CaseIterable
+// Your WindowType enum is great, let's keep it!
+enum WindowType: String, CaseIterable {
+    // ... (keep all your cases here) ...
     case chat = "chatWindow"
     case emoji = "emojiWindow"
     case movie = "movieWindow"
     case seatMap = "seatMap"
     case chatSettings = "chatSettings"
-    // case tabBar = "tabBar" // This was commented out in your NavView, ensure it's needed
     case exitingWindow = "exitingWindow"
     case navBar = "navBar"
-    // IMPORTANT: Add any other window types that might be managed or dismissed here
+    case spaceNavBar = "spaceNavBar"
+    case spaceMap = "spaceMap"
+    case spaceChatWindow = "spaceChatWindow"
+    case spaceEmojiWindow = "spaceEmojiWindow"
+    case audioControls = "audioControls"
+    case storytellerWindow = "storytellerWindow"
+    case userListWindow = "userListWindow"
+    case webBrowserWindow = "webBrowserWindow"
+    case movementControl = "movementControl"
 }
 
+@MainActor
 class WindowManager: ObservableObject {
-    @Published private var activeWindows = Set<WindowType>()
+    // This array defines all windows that belong to the "Spaces" experience.
+    // The manager will use this list to know what to close.
+    let spaceWindowTypes: [WindowType] = [
+        .spaceNavBar,
+        .spaceMap,
+        .spaceChatWindow,
+        .spaceEmojiWindow,
+        .audioControls,
+        .storytellerWindow,
+        .userListWindow,
+        .webBrowserWindow,
+        .movementControl
+    ]
     
-    // Simple method to check if a window is already open
-    func isWindowOpen(_ type: WindowType) -> Bool {
-        activeWindows.contains(type)
+    // The enum case for your main window that you want to return to.
+    let mainWindowType: WindowType = .chatSettings // As an example, assuming TabBar is in ChatSettings
+
+    // This method will be called when entering the immersive space.
+    func openSpaceEntryWindows(openWindow: OpenWindowAction) {
+        print("🪟 [WindowManager] Opening space entry windows...")
+        openWindow(id: WindowType.spaceNavBar.rawValue)
     }
-    
-    // Add window to active set when opening
-    func windowOpened(_ type: WindowType) {
-        activeWindows.insert(type)
-    }
-    
-    // Remove window from active set when closing
-    func windowClosed(_ type: WindowType) {
-        activeWindows.remove(type)
-    }
-    
-    func closeAllWindows() {
-        // Clear all active windows
-        for windowType in WindowType.allCases {
-            windowClosed(windowType)
+
+    // This method will be called when exiting the immersive space.
+    func closeAllSpaceWindows(dismissWindow: DismissWindowAction) {
+        print("🪟 [WindowManager] Closing all space-related windows...")
+        for windowType in spaceWindowTypes {
+            dismissWindow(id: windowType.rawValue)
         }
-        
-        // Clear the entire set as well
-        activeWindows.removeAll()
-        
-        print("🧹 WindowManager: All windows closed")
     }
     
-    // Additional helper to close specific window IDs that aren't in WindowType enum
-    func closeSpaceWindows() {
-        // These are specific to spaces that might not be in your WindowType enum
-        let spaceWindowTypes: [String] = [
-            "spaceNavBar",
-            "spaceMap",
-            "spaceChatWindow",
-            "spaceEmojiWindow",
-            "audioControls",
-            "storytellerWindow",
-            "userListWindow"
-        ]
-        
-        // You might need to track these separately or add them to your WindowType enum
-        print("🧹 Closing space-specific windows")
+    // This method opens the main application window after the space is closed.
+    func openMainWindow(openWindow: OpenWindowAction) {
+        print("🪟 [WindowManager] Opening main window...")
+        // We need a main window to open. Your TabBar is inside the "mainContent" WindowGroup.
+        // Let's assume you have a main window ID.
+        openWindow(id: "mainContent")
     }
 }

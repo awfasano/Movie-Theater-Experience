@@ -1,3 +1,5 @@
+
+// SpacesView.swift
 import SwiftUI
 import GroupActivities
 import RealityKit
@@ -5,12 +7,16 @@ import RealityKitContent
 import Combine
 
 struct SpacesView: View {
+    // Environment
+    @EnvironmentObject private var appModel: AppModel
+    @EnvironmentObject private var windowManager: WindowManager
+    @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismissWindow) private var dismissWindow
+    @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
+
     // MARK: - Properties
     @StateObject private var spaceService = SpaceService.shared
     @StateObject private var entityWrapper = SpacesEntityWrapper.shared
-    @Environment(AppModel.self) private var appModel
-    @Environment(\.openWindow) private var openWindow
-    @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
     @Environment(\.realityKitScene) private var realityKitScene
     //@EnvironmentObject var audioLoader: SpatialAudioLoader
     
@@ -26,6 +32,7 @@ struct SpacesView: View {
     @State private var previousSeatID: String = "seat_1"
     @State private var portalEntity: ModelEntity? = nil
     @State private var portalPaneEntity: ModelEntity? = nil // <-- ENSURE THIS LINE EXISTS
+    @State private var userVerticalOffset: Float = 0.0 // <-- ADD THIS LINE
 
 
 
@@ -99,6 +106,7 @@ struct SpacesView: View {
             }
         }
         .onDisappear {
+            // This robustly handles the exit sequence
             cleanupView()
         }
         .onReceive(NotificationCenter.default.publisher(for: .userRotationChanged)) { notification in
@@ -109,6 +117,15 @@ struct SpacesView: View {
             userRotation = rotation
             moveUserToSeat(named: seat, in: entity, animated: false)
             applyRotationToAnchor()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .userVerticalOffsetChanged)) { notification in
+            guard let offset = notification.userInfo?["verticalOffset"] as? Float,
+                  let seat = notification.userInfo?["seat"] as? String,
+                  let entity = entityWrapper.getSpaceEntity() else { return }
+            
+            self.userVerticalOffset = offset
+            // Following your working pattern, we call moveUserToSeat to update the position
+            moveUserToSeat(named: seat, in: entity, from: previousSeatID, animated: false)
         }
     }
 
@@ -199,6 +216,10 @@ struct SpacesView: View {
 
     @MainActor
     private func initializeSpace() async {
+        // Use the manager to open the correct windows on entry
+        windowManager.openSpaceEntryWindows(openWindow: openWindow)
+        
+        // ... rest of your initializeSpace function ...
         // ① ---- Initial State Reset -------------------------------------------
         notificationSentForEntityID = nil
         notificationPostTask?.cancel()
@@ -249,8 +270,6 @@ struct SpacesView: View {
 
             self.selectedSpace = currentSpace
             self.isLoading = false
-            
-            openWindowsIfNeeded()
             
             // Ensure entity is in the scene
             ensureEntityIsParented(entity)
@@ -400,7 +419,6 @@ struct SpacesView: View {
         entityWrapper.setSpaceEntity(nil)
         entityWrapper.setActiveSceneEntity(nil)
         // UPDATED: Clear the user rotation entity instead of anchor
-        openWindowsIfNeeded()
     }
     
     private func fetchSpacesAndLoadFirst() {
@@ -475,7 +493,6 @@ struct SpacesView: View {
                     self.entityWrapper.setSpaceEntity(entity)
                     self.entityWrapper.setActiveSceneEntity(entity)
                     
-                    openWindowsIfNeeded()
                     ensureEntityIsParented(entity)
                     
                     print("DEBUG: Space '\(entity.name)' was successfully loaded and added to the anchorEntity.")
@@ -549,7 +566,7 @@ struct SpacesView: View {
                 ]
             )
         } else if let entity = entityWrapper.getSpaceEntity() {
-            if let foundRoot = findRootEntity(in: entity), isEntityInScene(foundRoot) {
+            if let foundRoot = findEntityDeep(named: "Root", in: entity), isEntityInScene(foundRoot) {
                 self.rootEntity = foundRoot
                 
                 NotificationCenter.default.post(
@@ -664,6 +681,14 @@ struct SpacesView: View {
 
     
     private func cleanupView() {
+        // Use the manager to perform the full exit sequence
+        windowManager.closeAllSpaceWindows(dismissWindow: dismissWindow)
+        windowManager.openMainWindow(openWindow: openWindow)
+
+        // Reset any other necessary app state
+        appModel.selectedSpace = nil
+        appModel.currentActiveSpace = nil
+        
         // --- Leave Space ---
         // Leave the space before cleaning up the view state
         if let spaceId = selectedSpace?.id {
@@ -741,19 +766,6 @@ struct SpacesView: View {
         }
     }
     
-    private func openWindowsIfNeeded() {
-        if !navBarOpened {
-            openWindow(id: "spaceNavBar")
-            navBarOpened = true
-        }
-        
-        if !mapOpened {
-            openWindow(id: "spaceMap")
-            mapOpened = true
-        }
-    }
-
-    
     // MARK: - Sphere Markers
     /// Adds large sphere markers at seat_1 and seat_2 positions.
     private func addSphereMarkers(to spaceEntity: Entity) {
@@ -817,7 +829,7 @@ struct SpacesView: View {
         
         // The final target position for the anchor.
         // This moves the seat to the origin AND applies the viewer offset.
-        let finalAnchorPosition = -seatLocalPos - space.viewerAdjustment
+        let finalAnchorPosition = -seatLocalPos - space.viewerAdjustment + SIMD3<Float>(0, self.userVerticalOffset, 0)
 
         // Create a rotation quaternion from the user's rotation
         let radians = userRotation * .pi / 180

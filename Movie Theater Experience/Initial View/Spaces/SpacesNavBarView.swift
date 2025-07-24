@@ -1,171 +1,126 @@
+
+// SpacesNavBarView.swift
 import SwiftUI
 
+// MARK: - Notification Definitions
+extension Notification.Name {
+    /// Posted when the user's rotation changes.
+    /// UserInfo: ["rotation": Float, "seat": String]
+    static let userRotationChanged = Notification.Name("UserRotationChanged")
+
+    /// Posted when the user's vertical offset changes.
+    /// UserInfo: ["verticalOffset": Float, "seat": String]
+    static let userVerticalOffsetChanged = Notification.Name("UserVerticalOffsetChanged")
+
+    /// Used to trigger song fetching for a space.
+    static let FetchSongsForSpace = Notification.Name("FetchSongsForSpace")
+}
+
+
+// MARK: - Spaces Nav Bar View
 struct SpacesNavBarView: View {
+    // MARK: - Environment
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
     @Environment(\.openWindow) private var openWindow
-    @Environment(\.dismissWindow) private var dismissWindow
     @Environment(AppModel.self) private var appModel
     @EnvironmentObject private var spacesEntityWrapper: SpacesEntityWrapper
     @EnvironmentObject private var windowManager: WindowManager
 
     // MARK: - State Properties
-    @State private var showTransparencyControl = false
+    
+    // UI State
     @State private var isContentHidden: Bool = false
+    
+    // Transform State
     @State private var currentRotation: Float = 0.0
     private let rotationIncrement: Float = 5.0
+    @State private var verticalOffset: Float = 0.0
+    private let verticalIncrement: Float = 0.1
 
-    // State for button animations
+    // Button Animation State
     @State private var isOpeningMap = false
     @State private var isOpeningStoryteller = false
     @State private var isOpeningEmoji = false
     @State private var isOpeningUserList = false
     @State private var isOpeningChat = false
     @State private var isOpeningAudioControls = false
+    @State private var isOpeningBrowser = false // <-- ADDED
+    @State private var isOpeningSettings = false // <-- ADDED
     
-    // Get the shared audio service instance
+    // Services
     @StateObject private var audioService = AudioService.shared
     
     var body: some View {
         HStack(spacing: 20) {
-            // --- NON-WINDOW BUTTONS ---
+            // --- CORE CONTROLS ---
             
             Button(action: {
-                Task { await exitImmersiveSpace() }
+                Task {
+                    // Just dismiss the space. The cleanupView() in SpacesView
+                    // will handle closing all windows and opening the main one.
+                    await dismissImmersiveSpace()
+                }
             }) {
                 Image(systemName: "xmark.circle.fill")
             }
             .buttonStyle(.borderedProminent)
             .help("Exit immersive space")
             
-            Button(action: {
-                withAnimation { isContentHidden.toggle() }
-            }) {
-                Image(systemName: isContentHidden ? "eye.fill" : "eye.slash.fill")
+            Toggle(isOn: $spacesEntityWrapper.showEmojis) {
+                Image(systemName: spacesEntityWrapper.showEmojis ? "eye.slash.fill" : "eye.fill")
             }
-            .buttonStyle(.bordered)
-            .help(isContentHidden ? "Show interface" : "Hide interface")
-            
+            .toggleStyle(.button)
+            .help(spacesEntityWrapper.showEmojis ? "Hide Emojis" : "Show Emojis")
+
             Divider().frame(height: 20)
             
-            HStack(spacing: 10) {
-                Button(action: { rotateUser(degrees: -rotationIncrement) }) { Image(systemName: "arrow.counterclockwise") }
-                    .buttonStyle(.bordered)
-                Text("\(Int(currentRotation))°")
-                    .font(.caption).monospacedDigit().frame(width: 40).foregroundColor(.secondary)
-                Button(action: { rotateUser(degrees: rotationIncrement) }) { Image(systemName: "arrow.clockwise") }
-                    .buttonStyle(.bordered)
+            // --- MOVEMENT CONTROLS ---
+            VStack(spacing: 10) {
+                // Rotation
+                HStack(spacing: 10) {
+                    Button(action: { rotateUser(degrees: -rotationIncrement) }) { Image(systemName: "arrow.counterclockwise") }
+                        .buttonStyle(.bordered)
+                    Text("\(Int(currentRotation))°")
+                        .font(.caption).monospacedDigit().frame(width: 40).foregroundColor(.secondary)
+                    Button(action: { rotateUser(degrees: rotationIncrement) }) { Image(systemName: "arrow.clockwise") }
+                        .buttonStyle(.bordered)
+                }
+                
+                // Vertical Offset
+                HStack(spacing: 10) {
+                    Button(action: { moveUserVertically(amount: verticalIncrement) }) { Image(systemName: "arrow.up") }
+                        .buttonStyle(.bordered)
+                    Text("\(String(format: "%.1f", verticalOffset))m")
+                        .font(.caption).monospacedDigit().frame(width: 40).foregroundColor(.secondary)
+                    Button(action: { moveUserVertically(amount: -verticalIncrement) }) { Image(systemName: "arrow.down") }
+                        .buttonStyle(.bordered)
+                }
             }
             
             Divider().frame(height: 20)
 
             // --- WINDOW-OPENING BUTTONS ---
 
-            // Seat Selection Button
-            Button(action: {
-                isOpeningMap = true
-                Task {
-                    try? await Task.sleep(for: .milliseconds(20))
-                    await MainActor.run { openWindow(id: "spaceMap") }
-                    isOpeningMap = false
-                }
-            }) {
-                Image(systemName: "chair.lounge")
-            }
-            .buttonStyle(.bordered)
-            .help("Change seat")
-            .scaleEffect(isOpeningMap ? 1.2 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isOpeningMap)
+            // Seat Selection
+            windowOpeningButton(id: "spaceMap", state: $isOpeningMap, systemImage: "chair.lounge", helpText: "Change seat")
             
-            // Storyteller Button
-            Button(action: {
-                isOpeningStoryteller = true
-                Task {
-                    try? await Task.sleep(for: .milliseconds(20))
-                    await MainActor.run { openWindow(id: "storytellerWindow") }
-                    isOpeningStoryteller = false
-                }
-            }) {
-                Image(systemName: "waveform")
-            }
-            .buttonStyle(.bordered)
-            .help("Open stories")
-            .scaleEffect(isOpeningStoryteller ? 1.2 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isOpeningStoryteller)
+            // Storyteller
+            windowOpeningButton(id: "storytellerWindow", state: $isOpeningStoryteller, systemImage: "waveform", helpText: "Open stories")
             
-            // Emoji Buttons Window
-            Button(action: {
-                isOpeningEmoji = true
-                Task {
-                    try? await Task.sleep(for: .milliseconds(20))
-                    await MainActor.run { openWindow(id: "spaceEmojiWindow") }
-                    isOpeningEmoji = false
-                }
-            }) {
-                Image(systemName: "face.smiling")
-            }
-            .buttonStyle(.bordered)
-            .help("Send emoji reactions")
-            .scaleEffect(isOpeningEmoji ? 1.2 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isOpeningEmoji)
-            
-            // User List Window
-            Button(action: {
-                isOpeningUserList = true
-                Task {
-                    try? await Task.sleep(for: .milliseconds(20))
-                    await MainActor.run { openWindow(id: "userListWindow") }
-                    isOpeningUserList = false
-                }
-            }) {
-                Image(systemName: "person.2.fill")
-            }
-            .buttonStyle(.bordered)
-            .help("View active users")
-            .scaleEffect(isOpeningUserList ? 1.2 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isOpeningUserList)
-            
+            // Emoji Reactions
+            windowOpeningButton(id: "spaceEmojiWindow", state: $isOpeningEmoji, systemImage: "face.smiling", helpText: "Send emoji reactions")
 
-            // ADD THIS BUTTON:
-            /*
-            Button {
-                 showTransparencyControl.toggle()
-             } label: {
-                 Image(systemName: "slider.horizontal.below.rectangle")
-                     .font(.title2)
-             }
-             .buttonStyle(.plain)
-             .popover(isPresented: $showTransparencyControl, arrowEdge: .bottom) {
-                 // This now correctly references the `@State` variable
-                 TransparencyControlView()
-             }
-            */
-            // Chat Messages Window
-            Button(action: {
-                isOpeningChat = true
-                Task {
-                    try? await Task.sleep(for: .milliseconds(20))
-                    await MainActor.run { openWindow(id: "spaceChatWindow") }
-                    isOpeningChat = false
-                }
-            }) {
-                Image(systemName: "message.fill")
-            }
-            .buttonStyle(.bordered)
-            .help("Open chat messages")
-            .scaleEffect(isOpeningChat ? 1.2 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isOpeningChat)
+            // User List
+            windowOpeningButton(id: "userListWindow", state: $isOpeningUserList, systemImage: "person.2.fill", helpText: "View active users")
             
-            // ✅ FIXED Music Controls Button
+            // Chat
+            windowOpeningButton(id: "spaceChatWindow", state: $isOpeningChat, systemImage: "message.fill", helpText: "Open chat messages")
+            
+            // Music Controls
             Button(action: {
-                // 1. Open the window immediately. This makes the UI feel instant.
                 openWindow(id: "audioControls")
-
-                // 2. Prepare the audio in a background task.
                 Task {
-                    // This tiny delay gives the window animation a head start, preventing stutter.
                     try? await Task.sleep(for: .milliseconds(50))
-                    
-                    // The service itself prevents re-doing work, so this is safe to call.
                     if let space = appModel.selectedSpace, let entity = spacesEntityWrapper.getSpaceEntity() {
                         await audioService.loadSongsAndPreparePlayer(for: space.spaceName, rootEntity: entity)
                     }
@@ -176,8 +131,11 @@ struct SpacesNavBarView: View {
             .buttonStyle(.bordered)
             .help("Music Controls")
             
+            // Web Browser -- ADDED
+            windowOpeningButton(id: "webBrowserWindow", state: $isOpeningBrowser, systemImage: "safari.fill", helpText: "Open Web Browser")
             
-            
+            // Settings -- ADDED
+            windowOpeningButton(id: "chatSettings", state: $isOpeningSettings, systemImage: "gear", helpText: "Open Settings")
         }
         .padding()
         .background(.ultraThinMaterial)
@@ -192,60 +150,50 @@ struct SpacesNavBarView: View {
         currentRotation += degrees
         if currentRotation >= 360 { currentRotation -= 360 }
         else if currentRotation < 0 { currentRotation += 360 }
-        applyRotation()
-    }
-    
-    private func applyRotation() {
+        
         let userInfo: [String: Any] = [
             "rotation": currentRotation,
             "seat": appModel.selectedSpace?.currentSeat ?? "seat_1"
         ]
-        NotificationCenter.default.post(
-            name: .userRotationChanged,
-            object: nil,
-            userInfo: userInfo
-        )
+        NotificationCenter.default.post(name: .userRotationChanged, object: nil, userInfo: userInfo)
     }
     
-    private func openWindowWithAnimation(id: String, state: Binding<Bool>) {
-        state.wrappedValue = true
-        Task {
-            try? await Task.sleep(for: .milliseconds(20))
-            await MainActor.run { openWindow(id: id) }
-            state.wrappedValue = false
-        }
+    private func moveUserVertically(amount: Float) {
+        verticalOffset += amount
+        
+        let userInfo: [String: Any] = [
+            "verticalOffset": verticalOffset,
+            "seat": appModel.selectedSpace?.currentSeat ?? "seat_1"
+        ]
+        NotificationCenter.default.post(name: .userVerticalOffsetChanged, object: nil, userInfo: userInfo)
     }
-    
-    private func exitImmersiveSpace() {
-        Task {
-            await dismissImmersiveSpace()
-            try? await Task.sleep(for: .milliseconds(100))
-            
-            await withTaskGroup(of: Void.self) { group in
-                let windowIDs = [
-                    "spaceNavBar", "spaceMap", "spaceChatWindow", "spaceEmojiWindow",
-                    "audioControls", "storytellerWindow", "userListWindow", "volume",
-                    "tabBar", "chatWindow", "emojiWindow", "movieWindow",
-                    "navBar", "exitingWindow", "chatSettings"
-                ]
-                for id in windowIDs {
-                    group.addTask { await MainActor.run { dismissWindow(id: id) } }
-                }
+
+    private func windowOpeningButton(id: String, state: Binding<Bool>, systemImage: String, helpText: String) -> some View {
+        Button(action: {
+            state.wrappedValue = true
+            Task {
+                try? await Task.sleep(for: .milliseconds(20))
+                await MainActor.run { openWindow(id: id) }
+                state.wrappedValue = false
             }
-            
-            await MainActor.run {
-                appModel.selectedSpace = nil
-                appModel.currentActiveSpace = nil
-                windowManager.closeAllWindows()
-            }
-            
-            try? await Task.sleep(for: .milliseconds(200))
-            await MainActor.run { openWindow(id: "mainContent") }
+        }) {
+            Image(systemName: systemImage)
         }
+        .buttonStyle(.bordered)
+        .help(helpText)
+        .scaleEffect(state.wrappedValue ? 1.2 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: state.wrappedValue)
     }
 }
 
-extension Notification.Name {
-    static let userRotationChanged = Notification.Name("UserRotationChanged")
-    static let FetchSongsForSpace = Notification.Name("FetchSongsForSpace")
+
+// MARK: - Preview
+struct SpacesNavBarView_Previews: PreviewProvider {
+    static var previews: some View {
+        SpacesNavBarView()
+            .environment(AppModel())
+            .environmentObject(SpacesEntityWrapper.shared)
+            .environmentObject(WindowManager())
+            .glassBackgroundEffect()
+    }
 }

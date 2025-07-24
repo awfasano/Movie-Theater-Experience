@@ -1,130 +1,191 @@
-How to Create Comprehensive Software Documentation
-This guide provides a structured approach to creating a master documentation document for any software project. The goal is to produce a clear, comprehensive, and easy-to-maintain resource that explains the purpose of every file and function.
+Step 1: Update the WindowManager
+The most robust approach is to have the WindowManager coordinate the actions directly, rather than just tracking state. This avoids potential issues where the tracked state (activeWindows) gets out of sync with the actual UI.
 
-Part 1: The Foundation - High-Level Overview
-The first part of your documentation should give anyone (including your future self) a high-level understanding of the project.
+Replace your current WindowManager code with this enhanced version. It uses your WindowType enum but focuses on coordinating actions.
 
-1.1. Project Title and Mission Statement
-Title: A clear and concise name for your project.
+// WindowManager.swift
+import SwiftUI
 
-Mission Statement/Pitch (1-2 sentences): What is the core purpose of this project? What problem does it solve?
-
-Example: "This web application allows users to track their daily water intake to promote better hydration habits."
-
-1.2. Table of Contents
-A well-organized table of contents is crucial for navigation. It should be updated as you add new sections.
-
-1.3. Core Technologies & Setup
-Technology Stack: List all major languages, frameworks, libraries, and databases used.
-
-Example: Frontend - React, TailwindCSS; Backend - Node.js with Express; Database - PostgreSQL.
-
-Setup and Installation: Provide step-by-step instructions for getting the project running locally. Include all commands needed.
-
-# Example Setup Instructions
-# 1. Clone the repository
-git clone [repository-url]
-
-# 2. Navigate to the project directory
-cd [project-folder]
-
-# 3. Install dependencies
-npm install
-
-# 4. Run the development server
-npm run dev
-
-1.4. Project Structure Overview
-Include a visual representation or a tree-like list of the project's directory structure.
-
-Provide a brief, one-line description for each top-level folder.
-
-/project-root
-├── /src          # Main source code
-│   ├── /components # Reusable UI components
-│   ├── /pages      # Application pages
-│   └── /utils      # Helper functions
-├── /public       # Static assets (images, fonts)
-└── package.json  # Project dependencies and scripts
-
-Part 2: The Details - File-by-File Breakdown
-This is the core of your documentation. The goal is to detail the purpose of every single file in the project.
-
-2.1. Create a Section for Each Major Directory
-Organize this section to mirror your project structure (e.g., a heading for /src, /src/components, etc.).
-
-2.2. Document Each File
-For every file in the directory, create an entry with the following information:
-
-File Name: ExampleComponent.js
-
-Purpose: A clear, one-sentence description of what this file is responsible for.
-
-Example: "This file contains the main navigation bar component that appears at the top of every page."
-
-Dependencies: List any other components, utilities, or external libraries this file imports and relies on.
-
-Example: Imports Link from react-router-dom, imports api.js for user data.
-
-Part 3: The Granular Level - Function and Code Block Explanations
-Inside each file's documentation, you should detail the functions, classes, and important code blocks.
-
-3.1. Documenting Functions/Methods
-For each function, provide the following:
-
-Function Name: getUserProfile()
-
-Description: What does this function do? What is its primary responsibility?
-
-Example: "Fetches the profile data for a logged-in user from the backend API."
-
-Parameters: List each parameter the function accepts, its expected data type, and a brief description.
-
-userId (string): The unique identifier for the user.
-
-Returns: Describe what the function returns, its data type, and what the value represents.
-
-Returns a Promise that resolves to a user object containing profile information.
-
-Code Comments (In the code itself): Use a standardized format like JSDoc for clear, consistent comments directly above your functions.
-
-JSDoc Example (for JavaScript):
-
-/**
- * Fetches the profile data for a logged-in user from the backend API.
- * @param {string} userId - The unique identifier for the user.
- * @returns {Promise<object>} A promise that resolves to the user's profile object.
- */
-async function getUserProfile(userId) {
-  // function code here...
+// Your WindowType enum is great, let's keep it!
+enum WindowType: String, CaseIterable {
+    // ... (keep all your cases here) ...
+    case chat = "chatWindow"
+    case emoji = "emojiWindow"
+    case movie = "movieWindow"
+    case seatMap = "seatMap"
+    case chatSettings = "chatSettings"
+    case exitingWindow = "exitingWindow"
+    case navBar = "navBar"
+    case spaceNavBar = "spaceNavBar"
+    case spaceMap = "spaceMap"
+    case spaceChatWindow = "spaceChatWindow"
+    case spaceEmojiWindow = "spaceEmojiWindow"
+    case audioControls = "audioControls"
+    case storytellerWindow = "storytellerWindow"
+    case userListWindow = "userListWindow"
+    case webBrowserWindow = "webBrowserWindow"
+    case movementControl = "movementControl"
 }
 
-3.2. Explaining Key Logic
-If a file contains complex algorithms, business logic, or state management, add a separate "Logic Overview" section for that file.
+@MainActor
+class WindowManager: ObservableObject {
+    // This array defines all windows that belong to the "Spaces" experience.
+    // The manager will use this list to know what to close.
+    let spaceWindowTypes: [WindowType] = [
+        .spaceNavBar,
+        .spaceMap,
+        .spaceChatWindow,
+        .spaceEmojiWindow,
+        .audioControls,
+        .storytellerWindow,
+        .userListWindow,
+        .webBrowserWindow,
+        .movementControl
+    ]
+    
+    // The enum case for your main window that you want to return to.
+    let mainWindowType: WindowType = .chatSettings // As an example, assuming TabBar is in ChatSettings
 
-Use comments to explain why a particular piece of code exists, not just what it does.
+    // This method will be called when entering the immersive space.
+    func openSpaceEntryWindows(openWindow: OpenWindowAction) {
+        print("🪟 [WindowManager] Opening space entry windows...")
+        openWindow(id: WindowType.spaceNavBar.rawValue)
+        openWindow(id: WindowType.spaceChatWindow.rawValue)
+    }
 
-Bad Comment: // Increment i
+    // This method will be called when exiting the immersive space.
+    func closeAllSpaceWindows(dismissWindow: DismissWindowAction) {
+        print("🪟 [WindowManager] Closing all space-related windows...")
+        for windowType in spaceWindowTypes {
+            dismissWindow(id: windowType.rawValue)
+        }
+    }
+    
+    // This method opens the main application window after the space is closed.
+    func openMainWindow(openWindow: OpenWindowAction) {
+        print("🪟 [WindowManager] Opening main window...")
+        // We need a main window to open. Your TabBar is inside the "mainContent" WindowGroup.
+        // Let's assume you have a main window ID.
+        openWindow(id: "mainContent")
+    }
+}
+Step 2: Update Your Main App File
+In Movie_Theater_ExperienceApp.swift, ensure you instantiate the WindowManager and inject it into the environment for the scenes that need it. The window IDs must match the .rawValue of your WindowType enum.
 
-Good Comment: // We loop backwards to safely remove items from the array without skipping elements.
+// Movie_Theater_ExperienceApp.swift
+import SwiftUI
 
-Part 4: Maintenance and Best Practices
-4.1. Keep It Updated
-Documentation is only useful if it's accurate. Make it a habit to update the documentation whenever you:
+@main
+struct Movie_Theater_ExperienceApp: App {
+    
+    // Instantiate your WindowManager
+    @StateObject private var windowManager = WindowManager()
+    
+    var body: some Scene {
+        // Main content window (this is what will reopen)
+        WindowGroup(id: "mainContent") {
+            ContentView()
+                .environmentObject(windowManager)
+        }
+        
+        // Immersive space for Spaces
+        ImmersiveSpace(id: appModel.spacesID) {
+            SpacesView()
+                .environmentObject(windowManager)
+        }
+        
+        // Ensure all your WindowGroups use the .rawValue from the enum for their ID
+        
+        // Example: Space Nav Bar window
+        WindowGroup("Space Nav Bar", id: WindowType.spaceNavBar.rawValue) {
+            SpacesNavBarView()
+                .environmentObject(windowManager)
+        }
+        
+        // Example: Space Chat window
+        WindowGroup(id: WindowType.spaceChatWindow.rawValue) {
+            SpacesChatWindow()
+                .environmentObject(windowManager)
+        }
 
-Add a new file or function.
+        // ... and so on for all other WindowGroups ...
+        // Make sure to remove the .onDisappear { windowManager.windowClosed(...) }
+        // calls from your WindowGroup views, as they are no longer needed.
+    }
+}
+Step 3: Modify SpacesView.swift
+Now, update SpacesView to call the WindowManager's new methods when the view appears and disappears.
 
-Change a function's parameters or return value.
+// SpacesView.swift
+import SwiftUI
 
-Refactor a significant piece of logic.
+struct SpacesView: View {
+    // Environment
+    @EnvironmentObject private var appModel: AppModel
+    @EnvironmentObject private var windowManager: WindowManager
+    @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismissWindow) private var dismissWindow
+    @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
 
-4.2. Write for a Broad Audience
-Write clearly and simply. Avoid jargon where possible. Your future self might not remember the context, and new team members will need to understand it easily.
+    var body: some View {
+        ZStack {
+            // Your existing view content
+        }
+        .task {
+            print("📱 SpacesView appeared")
+            await initializeSpace()
+        }
+        .onDisappear {
+            // This robustly handles the exit sequence
+            cleanupView()
+        }
+    }
 
-4.3. Use a Consistent Format
-Stick to the structure you've defined. Consistency makes the document predictable and easy to scan.
+    // Core Functionality
+    @MainActor
+    private func initializeSpace() async {
+        // Use the manager to open the correct windows on entry
+        windowManager.openSpaceEntryWindows(openWindow: openWindow)
+        
+        // ... rest of your initializeSpace function ...
+    }
+    
+    private func cleanupView() {
+        // Use the manager to perform the full exit sequence
+        windowManager.closeAllSpaceWindows(dismissWindow: dismissWindow)
+        windowManager.openMainWindow(openWindow: openWindow)
 
-4.4. Link Between Sections
-If you mention a component or function that is documented elsewhere, link to that section of the document for easy navigation.
+        // Reset any other necessary app state
+        appModel.selectedSpace = nil
+        appModel.currentActiveSpace = nil
+    }
+}
+Step 4: Simplify SpacesNavBarView.swift
+Finally, simplify the exit button in SpacesNavBarView. Its only job is to dismiss the immersive space. The onDisappear trigger you just added to SpacesView will handle the rest of the cleanup automatically.
 
-By following this structure, you will create a master document that is an invaluable asset for your project, ensuring that it remains understandable and maintainable over time.
+// SpacesNavBarView.swift
+import SwiftUI
+
+struct SpacesNavBarView: View {
+    @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
+    @EnvironmentObject private var windowManager: WindowManager
+
+    var body: some View {
+        HStack {
+            // The exit button action is now very simple
+            Button(action: {
+                Task {
+                    // Just dismiss the space. The cleanupView() in SpacesView
+                    // will handle closing all windows and opening the main one.
+                    await dismissImmersiveSpace()
+                }
+            }) {
+                Image(systemName: "xmark.circle.fill")
+            }
+            .buttonStyle(.borderedProminent)
+            .help("Exit immersive space")
+
+            // ... rest of your nav bar buttons
+        }
+    }
+}

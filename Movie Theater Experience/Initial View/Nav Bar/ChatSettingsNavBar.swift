@@ -31,6 +31,7 @@ struct ChatSettingsNavBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Username Section
+            /*
             VStack(alignment: .leading, spacing: 8) {
                 Label("Username", systemImage: "person.circle.fill")
                     .font(.headline)
@@ -42,6 +43,7 @@ struct ChatSettingsNavBar: View {
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, 4)
             }
+            */
             
             // Message Colors Section
             VStack(alignment: .leading, spacing: 12) {

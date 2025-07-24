@@ -1,22 +1,20 @@
-//
-//  SpaceCard.swift
-//  Movie Theater Experience
-//
-//  Created by Anthony Fasano on 3/2/25.
-//
-
 import SwiftUI
-
 struct SpaceCard: View {
     let space: SpaceData
+    // Add a closure to handle the info button tap.
+    var onInfoTapped: () -> Void
+
+    @State private var isHovering = false
+    @State private var showAttribution = false
+
+    // MARK: - UI Helpers
     
-    // Helper computed properties for UI
     private var occupancyColor: Color {
         let percentage = space.occupancyPercentage
         switch percentage {
-        case ..<0.5: return .green // Low occupancy
-        case ..<0.8: return .yellow // Medium occupancy
-        case _: return .red // High occupancy
+        case ..<0.5: return .green
+        case ..<0.8: return .yellow
+        default: return .red
         }
     }
     
@@ -25,157 +23,116 @@ struct SpaceCard: View {
         return "\(space.currentUserCount)/\(space.maxUserCount) • \(percentage)%"
     }
     
+    // MARK: - Body
+    
     var body: some View {
-        VStack(alignment: .leading) {
-            // Thumbnail or placeholder
-            ZStack(alignment: .topTrailing) {
-                // Image container
+        VStack(alignment: .leading, spacing: 0) {
+            // MARK: Visual Header
+            ZStack(alignment: .bottomLeading) {
+                // This AsyncImage will fill the entire space allocated to it.
                 if let thumbnailURL = space.thumbnailURL, let url = URL(string: thumbnailURL) {
                     AsyncImage(url: url) { phase in
                         switch phase {
-                        case .empty:
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.2))
-                                .overlay {
-                                    ProgressView()
-                                }
                         case .success(let image):
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
+                            image.resizable().aspectRatio(contentMode: .fill)
                         case .failure:
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.2))
-                                .overlay {
-                                    Image(systemName: "photo")
-                                        .font(.largeTitle)
-                                        .foregroundColor(.gray)
-                                }
+                            Image(systemName: "photo").font(.largeTitle).frame(maxWidth: .infinity, maxHeight: .infinity).background(.thinMaterial)
+                        case .empty:
+                            ProgressView()
                         @unknown default:
                             EmptyView()
                         }
                     }
                 } else {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.2))
-                        .overlay {
-                            Image(systemName: "cube.transparent")
-                                .font(.largeTitle)
-                                .foregroundColor(.gray)
-                        }
+                    Image(systemName: "cube.transparent")
+                        .font(.system(size: 60))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.gray.opacity(0.2))
                 }
                 
-                // Occupancy badge
-                HStack(spacing: 4) {
+                LinearGradient(
+                    gradient: Gradient(colors: [.black.opacity(0.8), .clear]),
+                    startPoint: .bottom,
+                    endPoint: .top
+                )
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(space.spaceName)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .shadow(radius: 2)
+                    
+                    Text(space.description)
+                        .font(.callout)
+                        .foregroundColor(.white.opacity(0.9))
+                        .lineLimit(1)
+                }
+                .padding()
+            }
+            .frame(height: 180)
+            // The .clipped() modifier ensures the image never draws outside the frame.
+            .clipped()
+            .overlay(alignment: .topTrailing) {
+                // NEW: Info Circle Button
+                Button(action: { showAttribution.toggle() }) {
+                    Label("More Info", systemImage: "info.circle.fill")
+                        .labelStyle(.iconOnly)
+                        .font(.title)
+                        .foregroundStyle(.white)
+                        .shadow(radius: 2)
+                }
+                .buttonStyle(.plain) // Use .plain to avoid default button chrome
+                .hoverEffect(.lift)
+                .padding(12)
+                .popover(isPresented: $showAttribution, arrowEdge: .top) {
+                    Text(space.attributions ?? "")
+                        .padding()
+                        .frame(width: 300)
+                        .presentationCompactAdaptation(.popover)
+                }
+            }
+            
+            // MARK: Details Section
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Label(occupancyText, systemImage: "person.2.fill")
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                    
                     Circle()
                         .fill(occupancyColor)
-                        .frame(width: 8, height: 8)
-                    
-                    Text(occupancyText)
-                        .font(.caption)
-                        .foregroundColor(.white)
-                }
-                .padding(6)
-                .background(.ultraThinMaterial)
-                .cornerRadius(12)
-                .padding(8)
-            }
-            .frame(height: 150)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            
-            // Space information
-            VStack(alignment: .leading, spacing: 4) {
-                Text(space.spaceName)
-                    .font(.headline)
-                    .lineLimit(1)
-                
-                Text(space.description)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(2)
-                    .padding(.bottom, 4)
-                
-                // User activity indicator
-                HStack {
-                    Image(systemName: "person.2.fill")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Text("\(space.currentUserCount) active users")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .frame(width: 10, height: 10)
                 }
                 
-                // Tags display
                 if let tags = space.tags, !tags.isEmpty {
                     HStack {
-                        ForEach(Array(tags.prefix(2)), id: \.self) { tag in
+                        ForEach(Array(tags.prefix(3)), id: \.self) { tag in
                             Text(tag)
-                                .font(.caption2)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.blue.opacity(0.1))
-                                .foregroundColor(.blue)
+                                .font(.caption)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(.blue.opacity(0.2))
+                                .foregroundColor(.primary)
                                 .clipShape(Capsule())
-                        }
-                        
-                        if tags.count > 2 {
-                            Text("+\(tags.count - 2)")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
                         }
                     }
                 }
             }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(12)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(radius: 2)
+        .glassBackgroundEffect()
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+        // REMOVED: .scaleEffect to prevent cards from overlapping on hover.
+        .hoverEffect(.lift)
+        .onHover { hovering in
+            withAnimation(.spring()) {
+                isHovering = hovering
+            }
+        }
+        .shadow(color: .black.opacity(isHovering ? 0.4 : 0.2), radius: isHovering ? 15 : 5)
+        .animation(.spring(), value: isHovering)
     }
 }
 
-// Preview provider for SwiftUI canvas
-struct SpaceCard_Previews: PreviewProvider {
-    static var previews: some View {
-        VStack {
-            // Low occupancy
-            SpaceCard(space: SpaceData(
-                spaceName: "Movie Theater",
-                description: "A cozy virtual cinema for movie nights",
-                lastModified: Date(),
-                usdzURL: "https://example.com/theater.usdz",
-                thumbnailURL: nil,
-                tags: ["Movies", "Entertainment"],
-                currentUserCount: 5,
-                maxUserCount: 30
-            ))
-            
-            // Medium occupancy
-            SpaceCard(space: SpaceData(
-                spaceName: "Concert Hall",
-                description: "Live music experience",
-                lastModified: Date(),
-                usdzURL: "https://example.com/concert.usdz",
-                thumbnailURL: nil,
-                tags: ["Music", "Entertainment"],
-                currentUserCount: 75,
-                maxUserCount: 100
-            ))
-            
-            // High occupancy
-            SpaceCard(space: SpaceData(
-                spaceName: "Virtual Cafe",
-                description: "Hang out and chat",
-                lastModified: Date(),
-                usdzURL: "https://example.com/cafe.usdz",
-                thumbnailURL: nil,
-                tags: ["Social", "Relaxation"],
-                currentUserCount: 18,
-                maxUserCount: 20
-            ))
-        }
-        .padding()
-        .previewLayout(.sizeThatFits)
-    }
-}

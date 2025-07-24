@@ -17,7 +17,7 @@ class SpacesEntityWrapper: ObservableObject {
     @Published private(set) var spaceEntity: Entity?
     @Published private(set) var activeSceneEntity: Entity?
 
-    @AppStorage("showEmojis") private var showEmojis = true // User preference
+    @AppStorage("showEmojis") var showEmojis = true // User preference
     @Published private(set) var isEmitting = false // State of the emitter
 
     // Task for auto-resetting the emitter
@@ -236,7 +236,8 @@ class SpacesEntityWrapper: ObservableObject {
         }
     }
 
-    func updateVolumetricEmojiTexture(with imageName: String) {
+    func updateVolumetricEmojiTexture(with imageName: String, isLooping: Bool) {
+        print("STEP 3: Emitter trigger confirmed in SpacesEntityWrapper.") // LOGGING
         guard showEmojis else {
             print("🚫 Emoji display is disabled via AppStorage, skipping emission for '\(imageName)'")
             return
@@ -250,7 +251,7 @@ class SpacesEntityWrapper: ObservableObject {
             await captureOriginalEmitterProps()
 
             print("🎯 Starting emoji emission process for: \(imageName)")
-            await proceedWithEmission(imageName: imageName)
+            await proceedWithEmission(imageName: imageName, isLooping: isLooping)
         }
     }
 
@@ -276,7 +277,7 @@ class SpacesEntityWrapper: ObservableObject {
 
     // --- CORRECTED: Marked the entire function @MainActor ---
     @MainActor
-    private func proceedWithEmission(imageName: String) async {
+    private func proceedWithEmission(imageName: String, isLooping: Bool) async {
         // Now we are guaranteed to be on the MainActor here
         print("🔄 Starting emission process for image: \(imageName) on MainActor")
         resetTask?.cancel() // Cancel previous auto-reset if any
@@ -352,11 +353,12 @@ class SpacesEntityWrapper: ObservableObject {
 
              // --- Schedule Reset Task ---
              // Task still needs @MainActor because it runs *later*
+            if !isLooping {
              resetTask = Task { @MainActor [weak self] in // Capture self weakly
                  guard let self = self else { return } // Check weak self
 
                  do {
-                     try await Task.sleep(for: .seconds(3)) // Wait 3 seconds
+                     try await Task.sleep(for: .seconds(5)) // Wait 5 seconds
 
                      // Check if task was cancelled in the meantime
                      guard !Task.isCancelled else {
@@ -364,36 +366,23 @@ class SpacesEntityWrapper: ObservableObject {
                          return
                      }
 
-                     print("⏱️ Auto-resetting emoji image after 3 seconds...")
+                     print("⏱️ Auto-stopping emoji emission after 5 seconds...")
                      // Re-find the entity and component (already on MainActor)
                      let currentTargetEntity = self.activeSceneEntity ?? self.spaceEntity ?? self.entity
-                     // --- LINE 278 AREA ---
                      guard let currentEmojiEntity = self.findEmojiEntity(in: currentTargetEntity),
                            var currentEmitter = currentEmojiEntity.components[ParticleEmitterComponent.self] else {
-                         // This guard's else block and return are fine within an @MainActor Task closure
-                         print("⚠️ Auto-reset: Could not find emoji entity or component anymore.")
-                         self.isEmitting = false // Update state if entity/component is gone
-                         return // Exit the Task
+                         print("⚠️ Auto-stop: Could not find emoji entity or component anymore.")
+                         self.isEmitting = false
+                         return
                      }
 
-                     // Restore original properties if available
-                     if self.haveOriginalProps {
-                         print("🔄 Restoring original emitter properties...")
-                         currentEmitter.mainEmitter.image = self.originalImage
-                         if let size = self.originalSize { currentEmitter.mainEmitter.size = size }
-                         if let birthRate = self.originalBirthRate { currentEmitter.mainEmitter.birthRate = birthRate }
-                         currentEmitter.isEmitting = (self.originalBirthRate ?? 0) > 0
-                         currentEmojiEntity.components[ParticleEmitterComponent.self] = currentEmitter
-                         print("✅ Successfully restored original emitter state. IsEmitting: \(currentEmitter.isEmitting)")
-                     } else {
-                         // Fallback
-                         print("⚠️ Auto-reset: No original props - setting image to nil and stopping emission.")
-                         currentEmitter.mainEmitter.image = nil
-                         currentEmitter.isEmitting = false
-                         currentEmojiEntity.components[ParticleEmitterComponent.self] = currentEmitter
-                     }
-                     // Update published state based on final emitter state
-                     self.isEmitting = currentEmitter.isEmitting
+                     // Stop new particle births but let existing ones fade out
+                     print("🛑 Stopping new particle births by setting birthRate to 0.")
+                     currentEmitter.mainEmitter.birthRate = 0
+                     currentEmojiEntity.components[ParticleEmitterComponent.self] = currentEmitter
+
+                     // Update published state
+                     self.isEmitting = false
 
                  } catch is CancellationError {
                       print("ℹ️ Emoji reset task cancelled during sleep.")
@@ -402,6 +391,7 @@ class SpacesEntityWrapper: ObservableObject {
                      self.isEmitting = false // Update state on error
                  }
              } // End of reset Task
+}
 
         } catch {
              print("❌ proceedWithEmission: Failed to load TextureResource: \(error)")
