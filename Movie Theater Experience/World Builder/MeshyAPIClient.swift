@@ -6,3 +6,10 @@
 //
 
 import Foundation
+
+class MeshyAPIClient {
+    func generateModel(from description: String) async -> URL {
+        // Call Meshy API
+        return URL(string: "https://example.com/model.usdz")!
+    }
+}

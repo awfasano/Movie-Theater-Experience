@@ -45,6 +45,19 @@
 		C416BA4D2E0FCB87006399D8 /* StoryRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C416BA4C2E0FCB87006399D8 /* StoryRowView.swift */; };
 		C41817C82CBE319F00A94ADF /* Emitters.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41817C72CBE319F00A94ADF /* Emitters.swift */; };
 		C41C81622E093B970050BCB3 /* InteractiveStoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41C81612E093B970050BCB3 /* InteractiveStoryViewModel.swift */; };
+		C43A106D2E4D109A00DE2EFD /* WorldBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43A106C2E4D109A00DE2EFD /* WorldBuilderView.swift */; };
+		C43A106F2E4D113800DE2EFD /* WorldBuilderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43A106E2E4D113800DE2EFD /* WorldBuilderManager.swift */; };
+		C43A10712E4D115900DE2EFD /* WorldData.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43A10702E4D115900DE2EFD /* WorldData.swift */; };
+		C43A10732E4D118700DE2EFD /* PlacedObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43A10722E4D118700DE2EFD /* PlacedObject.swift */; };
+		C43A10752E4D119500DE2EFD /* ObjectProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43A10742E4D119500DE2EFD /* ObjectProperties.swift */; };
+		C43A10772E4D11A400DE2EFD /* EnvironmentalPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43A10762E4D11A400DE2EFD /* EnvironmentalPresets.swift */; };
+		C43A10792E4D11BF00DE2EFD /* VoiceCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43A10782E4D11BF00DE2EFD /* VoiceCommand.swift */; };
+		C43A107B2E4D11D400DE2EFD /* WorldAssetLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43A107A2E4D11D400DE2EFD /* WorldAssetLoader.swift */; };
+		C43A107D2E4D11E000DE2EFD /* VoiceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43A107C2E4D11E000DE2EFD /* VoiceController.swift */; };
+		C43A107F2E4D11EF00DE2EFD /* MeshyAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43A107E2E4D11EF00DE2EFD /* MeshyAPIClient.swift */; };
+		C43A10812E4D11FD00DE2EFD /* PlacementGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43A10802E4D11FD00DE2EFD /* PlacementGrid.swift */; };
+		C43A10832E4D121700DE2EFD /* WorldBuilderControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43A10822E4D121700DE2EFD /* WorldBuilderControlsView.swift */; };
+		C43A10852E4D122E00DE2EFD /* WorldBuilderLaunchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43A10842E4D122E00DE2EFD /* WorldBuilderLaunchView.swift */; };
 		C43DBA2E2CF5B9EB00E79D3F /* SpatialAudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43DBA2D2CF5B9EB00E79D3F /* SpatialAudioManager.swift */; };
 		C4413F592DC028D7008A7BD8 /* Song.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4413F582DC028D7008A7BD8 /* Song.swift */; };
 		C4413F5B2DC028EE008A7BD8 /* SongService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4413F5A2DC028EE008A7BD8 /* SongService.swift */; };
@@ -235,6 +248,19 @@
 		C416BA4E2E0FD9B4006399D8 /* GEMINI.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = GEMINI.md; sourceTree = "<group>"; };
 		C41817C72CBE319F00A94ADF /* Emitters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Emitters.swift; sourceTree = "<group>"; };
 		C41C81612E093B970050BCB3 /* InteractiveStoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveStoryViewModel.swift; sourceTree = "<group>"; };
+		C43A106C2E4D109A00DE2EFD /* WorldBuilderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldBuilderView.swift; sourceTree = "<group>"; };
+		C43A106E2E4D113800DE2EFD /* WorldBuilderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldBuilderManager.swift; sourceTree = "<group>"; };
+		C43A10702E4D115900DE2EFD /* WorldData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldData.swift; sourceTree = "<group>"; };
+		C43A10722E4D118700DE2EFD /* PlacedObject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacedObject.swift; sourceTree = "<group>"; };
+		C43A10742E4D119500DE2EFD /* ObjectProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectProperties.swift; sourceTree = "<group>"; };
+		C43A10762E4D11A400DE2EFD /* EnvironmentalPresets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvironmentalPresets.swift; sourceTree = "<group>"; };
+		C43A10782E4D11BF00DE2EFD /* VoiceCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceCommand.swift; sourceTree = "<group>"; };
+		C43A107A2E4D11D400DE2EFD /* WorldAssetLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldAssetLoader.swift; sourceTree = "<group>"; };
+		C43A107C2E4D11E000DE2EFD /* VoiceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceController.swift; sourceTree = "<group>"; };
+		C43A107E2E4D11EF00DE2EFD /* MeshyAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshyAPIClient.swift; sourceTree = "<group>"; };
+		C43A10802E4D11FD00DE2EFD /* PlacementGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacementGrid.swift; sourceTree = "<group>"; };
+		C43A10822E4D121700DE2EFD /* WorldBuilderControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldBuilderControlsView.swift; sourceTree = "<group>"; };
+		C43A10842E4D122E00DE2EFD /* WorldBuilderLaunchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldBuilderLaunchView.swift; sourceTree = "<group>"; };
 		C43DBA2D2CF5B9EB00E79D3F /* SpatialAudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpatialAudioManager.swift; sourceTree = "<group>"; };
 		C4413F582DC028D7008A7BD8 /* Song.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Song.swift; sourceTree = "<group>"; };
 		C4413F5A2DC028EE008A7BD8 /* SongService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongService.swift; sourceTree = "<group>"; };
@@ -461,6 +487,7 @@
 				C449192A2E109C3A00C4B087 /* Movie Theater Experience.entitlements */,
 				C4F478BC2CEBD46300965502 /* GoogleService-Info.plist */,
 				C41817C92CBE3B3600A94ADF /* Sign Up */,
+				C43A106B2E4D102D00DE2EFD /* World Builder */,
 				C4BFD5BA2CA5F63E007D20BE /* Calendar */,
 				C4C43A832CA49CF8001AC733 /* Model */,
 				C4C43A022CA364B0001AC733 /* Movie Picker */,
@@ -542,6 +569,26 @@
 			children = (
 			);
 			path = "Sign Up";
+			sourceTree = "<group>";
+		};
+		C43A106B2E4D102D00DE2EFD /* World Builder */ = {
+			isa = PBXGroup;
+			children = (
+				C43A106C2E4D109A00DE2EFD /* WorldBuilderView.swift */,
+				C43A106E2E4D113800DE2EFD /* WorldBuilderManager.swift */,
+				C43A10702E4D115900DE2EFD /* WorldData.swift */,
+				C43A10722E4D118700DE2EFD /* PlacedObject.swift */,
+				C43A10742E4D119500DE2EFD /* ObjectProperties.swift */,
+				C43A10762E4D11A400DE2EFD /* EnvironmentalPresets.swift */,
+				C43A10782E4D11BF00DE2EFD /* VoiceCommand.swift */,
+				C43A107A2E4D11D400DE2EFD /* WorldAssetLoader.swift */,
+				C43A107C2E4D11E000DE2EFD /* VoiceController.swift */,
+				C43A107E2E4D11EF00DE2EFD /* MeshyAPIClient.swift */,
+				C43A10802E4D11FD00DE2EFD /* PlacementGrid.swift */,
+				C43A10822E4D121700DE2EFD /* WorldBuilderControlsView.swift */,
+				C43A10842E4D122E00DE2EFD /* WorldBuilderLaunchView.swift */,
+			);
+			path = "World Builder";
 			sourceTree = "<group>";
 		};
 		C44082712D4974DA0068F8F1 /* Immersive */ = {
@@ -971,16 +1018,20 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C43A106F2E4D113800DE2EFD /* WorldBuilderManager.swift in Sources */,
 				C4115ED92B994AF9007AD9B0 /* ContentView.swift in Sources */,
 				C444C9292D5446710046F92D /* LazyView.swift in Sources */,
 				C49134412B9B072900A824DF /* ChatMessage.swift in Sources */,
 				C4D88CAA2D752B87004F226E /* SpacesNavBarView.swift in Sources */,
+				C43A10772E4D11A400DE2EFD /* EnvironmentalPresets.swift in Sources */,
 				C40BD7982E00B3E40062623E /* Story.swift in Sources */,
 				C40BD7942E00AF340062623E /* StoryTellerAudioService.swift in Sources */,
 				C4FA39F22E218939004BB564 /* VolumetricView.swift in Sources */,
 				C4FE99BD2D7F9DEE008AE0D6 /* SpacesEmojiViewModel.swift in Sources */,
 				C4413F5B2DC028EE008A7BD8 /* SongService.swift in Sources */,
+				C43A10852E4D122E00DE2EFD /* WorldBuilderLaunchView.swift in Sources */,
 				C49134432B9C1EA600A824DF /* ChatView.swift in Sources */,
+				C43A107F2E4D11EF00DE2EFD /* MeshyAPIClient.swift in Sources */,
 				C405E5832D4CAB5300681E60 /* DaySelectionView.swift in Sources */,
 				C444C91B2D53FC740046F92D /* SpaceRowView.swift in Sources */,
 				C4C439FA2CA348AE001AC733 /* MovieWindow.swift in Sources */,
@@ -993,6 +1044,7 @@
 				C4CA0D092DE6334B00178BA5 /* PlayPauseButton.swift in Sources */,
 				C4413F5D2DC0611B008A7BD8 /* VolumeControlView.swift in Sources */,
 				C404A8052D46B223000450D4 /* MessagePositionTracker.swift in Sources */,
+				C43A10752E4D119500DE2EFD /* ObjectProperties.swift in Sources */,
 				C4FA39F02E218923004BB564 /* MovementControlView.swift in Sources */,
 				C4D88CAC2D752CEB004F226E /* FirestoreManager.swift in Sources */,
 				C413FA4F2DBC2E41008FABEB /* AudioPositionSynchronizer.swift in Sources */,
@@ -1001,6 +1053,7 @@
 				C4E71ACE2DC69F490017914B /* SeatOrbEntities.swift in Sources */,
 				C491344B2B9C4B4800A824DF /* Extensions.swift in Sources */,
 				C474B5D32DC9BE12004084CE /* EndScreen.swift in Sources */,
+				C43A10712E4D115900DE2EFD /* WorldData.swift in Sources */,
 				C4FA39F62E24B044004BB564 /* TransparencyControlView.swift in Sources */,
 				C4D88CAE2D7531AB004F226E /* EventManagerConfiguration.swift in Sources */,
 				C4AF48492C9E65CE006FE6C8 /* TheatreEntityWrapper.swift in Sources */,
@@ -1014,12 +1067,14 @@
 				C4D88C992D74E457004F226E /* VolumetricSpaceModel.swift in Sources */,
 				C4BFD5B92CA5F628007D20BE /* CalendarEvent.swift in Sources */,
 				C4E815542D546DB6007FE604 /* VolumetricSpaceView.swift in Sources */,
+				C43A10732E4D118700DE2EFD /* PlacedObject.swift in Sources */,
 				C4CEBBC62DA330CF00731652 /* SelectedSpace.swift in Sources */,
 				C404A8092D46CB00000450D4 /* MessagePosition.swift in Sources */,
 				C413FA4C2DBC2E0D008FABEB /* SpatialAudioLoader.swift in Sources */,
 				C4AFB1EF2E2ED19F0067EA66 /* BookmarkManager.swift in Sources */,
 				C4AFB1F02E2ED19F0067EA66 /* BookmarksView.swift in Sources */,
 				C444C9272D540D550046F92D /* OccupancyProgressView.swift in Sources */,
+				C43A10832E4D121700DE2EFD /* WorldBuilderControlsView.swift in Sources */,
 				C404A7F52D3B7038000450D4 /* TimeoutError.swift in Sources */,
 				C404A7FF2D41D325000450D4 /* WatchStats.swift in Sources */,
 				C4C43A042CA364BB001AC733 /* VideoPicker.swift in Sources */,
@@ -1052,6 +1107,7 @@
 				C416BA482E09DDA7006399D8 /* WaveformViewModel.swift in Sources */,
 				C4F478BF2CEC29E900965502 /* ScrollOffsets.swift in Sources */,
 				C473DCB32D31A502008AA51D /* TheatreVisibilityManager.swift in Sources */,
+				C43A10792E4D11BF00DE2EFD /* VoiceCommand.swift in Sources */,
 				C45D34732E074203004407F4 /* LiveStorytellerService.swift in Sources */,
 				C45D346D2E073D5B004407F4 /* StoriesListView.swift in Sources */,
 				C404A7F72D3DC69D000450D4 /* ExitingWindow.swift in Sources */,
@@ -1068,11 +1124,14 @@
 				C404A8012D430161000450D4 /* ImmersiveHelper.swift in Sources */,
 				C404A8032D430186000450D4 /* ImmersiveSpaceManager.swift in Sources */,
 				C4FE99B52D7F8F4F008AE0D6 /* SpacesChatViewModel.swift in Sources */,
+				C43A10812E4D11FD00DE2EFD /* PlacementGrid.swift in Sources */,
 				C449192C2E109D1B00C4B087 /* UsersListView.swift in Sources */,
 				C4D88CA12D74E5EE004F226E /* SpaceBrowserIntegration.swift in Sources */,
 				C44919292E109BD800C4B087 /* SpaceActivities.swift in Sources */,
+				C43A106D2E4D109A00DE2EFD /* WorldBuilderView.swift in Sources */,
 				C4FA39F42E24498C004BB564 /* AudioService.swift in Sources */,
 				C4D88C9B2D74E519004F226E /* SpaceCard.swift in Sources */,
+				C43A107D2E4D11E000DE2EFD /* VoiceController.swift in Sources */,
 				C416BA4D2E0FCB87006399D8 /* StoryRowView.swift in Sources */,
 				C4AF48A92C9E6D61006FE6C8 /* ToggleImmersiveSpaceButton.swift in Sources */,
 				C4F478C92CEDBD2900965502 /* TheatreLightManager.swift in Sources */,
@@ -1080,6 +1139,7 @@
 				C405E5892D4CAC6200681E60 /* TopNavigationView.swift in Sources */,
 				C43DBA2E2CF5B9EB00E79D3F /* SpatialAudioManager.swift in Sources */,
 				C444C91F2D53FC9F0046F92D /* IntroSpace.swift in Sources */,
+				C43A107B2E4D11D400DE2EFD /* WorldAssetLoader.swift in Sources */,
 				C49134472B9C303600A824DF /* ChatBubble.swift in Sources */,
 				C4DAB7F42BA1609B00852029 /* EmojiButtonView.swift in Sources */,
 				C4CE14072E1E00A7009603E1 /* SpacesChatManager.swift in Sources */,

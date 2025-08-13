@@ -6,3 +6,13 @@
 //
 
 import Foundation
+
+// MARK: - Data Models
+struct WorldData: Codable {
+    let id: String
+    let name: String
+    let createdAt: Date
+    let environment: EnvironmentPreset
+    let objects: [PlacedObject]
+}
+

@@ -36,6 +36,11 @@ struct TabBarWindow: View {
                     Label("Chat Settings", systemImage: "gear")
                 }
                 .tag(2)
+            WorldBuilderLaunchView()
+                .tabItem {
+                    Label("World Builder", systemImage: "wand.and.stars")
+                }
+                .tag(3)
         }
         //.onAppear {
        //     calendarService.fetchAllEvents()

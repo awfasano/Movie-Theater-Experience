@@ -6,3 +6,10 @@
 //
 
 import Foundation
+
+struct ObjectProperties: Codable {
+    var color: String?
+    var material: String?
+    var description: String?
+    var needsGeneration: Bool = false
+}

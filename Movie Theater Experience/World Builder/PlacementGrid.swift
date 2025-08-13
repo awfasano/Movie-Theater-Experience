@@ -6,3 +6,9 @@
 //
 
 import Foundation
+
+struct PlacementGrid {
+    let entity: Entity
+    let spacing: Float
+    let size: Float
+}

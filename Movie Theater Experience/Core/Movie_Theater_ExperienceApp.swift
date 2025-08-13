@@ -165,6 +165,26 @@ struct Movie_Theater_ExperienceApp: App {
         .defaultSize(width: 360, height: 420)
         .windowResizability(.contentSize)
         
+        
+        // World Builder Immersive Space
+        ImmersiveSpace(id: AppModel.worldBuilderSpaceID) {
+            WorldBuilderView()
+                .environment(appModel)
+                .environmentObject(immersiveSpaceManager)
+                .environmentObject(windowManager)
+        }
+        .immersionStyle(selection: .constant(.mixed), in: .mixed)
+
+        // World Builder Controls Window
+        WindowGroup("World Builder Controls", id: "worldBuilderControls") {
+            WorldBuilderControlsView()
+                .environment(appModel)
+                .environmentObject(WorldBuilderManager.shared)
+        }
+        .defaultSize(width: 400, height: 600)
+        .windowStyle(.plain)
+        
+        
         // Space Map window.
         WindowGroup("Space Map", id: "spaceMap") {
             SpaceMapView()
