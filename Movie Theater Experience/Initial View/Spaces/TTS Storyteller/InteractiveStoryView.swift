@@ -2,7 +2,7 @@
 //  InteractiveStoryView.swift
 //  Movie Theater Experience
 //
-//  Updated to handle connecting state
+//  Updated to fix compiler errors and connection state handling.
 //
 
 import SwiftUI
@@ -19,20 +19,36 @@ struct InteractiveStoryView: View {
 
     // MARK: - Main body
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .center) {
 
             /* ── 1  VIDEO SURFACE ── */
-            BarePlayerContainer(player: viewModel.videoPlayer)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-                .task {
-                    await viewModel.prepare()
+            ZStack {
+                BarePlayerContainer(player: viewModel.videoPlayer)
+                    .blur(radius: viewModel.isVideoBuffering ? 10 : 0)
+                
+                if viewModel.isVideoBuffering {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                        .tint(.white)
+                        .transition(.opacity)
                 }
+            }
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+            .task {
+                await viewModel.prepare()
+            }
 
             /* ── 2  VIDEO BUTTONS (only while playing) ── */
-            if viewModel.sessionState == .playing {
-                topRightVideoControls
-                    .transition(.opacity)
+            VStack {
+                HStack {
+                    Spacer()
+                    if viewModel.sessionState == .playing {
+                        topRightVideoControls
+                            .transition(.opacity)
+                    }
+                }
+                Spacer()
             }
 
             /* ── 3  BOTTOM OVERLAYS ── */
@@ -45,6 +61,9 @@ struct InteractiveStoryView: View {
                     connectingOverlay
                 case .interacting:
                     interactingOverlay
+                case .disconnected:
+                    disconnectedOverlay
+                // --- END ---
                 }
             }
             .animation(.easeInOut, value: viewModel.sessionState)
@@ -53,16 +72,8 @@ struct InteractiveStoryView: View {
         .navigationTitle(viewModel.story.name)
         .navigationBarTitleDisplayMode(.inline)
         .onDisappear { viewModel.cleanup() }
-        .alert("Audio Connection Error", isPresented: $viewModel.showingError) {
-            Button("Retry") {
-                viewModel.retryConnection()
-            }
-            Button("Back to Story") {
-                viewModel.returnToStory()
-            }
-            Button("Cancel", role: .cancel) {
-                viewModel.showingError = false
-            }
+        .alert("Storyteller Interaction", isPresented: $viewModel.showingError) {
+            Button("OK", role: .cancel) { }
         } message: {
             Text(viewModel.errorMessage)
         }
@@ -71,21 +82,12 @@ struct InteractiveStoryView: View {
     // MARK: - Top-right video controls
     private var topRightVideoControls: some View {
         HStack(spacing: 10) {
-            Button(action: { viewModel.previousVideo() }) {
-                Image(systemName: "backward.fill")
-            }
-            Button(action: { viewModel.replayCurrentVideo() }) {
-                Image(systemName: "gobackward")
-            }
-            Button(action: { viewModel.playPauseVideoToggle() }) {
-                Image(systemName: viewModel.isVideoPlaying ? "pause.fill" : "play.fill")
-            }
-            Button(action: { viewModel.nextVideo() }) {
-                Image(systemName: "forward.fill")
-            }
-            Button(action: { viewModel.toggleVideoMute() }) {
-                Image(systemName: viewModel.isVideoMuted ? "speaker.slash.fill" : "speaker.wave.3.fill")
-            }
+            // **FIX**: Using explicit closure syntax for all buttons to avoid compiler errors.
+            Button(action: { viewModel.previousVideo() }) { Image(systemName: "backward.fill") }
+            Button(action: { viewModel.replayCurrentVideo() }) { Image(systemName: "gobackward") }
+            Button(action: { viewModel.playPauseVideoToggle() }) { Image(systemName: viewModel.isVideoPlaying ? "pause.fill" : "play.fill") }
+            Button(action: { viewModel.nextVideo() }) { Image(systemName: "forward.fill") }
+            Button(action: { viewModel.toggleVideoMute() }) { Image(systemName: viewModel.isVideoMuted ? "speaker.slash.fill" : "speaker.wave.3.fill") }
         }
         .font(.footnote)
         .padding(.vertical, 5).padding(.horizontal, 10)
@@ -98,80 +100,90 @@ struct InteractiveStoryView: View {
             switch viewModel.liveStorytellerService.status {
             case .connecting:
                 HStack {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                    Text("Connecting...")
-                        .font(.caption)
+                    ProgressView().scaleEffect(0.8)
+                    Text("Connecting...").font(.caption)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(.ultraThinMaterial, in: Capsule())
-                
             case .connected:
                 HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text("Connected")
-                        .font(.caption)
+                    Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                    Text("Connected").font(.caption)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(.ultraThinMaterial, in: Capsule())
-                
             case .error:
                 HStack {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.red)
-                    Text("Connection Error")
-                        .font(.caption)
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundColor(.red)
+                    Text("Connection Error").font(.caption)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(.ultraThinMaterial, in: Capsule())
-                
             case .permissionDenied:
                 HStack {
-                    Image(systemName: "mic.slash.fill")
-                        .foregroundColor(.orange)
-                    Text("Mic Permission Required")
-                        .font(.caption)
+                    Image(systemName: "mic.slash.fill").foregroundColor(.orange)
+                    Text("Mic Permission Denied").font(.caption)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(.ultraThinMaterial, in: Capsule())
-                
             default:
                 EmptyView()
             }
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: Capsule())
+    }
+    
+    private var disconnectedOverlay: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "wifi.exclamationmark")
+                .font(.largeTitle)
+                .foregroundStyle(.red)
+            
+            Text("Connection Lost")
+                .font(.headline)
+            
+            Text(viewModel.errorMessage)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            
+            HStack(spacing: 15) {
+                Button(action: { viewModel.returnToStory() }) {
+                    Text("Back to Story")
+                }
+                .buttonStyle(.bordered)
+                .tint(.secondary)
+                
+                Button(action: { viewModel.retryConnection() }) { // <-- Correct syntax
+                    Label("Retry", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.purple)
+            }
+        }
+        .padding(.horizontal, 40)
+        .padding(.vertical, 30)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding(.horizontal)
     }
 
     // MARK: - Bottom AUDIO overlay
     private var bottomAudioOverlay: some View {
         VStack(spacing: 15) {
-
-            /* ➊ Waveform */
             AudioWaveformView(audioLevels: viewModel.audioLevels)
                 .frame(height: 50)
 
-            /* ➋ Scrubber + main controls row */
             HStack(spacing: 12) {
-                
-                /* Play/Pause Button */
-                Button(action: viewModel.playPauseAudioToggle) {
-                    Label(viewModel.isAudioPlaying ? "" : "",
-                          systemImage: viewModel.isAudioPlaying ? "pause.circle.fill" : "play.circle.fill")
+                Button(action: { viewModel.playPauseAudioToggle() }) {
+                    Label(viewModel.isAudioPlaying ? "" : "", systemImage: viewModel.isAudioPlaying ? "pause.circle.fill" : "play.circle.fill")
                 }
                 .font(.title2)
                 .tint(.purple)
                 
-                /* Scrubber */
                 VStack(spacing: 6) {
-                    ThinTrackSlider(
-                        value: $viewModel.audioCurrentTime,
-                        range: 0...max(1, viewModel.audioDuration),
-                        onEditingChanged: viewModel.audioScrubbingChanged
-                    )
+                    if viewModel.isNarrationBuffering {
+                        ProgressView().tint(.purple)
+                    } else {
+                        ThinTrackSlider(
+                            value: $viewModel.audioCurrentTime,
+                            range: 0...max(1, viewModel.audioDuration),
+                            onEditingChanged: viewModel.audioScrubbingChanged
+                        )
+                    }
                     HStack {
                         Text(formatTime(viewModel.audioCurrentTime))
                         Spacer()
@@ -181,25 +193,19 @@ struct InteractiveStoryView: View {
                     .foregroundColor(.secondary)
                 }
                 
-                // Volume Down Button
-                Button(action: viewModel.decreaseVolume) {
-                    Image(systemName: viewModel.volume <= 0 ? "speaker.slash" : "speaker.minus.fill")
-                }
-                .disabled(viewModel.volume <= 0.0)
+                Button(action: { viewModel.decreaseVolume() }) { Image(systemName: viewModel.volume <= 0 ? "speaker.slash" : "speaker.minus.fill") }
+                    .disabled(viewModel.volume <= 0.0)
                 
-                // Volume Up Button
-                Button(action: viewModel.increaseVolume) {
-                    Image(systemName: viewModel.volume >= 1.0 ? "speaker.wave.3.fill" : "speaker.plus.fill")
-                }
-                .disabled(viewModel.volume >= 1.0)
+                Button(action: { viewModel.increaseVolume() }) { Image(systemName: viewModel.volume >= 1.0 ? "speaker.wave.3.fill" : "speaker.plus.fill") }
+                    .disabled(viewModel.volume >= 1.0)
                 
-                /* Skip button */
-                Button("Skip", action: viewModel.skipToInteraction)
+                Button(action: { viewModel.skipToInteraction() }) { Text("Skip") }
                     .buttonStyle(.bordered)
                     .tint(.secondary)
             }
             .font(.title3)
             .tint(.purple)
+            .disabled(viewModel.isNarrationBuffering)
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 20)
@@ -221,11 +227,9 @@ struct InteractiveStoryView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
             
-            Button("Cancel") {
-                viewModel.returnToStory()
-            }
-            .buttonStyle(.bordered)
-            .tint(.secondary)
+            Button(action: { viewModel.returnToStory() }) { Text("Cancel") }
+                .buttonStyle(.bordered)
+                .tint(.secondary)
         }
         .padding(.horizontal, 40)
         .padding(.vertical, 30)
@@ -236,22 +240,16 @@ struct InteractiveStoryView: View {
     // MARK: - Interaction overlay
     private var interactingOverlay: some View {
         VStack(spacing: 10) {
-            
             connectionStatusIndicator
                 .transition(.opacity)
             
-            /* ➊ Shared waveform */
             AudioWaveformView(audioLevels: viewModel.audioLevels)
                 .frame(height: 50)
 
-            /* ➋ Mic-text-buttons row */
             HStack(spacing: 12) {
-                // mic toggle - only show if microphone is available
                 if viewModel.liveStorytellerService.isMicrophoneAvailable {
-                    Button(action: viewModel.toggleMic) {
-                        Image(systemName: viewModel.isMicMuted ? "mic.slash.fill" : "mic.fill")
-                    }
-                    .font(.title3)
+                    Button(action: { viewModel.toggleMic() }) { Image(systemName: viewModel.isMicMuted ? "mic.slash.fill" : "mic.fill") }
+                        .font(.title3)
                 } else {
                     Image(systemName: "mic.slash.fill")
                         .font(.title3)
@@ -259,29 +257,20 @@ struct InteractiveStoryView: View {
                         .help("No microphone available")
                 }
 
-                // text field
-                TextField("Type a message…", text: $viewModel.textDraft, onCommit: {
-                    viewModel.sendTextMessage()
-                })
-                .textFieldStyle(.roundedBorder)
+                TextField("Type a message…", text: $viewModel.textDraft, onCommit: viewModel.sendTextMessage)
+                    .textFieldStyle(.roundedBorder)
 
-                // send button
-                Button(action: viewModel.sendTextMessage) {
-                    Image(systemName: "paperplane.fill")
-                }
+                Button(action: { viewModel.sendTextMessage() }) { Image(systemName: "paperplane.fill") }
 
-                // back-to-story
-                Button("Back") { viewModel.returnToStory() }
+                Button(action: { viewModel.returnToStory() }) { Text("Back") }
                     .buttonStyle(.bordered)
             }
             
-            // Show a message if no microphone is available
             if !viewModel.liveStorytellerService.isMicrophoneAvailable {
                 Text("Voice input unavailable - use text instead")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 18)
@@ -289,7 +278,6 @@ struct InteractiveStoryView: View {
         .padding(.horizontal)
     }
 
-    // MARK: - Helper
     private func formatTime(_ seconds: Double) -> String {
         guard seconds.isFinite else { return "00:00" }
         let m = Int(seconds) / 60

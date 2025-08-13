@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ChatSettingsWindow: View {
     // 1. Get a reference to the AppModel from the environment
-    @Environment(AppModel.self) private var appModel // <<-- ADDED
+    @Environment(AppModel.self) private var appModel
 
     // Persist the username using AppStorage.
     @AppStorage("username") private var username: String = ""
@@ -65,7 +65,7 @@ struct ChatSettingsWindow: View {
                 .frame(width: geometry.size.width * 0.33)
                 .padding([.top, .leading, .bottom])
                 // 2. Sync the username to the AppModel whenever it changes
-                .onChange(of: username) { _, newUsername in // <<-- ADDED
+                .onChange(of: username) { _, newUsername in
                     appModel.username = newUsername
                     print("🔄 [ChatSettingsWindow] Synced AppModel username to: \(newUsername)")
                 }
@@ -74,34 +74,48 @@ struct ChatSettingsWindow: View {
                 
                 // MARK: - Right Side: Information Text (2/3 of available width)
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 15) {
+                    VStack(alignment: .leading, spacing: 20) {
+                        
+                        // --- UPDATED TEXT BEGINS HERE ---
+                        
                         Group {
-                            Text("Get on Our Schedule")
+                            Text("The Future of Spiera & Your Feedback")
                                 .font(.headline)
                             
-                            Text("If you would like to get on our schedule to play your movie, please email us at:")
-                            
-                            Text("anthony@spaces.com")
-                                .fontWeight(.bold)
-                                .foregroundColor(.blue)
-                            
-                            Text("Also, if you have found bugs or have suggestions for improvements, please don't hesitate to reach out.")
+                            Text("We have major updates and exciting new features planned for the coming patches. Our goal is to create a rich, well-rounded application for you to enjoy. Your feedback is crucial to this process, and we'd love to hear your ideas and suggestions!")
                         }
                         
                         Divider()
                         
                         Group {
-                            Text("Support the Project")
+                            Text("Create with Us")
                                 .font(.headline)
-                                .padding(.top, 10)
                             
-                            Text("If you want to buy me coffee or support this project, I am looking to add features in the future as well as create better spaces for content. You can send money to:")
+                            Text("Do you have an idea for an immersive story using video and audio? Or perhaps a 3D space you'd like to feature? We are always looking for collaborators. Please reach out to discuss how we can incorporate your content.")
+                        }
+                        
+                        Divider()
+
+                        // This new section combines contact, collaboration, and support info.
+                        Group {
+                            Text("Contact, Collaboration & Support")
+                                .font(.headline)
                             
-                            Text("anthony@spaces.com")
-                                .fontWeight(.bold)
-                                .foregroundColor(.blue)
+                            Text("For all inquiries, or if you'd like to support the project, please use the details below. Contributions help cover server costs and future development, and are greatly appreciated!")
                             
-                            Text("Better spaces, streaming videos, and databases all cost money, so if you would like to support the project, I would really appreciate it.")
+                            // Contact details VStack for clean alignment
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("Email: spiera.anthony@gmail.com")
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.blue)
+                                    .textSelection(.enabled) // Makes it easy to copy
+
+                                Text("Venmo: @awfasano")
+                                    .fontWeight(.bold)
+                                    .foregroundColor(Color(red: 0.2, green: 0.6, blue: 0.86)) // Venmo blue
+                                    .textSelection(.enabled)
+                            }
+                            .padding(.top, 5)
                         }
                         
                         Divider()
@@ -109,21 +123,21 @@ struct ChatSettingsWindow: View {
                         Group {
                             Text("Terms of Use & Privacy Policy")
                                 .font(.headline)
-                                .padding(.top, 10)
                             
-                            Text("Additionally, here are our Terms of Use and Privacy Policy if you would like to take a look:")
+                            Text("For more details on how we operate and handle your data, please review our policies on our website:")
                             
-                            // Replace "link" with an actual URL link if needed.
-                            Text("link")
-                                .foregroundColor(.blue)
-                                .underline()
+                            if let url = URL(string: "https://spindleworlds.web.app/") {
+                                Link("spindleworlds.web.app", destination: url)
+                            }
                         }
                         
+                        // --- UPDATED TEXT ENDS HERE ---
+
                         Spacer() // Push content to the top.
                     }
                     .padding([.top, .bottom])
-                    .padding(.trailing, 50) // Extra right padding to keep text from running off the side.
-                    .padding(.leading, 10)  // Optional: slight left padding inside the right section.
+                    .padding(.trailing, 40)
+                    .padding(.leading, 20)
                 }
                 .frame(width: geometry.size.width * 0.67)
             }
@@ -136,7 +150,6 @@ struct ChatSettingsWindow: View {
 struct ChatSettingsWindow_Previews: PreviewProvider {
     static var previews: some View {
         ChatSettingsWindow()
-            // Add a dummy AppModel for the preview to work correctly
             .environment(AppModel.shared)
     }
 }

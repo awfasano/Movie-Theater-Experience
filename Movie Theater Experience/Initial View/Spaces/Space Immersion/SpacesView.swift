@@ -1,4 +1,3 @@
-
 // SpacesView.swift
 import SwiftUI
 import GroupActivities
@@ -13,6 +12,7 @@ struct SpacesView: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
+    @Environment(\.scenePhase) private var scenePhase
 
     // MARK: - Properties
     @StateObject private var spaceService = SpaceService.shared
@@ -33,6 +33,7 @@ struct SpacesView: View {
     @State private var portalEntity: ModelEntity? = nil
     @State private var portalPaneEntity: ModelEntity? = nil // <-- ENSURE THIS LINE EXISTS
     @State private var userVerticalOffset: Float = 0.0 // <-- ADD THIS LINE
+    @State private var isCleaningUp = false
 
 
 
@@ -86,6 +87,11 @@ struct SpacesView: View {
         .task {
             print("📱 SpacesView appeared")
             await initializeSpace()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .inactive {
+                cleanupView()
+            }
         }
         .onChange(of: sharePlayManager.isSessionActive) { _, isActive in
             if isActive {
@@ -681,6 +687,9 @@ struct SpacesView: View {
 
     
     private func cleanupView() {
+        guard !isCleaningUp else { return }
+        isCleaningUp = true
+        
         // Use the manager to perform the full exit sequence
         windowManager.closeAllSpaceWindows(dismissWindow: dismissWindow)
         windowManager.openMainWindow(openWindow: openWindow)

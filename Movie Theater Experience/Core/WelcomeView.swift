@@ -16,42 +16,34 @@ struct WelcomeView: View {
 
     var body: some View {
         ZStack {
-            // --- START: Animated Aurora Background ---
-            // A container to hold the blurred shapes
+            // --- Animated Aurora Background ---
             ZStack {
-                // Shape 1
                 Circle()
                     .fill(Color.blue.opacity(0.5))
                     .frame(width: 500)
                     .blur(radius: 150)
                     .offset(x: animateCircle1 ? 250 : -250, y: animateCircle1 ? -150 : 150)
                 
-                // Shape 2
                 Circle()
                     .fill(Color.purple.opacity(0.5))
                     .frame(width: 600)
                     .blur(radius: 180)
                     .offset(x: animateCircle2 ? -300 : 300, y: animateCircle2 ? 200 : -200)
                 
-                // Shape 3
                 Circle()
                     .fill(Color.cyan.opacity(0.4))
                     .frame(width: 450)
                     .blur(radius: 130)
                     .offset(x: animateCircle3 ? 150 : -150, y: animateCircle3 ? 250 : -250)
             }
-            // A material layer on top to give it a frosted glass feel
-            // --- END: Animated Aurora Background ---
 
-            // Your main content VStack
+            // --- Main Content VStack ---
             VStack(spacing: 20) {
-                // 1. 3D Scene as the centerpiece
+                // 1. 3D Scene
                 RealityView { content in
-                    // Concurrently load the intro scene and the projector emitter
                     async let introScene = Entity(named: "intro", in: realityKitContentBundle)
                     async let emitter = Entity(named: "projectorEmitter", in: realityKitContentBundle)
                     
-                    // Add both to the content once they are loaded
                     if let scene = try? await introScene {
                         scene.scale = [0.1, 0.1, 0.1]
                         scene.transform.translation.y += -0.075
@@ -72,13 +64,14 @@ struct WelcomeView: View {
 
                 // 2. Animated explanatory text
                 VStack {
-                    Text("Welcome to Spaces")
+                    Text("Welcome to Spiera")
                         .font(.extraLargeTitle2).fontWeight(.bold)
                     
-                    Text("Browse unique spaces, with stories, music, and more.  We have a lot more coming in VisionOS 26\n so stay tuned")
+                    Text("Discover immersive 3D spaces, each filled with unique stories, music, and interactive content. We're just getting started—new worlds and features will be added regularly.")
                         .font(.title3)
                         .multilineTextAlignment(.center)
                         .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true) // <<-- THIS LINE FIXES IT
                         .frame(maxWidth: 500)
                 }
                 .opacity(showContent ? 1 : 0)
@@ -100,12 +93,11 @@ struct WelcomeView: View {
             .padding(40)
         }
         .onAppear {
-            // Trigger the animations when the view appears.
+            // Trigger animations
             withAnimation(.spring(response: 0.8, dampingFraction: 0.7, blendDuration: 1)) {
                 showContent = true
             }
             
-            // Start the background gradient animations with staggered durations
             withAnimation(.linear(duration: 4).repeatForever(autoreverses: true)) {
                 animateCircle1.toggle()
             }

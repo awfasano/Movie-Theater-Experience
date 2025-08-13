@@ -69,20 +69,31 @@ class StorytellerAudioService {
 
                 // --- CORRECTED SECTION START ---
 
-                var createdTap: MTAudioProcessingTap? // 1. Declare the correct type
+                // 1. Declare a variable of the direct, optional type.
+                // --- REVISED SECTION START ---
+                var tap: Unmanaged<MTAudioProcessingTap>?
+
+                // 2. Call the creation function, passing a pointer to the Unmanaged variable.
                 let err = MTAudioProcessingTapCreate(
                     kCFAllocatorDefault,
                     &callbacks,
                     kMTAudioProcessingTapCreationFlag_PostEffects,
-                    &createdTap                      // 2. Pass a pointer to it
+                    &tap
                 )
-                guard err == noErr, let tap = createdTap else { // 3. Safely unwrap
+
+                // 3. Safely unwrap the Unmanaged object and get a memory-managed instance.
+                guard err == noErr, let createdTap = tap else {
                     print("Audio-tap creation failed: \(err)")
                     DispatchQueue.main.async { self.player.replaceCurrentItem(with: item) }
                     return
                 }
 
-                self.tap = tap // 4. Assign directly. Swift manages memory.
+                // 4. Assign the retained value to your class property.
+                self.tap = createdTap.takeRetainedValue()
+
+                // --- REVISED SECTION END ---
+
+                // --- CORRECTED SECTION END ---
 
                 // --- CORRECTED SECTION END ---
 

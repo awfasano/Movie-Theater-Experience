@@ -2,7 +2,7 @@
 //  InteractiveStoryViewModel.swift
 //  Movie Theater Experience
 //
-//  Updated to fix WebSocket connection stuttering
+//  Updated to fix connection state listening and prevent unwanted error pop-ups.
 //
 
 import Foundation
@@ -14,20 +14,21 @@ import QuartzCore
 class InteractiveStoryViewModel: ObservableObject {
     
     // MARK: - Session
-    enum SessionState { case playing, interacting, connecting }
     @Published private(set) var sessionState: SessionState = .playing
 
     // MARK: - Player state
     @Published private(set) var isVideoPlaying = false
     @Published private(set) var isAudioPlaying = false
     @Published var isVideoMuted = false
-    
+    @Published private(set) var isNarrationBuffering = false
+    @Published private(set) var isVideoBuffering = false
+    enum SessionState { case playing, interacting, connecting, disconnected }
+
     // MARK: - Volume & Scrubber
     @Published var volume: Double = 1.0
     @Published var audioCurrentTime: Double = 0
     @Published private(set) var audioDuration: Double = 1.0
-    @Published private(set) var liveTranscript: String = ""
-
+    
     // MARK: - Interaction State
     @Published var isMicMuted = true
     var textDraft = ""
@@ -56,16 +57,14 @@ class InteractiveStoryViewModel: ObservableObject {
     // MARK: - Private
     let story: Story
     private var currentVideoIndex = 0
-    private var cancellables = Set<AnyCancellable>()
+    private var playerCancellables = Set<AnyCancellable>()
+    // **FIX**: A dedicated set of cancellables for the interaction state listener.
+    private var interactionCancellables = Set<AnyCancellable>()
     private var displayLink: CADisplayLink?
     private var timeObserverToken: Any?
     private var isScrubbing = false
     private var wasPlayingBeforeScrub = false
     
-    // MARK: - Storyteller Configuration
-    var storytellerVoice = "Zephyr"
-    var storytellerInstruction = "You are a helpful and creative storyteller."
-
     // MARK: - Init
     init(story: Story) {
         self.story = story
@@ -75,8 +74,8 @@ class InteractiveStoryViewModel: ObservableObject {
     @MainActor
     func prepare() async {
         setupAudioSession()
-        await loadNarrationTrackAsync()
         loadCurrentVideo()
+        loadNarrationTrack()
         startDisplayLink()
         setupVolumeBinding()
         setupVideoPlayerStateObserver()
@@ -88,7 +87,7 @@ class InteractiveStoryViewModel: ObservableObject {
                 self?.videoPlayer.volume = Float(vol)
                 self?.narrationAudioService.player.volume = Float(vol)
             }
-            .store(in: &cancellables)
+            .store(in: &playerCancellables)
     }
     
     private func setupVideoPlayerStateObserver() {
@@ -97,7 +96,12 @@ class InteractiveStoryViewModel: ObservableObject {
             .sink { [weak self] status in
                 self?.isVideoPlaying = (status == .playing)
             }
-            .store(in: &cancellables)
+            .store(in: &playerCancellables)
+        
+        videoPlayer.publisher(for: \.currentItem?.isPlaybackBufferEmpty)
+            .receive(on: DispatchQueue.main)
+            .map { $0 ?? false }
+            .assign(to: &$isVideoBuffering)
     }
 
     // MARK: - Controls
@@ -109,15 +113,20 @@ class InteractiveStoryViewModel: ObservableObject {
         let p = narrationAudioService.player
         p.timeControlStatus == .playing ? p.pause() : p.play()
     }
+    
+    func retryConnection() {
+        skipToInteraction()
+    }
 
     func audioScrubbingChanged(isEditing: Bool) {
         isScrubbing = isEditing
+        let player = narrationAudioService.player
         if isEditing {
-            wasPlayingBeforeScrub = isAudioPlaying
-            narrationAudioService.player.pause()
+            wasPlayingBeforeScrub = (player.timeControlStatus == .playing)
+            player.pause()
         } else {
             seekAudio(to: audioCurrentTime)
-            if wasPlayingBeforeScrub { narrationAudioService.player.play() }
+            if wasPlayingBeforeScrub { player.play() }
         }
     }
     
@@ -134,14 +143,12 @@ class InteractiveStoryViewModel: ObservableObject {
         guard currentVideoIndex > 0 else { return }
         currentVideoIndex -= 1
         loadCurrentVideo()
-        if videoPlayer.timeControlStatus == .playing { videoPlayer.play() }
     }
     
     func nextVideo() {
         guard currentVideoIndex < story.videos.count - 1 else { return }
         currentVideoIndex += 1
         loadCurrentVideo()
-        if videoPlayer.timeControlStatus == .playing { videoPlayer.play() }
     }
     
     func toggleVideoMute() {
@@ -149,22 +156,9 @@ class InteractiveStoryViewModel: ObservableObject {
         videoPlayer.isMuted = isVideoMuted
     }
     
-    private func loadNarrationTrackAsync() async {
-        guard let url = story.audioURL else { return }
-
-        let asset = AVURLAsset(url: url)
-        _ = try? await asset.load(.duration)
-
-        await MainActor.run {
-            narrationAudioService.loadAsset(asset)
-            setupAudioPlayerStateObserver()
-            audioDuration = asset.duration.seconds
-        }
-    }
-    
     private func loadNarrationTrack() {
         guard let url = story.audioURL else { return }
-
+        isNarrationBuffering = true
         narrationAudioService.loadMedia(from: url)
         setupAudioPlayerStateObserver()
 
@@ -173,129 +167,87 @@ class InteractiveStoryViewModel: ObservableObject {
         player.publisher(for: \.currentItem)
             .compactMap { $0 }
             .flatMap { item in
-                item.publisher(for: \.status)
-                    .filter { $0 == .readyToPlay }
-                    .map { _ in item }
+                let bufferingPublisher = item.publisher(for: \.isPlaybackBufferEmpty).map { $0 }
+                let readyPublisher = item.publisher(for: \.status).filter { $0 == .readyToPlay }.map { _ in item.duration.seconds }
+                return Publishers.CombineLatest(bufferingPublisher, readyPublisher)
             }
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] readyItem in
+            .sink { [weak self] (isBuffering, duration) in
                 guard let self = self else { return }
-
-                let durationSeconds = readyItem.duration.seconds
-                if durationSeconds.isFinite && durationSeconds > 0 {
-                    self.audioDuration = durationSeconds
-                }
-
-                if let existingToken = self.timeObserverToken {
-                    player.removeTimeObserver(existingToken)
-                }
-                
-                self.timeObserverToken = player.addPeriodicTimeObserver(
-                    forInterval: CMTime(seconds: 0.1, preferredTimescale: 600),
-                    queue: .main
-                ) { [weak self] time in
-                    guard let self = self, !self.isScrubbing else { return }
-                    self.audioCurrentTime = time.seconds
+                self.isNarrationBuffering = isBuffering
+                if duration.isFinite && duration > 0 { self.audioDuration = duration }
+                if self.timeObserverToken == nil {
+                     self.timeObserverToken = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.1, preferredTimescale: 600), queue: .main) { [weak self] time in
+                        guard let self = self, !self.isScrubbing else { return }
+                        self.audioCurrentTime = time.seconds
+                    }
                 }
             }
-            .store(in: &cancellables)
+            .store(in: &playerCancellables)
     }
 
+    // MARK: - Interaction Flow
+    
     func skipToInteraction() {
-        // Start the transition immediately but show connecting state
-        sessionState = .connecting
+        // 1. Cancel any previous interaction listeners to prevent conflicts.
+        interactionCancellables.removeAll()
         
-        // Pause media immediately to provide instant feedback
+        // 2. Set UI state to connecting.
+        sessionState = .connecting
         videoPlayer.pause()
         narrationAudioService.player.pause()
-        
-        // Clear any previous errors
         errorMessage = ""
         showingError = false
         
-        // Configure the service
-        liveStorytellerService.configure(
-            voice: story.voice,
-            instruction: story.instructions
-        )
-        
-        // Setup monitoring before connection
-        setupConnectionMonitoring()
-        
-        // Connect asynchronously to avoid blocking the main thread
-        Task {
-            await connectToStorytellerService()
-        }
-    }
-    
-    private func setupConnectionMonitoring() {
+        // 3. Set up a NEW listener for this specific connection attempt.
         liveStorytellerService.$status
             .receive(on: DispatchQueue.main)
             .sink { [weak self] status in
-                guard let self = self else { return }
-                
-                switch status {
-                case .connected:
-                    print("✅ Connected to storyteller service")
-                    // Only transition to interacting once actually connected
-                    if self.sessionState == .connecting {
-                        self.sessionState = .interacting
-                    }
-                    
-                case .error(let message):
-                    self.errorMessage = "Audio connection failed: \(message)"
-                    self.showingError = true
-                    // Return to playing state on error
-                    if self.sessionState == .connecting {
-                        self.sessionState = .playing
-                    }
-                    
-                case .permissionDenied:
-                    self.errorMessage = "Microphone permission is required for interaction. Please enable it in Settings."
-                    self.showingError = true
-                    if self.sessionState == .connecting {
-                        self.sessionState = .playing
-                    }
-                    
-                default:
-                    break
-                }
+                self?.handleConnectionStatus(status)
             }
-            .store(in: &cancellables)
+            .store(in: &interactionCancellables)
+        
+        // 4. Start the connection process.
+        liveStorytellerService.connectAndStart(urlString: webSocketURL)
     }
     
-    @MainActor
-    private func connectToStorytellerService() async {
-        // Perform the actual connection on a background queue
-        await withCheckedContinuation { continuation in
-            Task.detached {
-                // This runs on a background thread
-                await MainActor.run {
-                    self.liveStorytellerService.connectAndStart(urlString: self.webSocketURL)
-                    self.liveStorytellerService.setMic(active: false)
-                }
-                continuation.resume()
+    private func handleConnectionStatus(_ status: LiveStorytellerService.Status) {
+        switch status {
+        case .connected:
+            if sessionState == .connecting {
+                sessionState = .interacting
             }
-        }
-    }
-    
-    func retryConnection() {
-        guard sessionState == .interacting || sessionState == .connecting else { return }
-        
-        errorMessage = ""
-        showingError = false
-        sessionState = .connecting
-        
-        liveStorytellerService.disconnect()
-        
-        // Retry connection after a brief delay
-        Task {
-            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
-            await connectToStorytellerService()
+        case .error(let message):
+            // --- MODIFIED SECTION ---
+            // Instead of returning to the story, go to the disconnected state.
+            errorMessage = "Connection lost: \(message)"
+            sessionState = .disconnected
+            // --- END MODIFIED SECTION ---
+
+        case .permissionDenied:
+            errorMessage = "Microphone permission was denied. You can use text chat."
+            showingError = true
+            if sessionState == .connecting {
+                sessionState = .interacting
+            }
+        default:
+            break
         }
     }
 
-    // MARK: - Waveform engine
+    
+    func returnToStory() {
+        // **FIX**: Cancel the interaction listener before disconnecting.
+        // This prevents the listener from catching the "connection closed" error.
+        interactionCancellables.removeAll()
+        liveStorytellerService.disconnect(silent: true)
+        
+        sessionState = .playing
+        showingError = false
+    }
+
+    // MARK: - Lifecycle & Helpers
+    
     private func startDisplayLink() {
         displayLink = CADisplayLink(target: self, selector: #selector(updateWaveform))
         displayLink?.add(to: .main, forMode: .common)
@@ -310,25 +262,13 @@ class InteractiveStoryViewModel: ObservableObject {
         let spec = (sessionState == .playing)
                  ? narrationAudioService.getSpectrum()
                  : liveStorytellerService.getSpectrum()
-
-        if audioLevels.count != spec.count {
-            if audioLevels.count < spec.count {
-                audioLevels += Array(repeating: 0, count: spec.count - audioLevels.count)
-            } else {
-                audioLevels.removeLast(audioLevels.count - spec.count)
-            }
-        }
-
-        let count = min(audioLevels.count, spec.count)
+        if audioLevels.count != spec.count { audioLevels = Array(repeating: 0, count: spec.count) }
         let decay: Float = 0.75
-
-        for i in 0..<count {
-            let target = spec[i]
-            audioLevels[i] = audioLevels[i] * decay + target * (1 - decay)
+        for i in 0..<spec.count {
+            audioLevels[i] = audioLevels[i] * decay + spec[i] * (1 - decay)
         }
     }
 
-    // MARK: - Audio-player KVO
     private func setupAudioPlayerStateObserver() {
         narrationAudioService.player.publisher(for: \.timeControlStatus)
             .receive(on: DispatchQueue.main)
@@ -336,20 +276,20 @@ class InteractiveStoryViewModel: ObservableObject {
                 guard let self = self, !self.isScrubbing else { return }
                 self.isAudioPlaying = (status == .playing)
             }
-            .store(in: &cancellables)
+            .store(in: &playerCancellables)
     }
 
-    // MARK: - AVAudioSession
     private func setupAudioSession() {
-        do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: .mixWithOthers)
-            try AVAudioSession.sharedInstance().setActive(true)
-        } catch {
-            print("AVAudioSession error:", error)
+        Task.detached(priority: .utility) {
+            do {
+                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: .mixWithOthers)
+                try AVAudioSession.sharedInstance().setActive(true)
+            } catch {
+                print("AVAudioSession error:", error)
+            }
         }
     }
     
-    // MARK: - Interaction helpers
     func sendTextMessage() {
         guard sessionState == .interacting, !textDraft.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         liveStorytellerService.send(text: textDraft)
@@ -357,18 +297,12 @@ class InteractiveStoryViewModel: ObservableObject {
     }
 
     func toggleMic() {
-        guard sessionState == .interacting else { return }
+        guard sessionState == .interacting, liveStorytellerService.isMicrophoneAvailable else { return }
         isMicMuted.toggle()
         liveStorytellerService.setMic(active: !isMicMuted)
     }
-
-    func returnToStory() {
-        liveStorytellerService.disconnect(silent: true)
-        cancellables.removeAll()
-        sessionState = .playing
-        showingError = false
-    }
     
+    // **FIX**: Added the missing volume control functions.
     func increaseVolume() {
         volume = min(volume + 0.1, 1.0)
     }
@@ -377,59 +311,29 @@ class InteractiveStoryViewModel: ObservableObject {
         volume = max(volume - 0.1, 0.0)
     }
     
-    // MARK: - Video Loading
     private func loadCurrentVideo() {
-        // 1. Cancel previous observers to prevent leaks
-        cancellables.removeAll()
-        
-        guard let url = URL(string: story.videos[currentVideoIndex]) else { return }
-
-        // 2. Start a background Task to load the asset
-        Task {
-            do {
-                let asset = AVURLAsset(url: url)
-                
-                // 3. Asynchronously load the 'playable' property. This does network I/O in the background.
-                let isPlayable = try await asset.load(.isPlayable)
-
-                if isPlayable {
-                    let newItem = AVPlayerItem(asset: asset)
-                    
-                    // 4. Switch back to the main thread to update the UI
-                    await MainActor.run {
-                        self.videoPlayer.replaceCurrentItem(with: newItem)
-                        
-                        // Re-attach the end-time observer for the new item
-                        NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime, object: self.videoPlayer.currentItem)
-                            .sink { [weak self] _ in self?.videoPlayer.pause() }
-                            .store(in: &self.cancellables)
-                    }
-                } else {
-                    print("Error: Video at \(url) is not playable.")
-                    // You might want to show an error to the user here.
-                }
-            } catch {
-                print("Error loading video asset: \(error)")
-            }
-        }
+        guard currentVideoIndex < story.videos.count, let url = URL(string: story.videos[currentVideoIndex]) else { return }
+        isVideoBuffering = true
+        let newItem = AVPlayerItem(asset: AVURLAsset(url: url))
+        NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime, object: newItem)
+            .sink { [weak self] _ in self?.videoPlayer.pause() }
+            .store(in: &playerCancellables)
+        videoPlayer.replaceCurrentItem(with: newItem)
     }
 
-    // MARK: - Teardown
     func cleanup() {
         videoPlayer.pause()
         narrationAudioService.stop()
-        narrationAudioService.player.pause()
         stopDisplayLink()
-
         liveStorytellerService.disconnect(silent: true)
-        cancellables.removeAll()
+        
+        // Cancel all listeners
+        playerCancellables.removeAll()
+        interactionCancellables.removeAll()
 
         if let tok = timeObserverToken {
             narrationAudioService.player.removeTimeObserver(tok)
             timeObserverToken = nil
         }
-
-        errorMessage = ""
-        showingError = false
     }
 }

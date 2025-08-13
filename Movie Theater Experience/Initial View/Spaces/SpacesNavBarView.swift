@@ -88,11 +88,11 @@ struct SpacesNavBarView: View {
                 
                 // Vertical Offset
                 HStack(spacing: 10) {
-                    Button(action: { moveUserVertically(amount: verticalIncrement) }) { Image(systemName: "arrow.up") }
+                    Button(action: { moveUserVertically(amount: verticalIncrement) }) { Image(systemName: "arrow.down") }
                         .buttonStyle(.bordered)
                     Text("\(String(format: "%.1f", verticalOffset))m")
                         .font(.caption).monospacedDigit().frame(width: 40).foregroundColor(.secondary)
-                    Button(action: { moveUserVertically(amount: -verticalIncrement) }) { Image(systemName: "arrow.down") }
+                    Button(action: { moveUserVertically(amount: -verticalIncrement) }) { Image(systemName: "arrow.up") }
                         .buttonStyle(.bordered)
                 }
             }
