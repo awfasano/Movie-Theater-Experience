@@ -40,7 +40,7 @@ class InteractiveStoryViewModel: ObservableObject {
     private let barCount = 128
     @Published private(set) var audioLevels: [Float]
     
-    let webSocketURL = "wss://storyteller-457201302256.us-east5.run.app/ws"
+    let webSocketURL = "wss://storyteller-457201302256.us-east5.run.app"
 
     // MARK: - Services
     private(set) var videoPlayer = AVPlayer()
@@ -188,18 +188,28 @@ class InteractiveStoryViewModel: ObservableObject {
 
     // MARK: - Interaction Flow
     
+    // In InteractiveStoryViewModel.swift
+
     func skipToInteraction() {
-        // 1. Cancel any previous interaction listeners to prevent conflicts.
+        // 1. Cancel any previous interaction listeners to prevent conflicts
+        // or duplicate connection attempts.
         interactionCancellables.removeAll()
-        
-        // 2. Set UI state to connecting.
-        sessionState = .connecting
+
+        // 2. Fully stop the narration audio service and pause the video. This
+        // ensures the audio tap is properly detached before the live service
+        // tries to reconfigure the AVAudioSession. This is the key fix
+        // for the crash.
         videoPlayer.pause()
-        narrationAudioService.player.pause()
+        narrationAudioService.stop()
+        
+        // 3. Set the UI state to "connecting" and clear any old errors.
+        sessionState = .connecting
         errorMessage = ""
         showingError = false
         
-        // 3. Set up a NEW listener for this specific connection attempt.
+        // 4. Set up a NEW listener for this specific connection attempt. This
+        // listener will handle the outcome (success or failure) of the
+        // WebSocket connection.
         liveStorytellerService.$status
             .receive(on: DispatchQueue.main)
             .sink { [weak self] status in
@@ -207,7 +217,7 @@ class InteractiveStoryViewModel: ObservableObject {
             }
             .store(in: &interactionCancellables)
         
-        // 4. Start the connection process.
+        // 5. Start the connection process.
         liveStorytellerService.connectAndStart(urlString: webSocketURL)
     }
     
@@ -217,12 +227,21 @@ class InteractiveStoryViewModel: ObservableObject {
             if sessionState == .connecting {
                 sessionState = .interacting
             }
+
         case .error(let message):
-            // --- MODIFIED SECTION ---
-            // Instead of returning to the story, go to the disconnected state.
+            // An error occurred (e.g., the server was unreachable).
+            // Update the UI to show the disconnected state.
             errorMessage = "Connection lost: \(message)"
             sessionState = .disconnected
-            // --- END MODIFIED SECTION ---
+            
+            // *** ADD THIS LINE TO THE FUNCTION ***
+            //
+            // This is the critical fix. By resetting the audio session back
+            // to playback mode, you return the app to a stable state. This
+            // prevents the crash when "Retry" is pressed or the view is
+            // dismissed because all audio components are now in a
+            // consistent environment.
+            setupAudioSession()
 
         case .permissionDenied:
             errorMessage = "Microphone permission was denied. You can use text chat."
@@ -230,20 +249,38 @@ class InteractiveStoryViewModel: ObservableObject {
             if sessionState == .connecting {
                 sessionState = .interacting
             }
+            
         default:
             break
         }
     }
 
     
+    // In InteractiveStoryViewModel.swift
+
+
     func returnToStory() {
-        // **FIX**: Cancel the interaction listener before disconnecting.
-        // This prevents the listener from catching the "connection closed" error.
+        // 1. Cancel the active connection state listener. This is crucial to
+        // prevent it from incorrectly catching the "connection closed"
+        // error when we manually disconnect the WebSocket.
         interactionCancellables.removeAll()
+        
+        // 2. Disconnect the live storyteller service. The `silent: true`
+        // parameter ensures this doesn't unnecessarily change the UI state.
         liveStorytellerService.disconnect(silent: true)
         
+        // 3. Set the UI state back to the main story playback view.
         sessionState = .playing
         showingError = false
+        
+        // 4. IMPORTANT: Restore the shared AVAudioSession to a playback-only
+        // mode. This creates a clean environment for the narration player.
+        setupAudioSession()
+        
+        // 5. Re-initialize the narration track. This re-creates the audio
+        // player and its processing tap, ensuring they are ready for use
+        // the next time the user wants to interact.
+        loadNarrationTrack()
     }
 
     // MARK: - Lifecycle & Helpers
@@ -321,13 +358,24 @@ class InteractiveStoryViewModel: ObservableObject {
         videoPlayer.replaceCurrentItem(with: newItem)
     }
 
+    // In InteractiveStoryViewModel.swift
+
     func cleanup() {
+        // 1. Stop all active audio players immediately.
         videoPlayer.pause()
-        narrationAudioService.stop()
-        stopDisplayLink()
         liveStorytellerService.disconnect(silent: true)
         
-        // Cancel all listeners
+        // 2. IMPORTANT: Reset the shared AVAudioSession back to a neutral
+        // playback state. This MUST happen before dismantling the narration
+        // service, which expects this state.
+        setupAudioSession()
+
+        // 3. Now that the audio environment is in a known-good state, it is
+        // safe to stop the narration service and its sensitive audio tap.
+        narrationAudioService.stop()
+
+        // 4. Clean up all remaining components and listeners.
+        stopDisplayLink()
         playerCancellables.removeAll()
         interactionCancellables.removeAll()
 
