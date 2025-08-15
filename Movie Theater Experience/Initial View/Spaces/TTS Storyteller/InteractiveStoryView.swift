@@ -2,7 +2,7 @@
 //  InteractiveStoryView.swift
 //  Movie Theater Experience
 //
-//  Updated to fix compiler errors and connection state handling.
+//  Updated to include transcript display during interaction
 //
 
 import SwiftUI
@@ -12,6 +12,7 @@ import Accelerate
 struct InteractiveStoryView: View {
 
     @StateObject private var viewModel: InteractiveStoryViewModel
+    @State private var showTranscripts = false
     
     init(story: Story) {
         _viewModel = StateObject(wrappedValue: InteractiveStoryViewModel(story: story))
@@ -63,7 +64,6 @@ struct InteractiveStoryView: View {
                     interactingOverlay
                 case .disconnected:
                     disconnectedOverlay
-                // --- END ---
                 }
             }
             .animation(.easeInOut, value: viewModel.sessionState)
@@ -77,12 +77,14 @@ struct InteractiveStoryView: View {
         } message: {
             Text(viewModel.errorMessage)
         }
+        .sheet(isPresented: $showTranscripts) {
+            transcriptSheet
+        }
     }
 
     // MARK: - Top-right video controls
     private var topRightVideoControls: some View {
         HStack(spacing: 10) {
-            // **FIX**: Using explicit closure syntax for all buttons to avoid compiler errors.
             Button(action: { viewModel.previousVideo() }) { Image(systemName: "backward.fill") }
             Button(action: { viewModel.replayCurrentVideo() }) { Image(systemName: "gobackward") }
             Button(action: { viewModel.playPauseVideoToggle() }) { Image(systemName: viewModel.isVideoPlaying ? "pause.fill" : "play.fill") }
@@ -148,7 +150,7 @@ struct InteractiveStoryView: View {
                 .buttonStyle(.bordered)
                 .tint(.secondary)
                 
-                Button(action: { viewModel.retryConnection() }) { // <-- Correct syntax
+                Button(action: { viewModel.retryConnection() }) {
                     Label("Retry", systemImage: "arrow.clockwise")
                 }
                 .buttonStyle(.borderedProminent)
@@ -237,19 +239,45 @@ struct InteractiveStoryView: View {
         .padding(.horizontal)
     }
 
-    // MARK: - Interaction overlay
+    // MARK: - Interaction overlay with transcripts
     private var interactingOverlay: some View {
         VStack(spacing: 10) {
-            connectionStatusIndicator
-                .transition(.opacity)
+            // Status and transcript toggle
+            HStack {
+                connectionStatusIndicator
+                Spacer()
+                
+                // Show transcript count badge if there are messages
+                if !viewModel.liveStorytellerService.transcripts.isEmpty {
+                    Button(action: { showTranscripts.toggle() }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "text.bubble")
+                            Text("\(viewModel.liveStorytellerService.transcripts.count)")
+                                .font(.caption)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.purple)
+                                .foregroundColor(.white)
+                                .clipShape(Capsule())
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.purple)
+                }
+            }
+            .padding(.horizontal, 24)
+            .transition(.opacity)
             
             AudioWaveformView(audioLevels: viewModel.audioLevels)
                 .frame(height: 50)
 
             HStack(spacing: 12) {
                 if viewModel.liveStorytellerService.isMicrophoneAvailable {
-                    Button(action: { viewModel.toggleMic() }) { Image(systemName: viewModel.isMicMuted ? "mic.slash.fill" : "mic.fill") }
-                        .font(.title3)
+                    Button(action: { viewModel.toggleMic() }) {
+                        Image(systemName: viewModel.isMicMuted ? "mic.slash.fill" : "mic.fill")
+                    }
+                    .font(.title3)
+                    .foregroundColor(viewModel.isMicMuted ? .gray : .purple)
                 } else {
                     Image(systemName: "mic.slash.fill")
                         .font(.title3)
@@ -260,7 +288,10 @@ struct InteractiveStoryView: View {
                 TextField("Type a message…", text: $viewModel.textDraft, onCommit: viewModel.sendTextMessage)
                     .textFieldStyle(.roundedBorder)
 
-                Button(action: { viewModel.sendTextMessage() }) { Image(systemName: "paperplane.fill") }
+                Button(action: { viewModel.sendTextMessage() }) {
+                    Image(systemName: "paperplane.fill")
+                }
+                .disabled(viewModel.textDraft.isEmpty)
 
                 Button(action: { viewModel.returnToStory() }) { Text("Back") }
                     .buttonStyle(.bordered)
@@ -276,6 +307,22 @@ struct InteractiveStoryView: View {
         .padding(.vertical, 18)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .padding(.horizontal)
+    }
+    
+    // MARK: - Transcript Sheet
+    private var transcriptSheet: some View {
+        NavigationView {
+            TranscriptView(transcripts: viewModel.liveStorytellerService.transcripts)
+                .navigationTitle("Conversation")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Done") {
+                            showTranscripts = false
+                        }
+                    }
+                }
+        }
     }
 
     private func formatTime(_ seconds: Double) -> String {

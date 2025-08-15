@@ -91,6 +91,7 @@
 		C49134452B9C1F6B00A824DF /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134442B9C1F6B00A824DF /* ChatViewModel.swift */; };
 		C49134472B9C303600A824DF /* ChatBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134462B9C303600A824DF /* ChatBubble.swift */; };
 		C491344B2B9C4B4800A824DF /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C491344A2B9C4B4800A824DF /* Extensions.swift */; };
+		C4ABF0A82E4E725400284784 /* Transcripts.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4ABF0A72E4E725400284784 /* Transcripts.swift */; };
 		C4AF48492C9E65CE006FE6C8 /* TheatreEntityWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AF48482C9E65CE006FE6C8 /* TheatreEntityWrapper.swift */; };
 		C4AF48A92C9E6D61006FE6C8 /* ToggleImmersiveSpaceButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AF48A82C9E6D61006FE6C8 /* ToggleImmersiveSpaceButton.swift */; };
 		C4AF48AB2C9E7288006FE6C8 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AF48AA2C9E7288006FE6C8 /* AppModel.swift */; };
@@ -281,6 +282,7 @@
 		C49134442B9C1F6B00A824DF /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
 		C49134462B9C303600A824DF /* ChatBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatBubble.swift; sourceTree = "<group>"; };
 		C491344A2B9C4B4800A824DF /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		C4ABF0A72E4E725400284784 /* Transcripts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transcripts.swift; sourceTree = "<group>"; };
 		C4AF48482C9E65CE006FE6C8 /* TheatreEntityWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TheatreEntityWrapper.swift; sourceTree = "<group>"; };
 		C4AF48A82C9E6D61006FE6C8 /* ToggleImmersiveSpaceButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToggleImmersiveSpaceButton.swift; sourceTree = "<group>"; };
 		C4AF48AA2C9E7288006FE6C8 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
@@ -418,6 +420,7 @@
 				C41C81612E093B970050BCB3 /* InteractiveStoryViewModel.swift */,
 				C45D34702E0740F0004407F4 /* InteractiveStoryView.swift */,
 				C416BA492E0A4E35006399D8 /* BarePlayerView.swift */,
+				C4ABF0A72E4E725400284784 /* Transcripts.swift */,
 				C45D34762E074824004407F4 /* AudioWaveFormView.swift */,
 				C416BA472E09DDA7006399D8 /* WaveformViewModel.swift */,
 				C45D34722E074203004407F4 /* LiveStorytellerService.swift */,
@@ -996,6 +999,7 @@
 				C4FA39F02E218923004BB564 /* MovementControlView.swift in Sources */,
 				C4D88CAC2D752CEB004F226E /* FirestoreManager.swift in Sources */,
 				C413FA4F2DBC2E41008FABEB /* AudioPositionSynchronizer.swift in Sources */,
+				C4ABF0A82E4E725400284784 /* Transcripts.swift in Sources */,
 				C4D88CA82D74F9BF004F226E /* SeatSelectionPanel.swift in Sources */,
 				C4D88CA32D74F86B004F226E /* SpacesEntityWrapper.swift in Sources */,
 				C4E71ACE2DC69F490017914B /* SeatOrbEntities.swift in Sources */,

@@ -2,7 +2,7 @@
 //  LiveStorytellerService.swift
 //  Movie Theater Experience
 //
-//  Updated to work with the deployed Gemini Live API web service
+//  Fixed to match the web client's message format
 //
 
 import Foundation
@@ -116,38 +116,47 @@ final class LiveStorytellerService: ObservableObject {
             self.webSocketTask = URLSession.shared.webSocketTask(with: request)
             self.webSocketTask?.resume()
             
+            // Start listening for messages first
+            self.listenForMessages()
+            
             // Send configuration immediately after connection
             Task {
                 try? await Task.sleep(nanoseconds: 100_000_000) // 100ms delay
-                self.sendConfiguration()
+                await self.sendConfiguration()
             }
             
-            self.listenForMessages()
             self.startPingTimer()
         }
     }
     
-    private func sendConfiguration() {
+    private func sendConfiguration() async {
+        // Match the exact format the web client sends
         let config: [String: Any] = [
             "system_instruction": instruction,
             "voice_name": voice,
             "max_context_turns": 8
         ]
         
-        guard let jsonData = try? JSONSerialization.data(withJSONObject: config),
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: config, options: []),
               let jsonString = String(data: jsonData, encoding: .utf8) else {
-            status = .error("Failed to create configuration")
+            await MainActor.run {
+                self.status = .error("Failed to create configuration")
+            }
             return
         }
         
+        print("[LiveStoryteller] Sending config: \(jsonString)")
+        
         webSocketTask?.send(.string(jsonString)) { [weak self] error in
-            if let error = error {
-                Task { @MainActor in
+            Task { @MainActor in
+                if let error = error {
                     self?.status = .error("Failed to send config: \(error.localizedDescription)")
-                }
-            } else {
-                Task { @MainActor in
+                    print("[LiveStoryteller] Config send error: \(error)")
+                } else {
+                    // Wait for the server to be ready before marking as connected
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 500ms
                     self?.status = .connected
+                    print("[LiveStoryteller] Successfully connected and configured")
                 }
             }
         }
@@ -172,7 +181,7 @@ final class LiveStorytellerService: ObservableObject {
         }
         
         audioPlayer.stop()
-        hasStartedPlayback = false // <-- ADD THIS LINE
+        hasStartedPlayback = false
 
         if !silent {
             status = .idle
@@ -195,6 +204,7 @@ final class LiveStorytellerService: ObservableObject {
                 if (error as NSError).code != NSURLErrorCancelled {
                     Task { @MainActor in
                         self.status = .error("Connection lost: \(error.localizedDescription)")
+                        print("[LiveStoryteller] WebSocket error: \(error)")
                     }
                 }
             }
@@ -204,6 +214,8 @@ final class LiveStorytellerService: ObservableObject {
     private func processMessage(_ message: URLSessionWebSocketTask.Message) {
         switch message {
         case .string(let text):
+            print("[LiveStoryteller] Received text message: \(text)")
+            
             // Handle JSON messages (transcripts)
             if let data = text.data(using: .utf8),
                let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -237,7 +249,7 @@ final class LiveStorytellerService: ObservableObject {
             
         case .data(let data):
             // Handle audio data (PCM16 @ 24kHz from server)
-            print("✅ [Audio Debug] Received \(data.count) bytes of audio data.") // <-- ADD THIS
+            print("[LiveStoryteller] Received audio data: \(data.count) bytes")
             handleIncomingAudio(data)
             
         @unknown default:
@@ -246,24 +258,43 @@ final class LiveStorytellerService: ObservableObject {
     }
     
     func send(text: String) {
-        guard status == .connected else { return }
+        guard status == .connected else {
+            print("[LiveStoryteller] Cannot send - not connected (status: \(status))")
+            return
+        }
         
+        // Match the exact format the web client uses for text messages
         let message: [String: Any] = [
             "type": "text",
             "data": text
         ]
         
-        guard let jsonData = try? JSONSerialization.data(withJSONObject: message),
-              let jsonString = String(data: jsonData, encoding: .utf8) else { return }
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: message, options: []),
+              let jsonString = String(data: jsonData, encoding: .utf8) else {
+            print("[LiveStoryteller] Failed to encode text message")
+            return
+        }
         
-        webSocketTask?.send(.string(jsonString)) { _ in }
+        print("[LiveStoryteller] Sending text: \(jsonString)")
+        
+        webSocketTask?.send(.string(jsonString)) { error in
+            if let error = error {
+                print("[LiveStoryteller] Failed to send text: \(error)")
+            } else {
+                print("[LiveStoryteller] Text sent successfully")
+            }
+        }
     }
     
     private func startPingTimer() {
         Task {
             while webSocketTask != nil {
                 try? await Task.sleep(nanoseconds: 30_000_000_000) // 30 seconds
-                webSocketTask?.sendPing { _ in }
+                webSocketTask?.sendPing { error in
+                    if let error = error {
+                        print("[LiveStoryteller] Ping failed: \(error)")
+                    }
+                }
             }
         }
     }
@@ -342,12 +373,7 @@ final class LiveStorytellerService: ObservableObject {
         }
     }
     
-    // In LiveStorytellerService.swift
-
-    // In LiveStorytellerService.swift
-
     private func handleIncomingAudio(_ data: Data) {
-        // This function's audio conversion logic remains the same.
         guard let pcmBuffer = data.toPCMBuffer(format: playbackFormat) else { return }
         let outputFormat = audioEngine.mainMixerNode.outputFormat(forBus: 0)
         if playbackConverter == nil {
@@ -362,13 +388,10 @@ final class LiveStorytellerService: ObservableObject {
             return pcmBuffer
         }
 
-        // The queuing logic is what's new.
         if error == nil {
             pcmQueue.async {
                 self.audioBufferQueue.append(outputBuffer)
 
-                // If playback hasn't started and we've collected enough chunks,
-                // kick off the playback loop on the main thread.
                 if !self.hasStartedPlayback && self.audioBufferQueue.count >= self.audioBufferThreshold {
                     Task { @MainActor in
                         self.hasStartedPlayback = true
@@ -381,8 +404,6 @@ final class LiveStorytellerService: ObservableObject {
 
     private func playNextBuffer() {
         pcmQueue.async {
-            // If the queue runs out of data, stop and reset the flag.
-            // Playback will restart automatically once the buffer fills up again.
             guard !self.audioBufferQueue.isEmpty else {
                 Task { @MainActor in self.hasStartedPlayback = false }
                 return
@@ -391,12 +412,9 @@ final class LiveStorytellerService: ObservableObject {
             let bufferToPlay = self.audioBufferQueue.removeFirst()
 
             Task { @MainActor in
-                // Ensure the audio engine and player node are running.
                 if !self.audioEngine.isRunning { try? self.audioEngine.start() }
                 if !self.audioPlayer.isPlaying { self.audioPlayer.play() }
 
-                // Schedule the buffer. The completion handler immediately calls this
-                // function again, creating a self-sustaining and seamless playback loop.
                 self.audioPlayer.scheduleBuffer(bufferToPlay) {
                     self.playNextBuffer()
                 }
