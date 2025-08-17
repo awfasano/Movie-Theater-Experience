@@ -167,13 +167,16 @@ struct Movie_Theater_ExperienceApp: App {
         
         
         // World Builder Immersive Space
+        // World Builder Immersive Space
         ImmersiveSpace(id: AppModel.worldBuilderSpaceID) {
             WorldBuilderView()
                 .environment(appModel)
+                .environmentObject(WorldBuilderManager.shared)
+                .environmentObject(EnvironmentManager.shared)     // <-- ✅ add this
                 .environmentObject(immersiveSpaceManager)
                 .environmentObject(windowManager)
         }
-        .immersionStyle(selection: .constant(.mixed), in: .mixed)
+        .immersionStyle(selection: .constant(.full), in: .full)
 
         // World Builder Controls Window
         WindowGroup("World Builder Controls", id: "worldBuilderControls") {

@@ -1,11 +1,5 @@
-//
-//  WorldBuilderLaunchView.swift
-//  Movie Theater Experience
-//
-//  Created by Anthony Fasano on 8/13/25.
-//
-
 import Foundation
+import SwiftUI
 
 struct WorldBuilderLaunchView: View {
     @Environment(AppModel.self) private var appModel
@@ -46,7 +40,7 @@ struct WorldBuilderLaunchView: View {
             }
             .controlSize(.extraLarge)
             .buttonStyle(.borderedProminent)
-            .disabled(!immersiveSpaceManager.canTransition)
+            .disabled(!appModel.canTransitionImmersiveSpace) // Use appModel's computed property
             
             if isInWorldBuilder {
                 Text("Voice control is active. Start speaking to create!")
@@ -65,10 +59,11 @@ struct WorldBuilderLaunchView: View {
                 await dismissImmersiveSpace()
                 isInWorldBuilder = false
             } else {
-                // Enter world builder
-                let success = await appModel.switchToSpace(AppModel.worldBuilderSpaceID)
+                // Enter world builder - worldBuilderSpaceID is a String, not optional
+                let worldBuilderSpaceID = AppModel.worldBuilderSpaceID
+                let success = await appModel.switchToSpace(worldBuilderSpaceID)
                 if success {
-                    await openImmersiveSpace(id: AppModel.worldBuilderSpaceID)
+                    await openImmersiveSpace(id: worldBuilderSpaceID)
                     openWindow(id: "worldBuilderControls")
                     isInWorldBuilder = true
                 }

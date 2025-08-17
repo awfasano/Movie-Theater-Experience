@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import RealityKit
 
 struct PlacementGrid {
     let entity: Entity

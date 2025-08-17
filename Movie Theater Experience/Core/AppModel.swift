@@ -22,7 +22,8 @@ class AppModel: ObservableObject { // Removed ObservableObject as @Observable is
     static let shared = AppModel() // If you intend to use it as a singleton
     let immersiveSpaceID = "ImmersiveSpace" // Matches your ImmersiveSpace ID
     let spacesID = "Spaces" // Matches your Spaces ImmersiveSpace ID
-    
+    static let worldBuilderSpaceID = "WorldBuilderSpace"
+
     // MARK: - Published State (or properties for @Observable)
     var selectedVideoURL: URL?
     var currentEvent: CalendarEvent?
