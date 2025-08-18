@@ -1,4 +1,3 @@
-
 // SpacesNavBarView.swift
 import SwiftUI
 
@@ -15,7 +14,6 @@ extension Notification.Name {
     /// Used to trigger song fetching for a space.
     static let FetchSongsForSpace = Notification.Name("FetchSongsForSpace")
 }
-
 
 // MARK: - Spaces Nav Bar View
 struct SpacesNavBarView: View {
@@ -44,8 +42,8 @@ struct SpacesNavBarView: View {
     @State private var isOpeningUserList = false
     @State private var isOpeningChat = false
     @State private var isOpeningAudioControls = false
-    @State private var isOpeningBrowser = false // <-- ADDED
-    @State private var isOpeningSettings = false // <-- ADDED
+    @State private var isOpeningBrowser = false
+    @State private var isOpeningSettings = false
     
     // Services
     @StateObject private var audioService = AudioService.shared
@@ -131,14 +129,21 @@ struct SpacesNavBarView: View {
             .buttonStyle(.bordered)
             .help("Music Controls")
             
-            // Web Browser -- ADDED
+            // Web Browser
             windowOpeningButton(id: "webBrowserWindow", state: $isOpeningBrowser, systemImage: "safari.fill", helpText: "Open Web Browser")
             
-            // Settings -- ADDED
+            // Settings
             windowOpeningButton(id: "chatSettings", state: $isOpeningSettings, systemImage: "gear", helpText: "Open Settings")
         }
         .padding()
-        .background(.ultraThinMaterial)
+        // UPDATED: More opaque background options
+        .background(.thickMaterial)
+        
+        // Alternative background options (replace .thickMaterial above with one of these):
+        // .background(.regularMaterial)  // Even less translucent
+        // .background(.bar)              // Most opaque material
+        // .background(Color.black.opacity(0.3))  // Custom semi-transparent
+        // .background(.thinMaterial)     // Still translucent but better than ultraThin
         .cornerRadius(10)
         .shadow(radius: 5)
         .opacity(isContentHidden ? 0.0 : 1.0)
@@ -185,7 +190,6 @@ struct SpacesNavBarView: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: state.wrappedValue)
     }
 }
-
 
 // MARK: - Preview
 struct SpacesNavBarView_Previews: PreviewProvider {

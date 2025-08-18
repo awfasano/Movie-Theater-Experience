@@ -1,6 +1,8 @@
 import SwiftUI
+
 struct SpaceCard: View {
     let space: SpaceData
+    let isHighlighted: Bool // NEW: Parameter to control highlighting
     // Add a closure to handle the info button tap.
     var onInfoTapped: () -> Void
 
@@ -23,6 +25,35 @@ struct SpaceCard: View {
         return "\(space.currentUserCount)/\(space.maxUserCount) • \(percentage)%"
     }
     
+    // NEW: Computed properties for highlighting effects
+    private var cardScale: CGFloat {
+        isHighlighted ? 1.08 : (isHovering ? 1.03 : 1.0)
+    }
+    
+    private var cardOpacity: Double {
+        isHighlighted ? 1.0 : (isHovering ? 0.95 : 0.9)
+    }
+    
+    private var shadowRadius: CGFloat {
+        isHighlighted ? 25 : (isHovering ? 15 : 5)
+    }
+    
+    private var shadowOpacity: Double {
+        isHighlighted ? 0.8 : (isHovering ? 0.4 : 0.2)
+    }
+    
+    private var borderColor: Color {
+        isHighlighted ? .blue : .clear
+    }
+    
+    private var borderWidth: CGFloat {
+        isHighlighted ? 4 : 0
+    }
+    
+    private var glowEffect: Color {
+        isHighlighted ? .blue.opacity(0.3) : .clear
+    }
+    
     // MARK: - Body
     
     var body: some View {
@@ -34,9 +65,14 @@ struct SpaceCard: View {
                     AsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let image):
-                            image.resizable().aspectRatio(contentMode: .fill)
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
                         case .failure:
-                            Image(systemName: "photo").font(.largeTitle).frame(maxWidth: .infinity, maxHeight: .infinity).background(.thinMaterial)
+                            Image(systemName: "photo")
+                                .font(.largeTitle)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .background(.thinMaterial)
                         case .empty:
                             ProgressView()
                         @unknown default:
@@ -69,12 +105,20 @@ struct SpaceCard: View {
                         .lineLimit(1)
                 }
                 .padding()
+                
+                // NEW: Highlight indicator overlay
+                if isHighlighted {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.blue, lineWidth: 2)
+                        .background(Color.blue.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
             }
             .frame(height: 180)
             // The .clipped() modifier ensures the image never draws outside the frame.
             .clipped()
             .overlay(alignment: .topTrailing) {
-                // NEW: Info Circle Button
+                // Info Circle Button
                 Button(action: { showAttribution.toggle() }) {
                     Label("More Info", systemImage: "info.circle.fill")
                         .labelStyle(.iconOnly)
@@ -124,15 +168,46 @@ struct SpaceCard: View {
         }
         .glassBackgroundEffect()
         .clipShape(RoundedRectangle(cornerRadius: 24))
-        // REMOVED: .scaleEffect to prevent cards from overlapping on hover.
-        .hoverEffect(.lift)
-        .onHover { hovering in
-            withAnimation(.spring()) {
-                isHovering = hovering
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(borderColor, lineWidth: borderWidth)
+        )
+        .background(
+            // Glow effect for highlighted state
+            RoundedRectangle(cornerRadius: 24)
+                .fill(glowEffect)
+                .blur(radius: 10)
+                .scaleEffect(1.1)
+        )
+        .scaleEffect(cardScale)
+        .opacity(cardOpacity)
+        .hoverEffect(.highlight) // Use .highlight for better gaze feedback
+        .onContinuousHover { phase in
+            switch phase {
+            case .active(_):
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    isHovering = true
+                }
+            case .ended:
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    isHovering = false
+                }
             }
         }
-        .shadow(color: .black.opacity(isHovering ? 0.4 : 0.2), radius: isHovering ? 15 : 5)
-        .animation(.spring(), value: isHovering)
+        .shadow(
+            color: .black.opacity(shadowOpacity),
+            radius: shadowRadius
+        )
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHighlighted)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovering)
     }
 }
 
+// MARK: - Convenience Initializer for Backward Compatibility
+extension SpaceCard {
+    init(space: SpaceData, onInfoTapped: @escaping () -> Void) {
+        self.space = space
+        self.isHighlighted = false
+        self.onInfoTapped = onInfoTapped
+    }
+}

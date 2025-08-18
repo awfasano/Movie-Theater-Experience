@@ -19,6 +19,7 @@ struct SpaceBrowserIntegration: View {
     @State private var loadError: Error?
     @State private var loadingProgress: Double = 0.0
     @State private var loadingMessage: String = ""
+    @State private var hoveredSpaceId: String? = nil // Track which space is being looked at
 
     // MARK: - Child Views
 
@@ -26,7 +27,10 @@ struct SpaceBrowserIntegration: View {
         ScrollView {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 300))], spacing: 24) {
                 ForEach(Array(service.spaces.enumerated()), id: \.element.id) { index, space in
-                    SpaceCard(space: space) {
+                    SpaceCard(
+                        space: space,
+                        isHighlighted: hoveredSpaceId == space.id // Pass highlighting state
+                    ) {
                         // Define the action for the info button here.
                         // For example, you could open a detail window:
                         // openWindow(value: space.id)
@@ -39,6 +43,14 @@ struct SpaceBrowserIntegration: View {
                             await enterImmersiveSpace(space: space)
                         }
                     }
+                    .onContinuousHover { phase in
+                        switch phase {
+                        case .active(_):
+                            hoveredSpaceId = space.id
+                        case .ended:
+                            hoveredSpaceId = nil
+                        }
+                    }
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     .animation(.spring(duration: 0.5).delay(Double(index) * 0.05), value: service.spaces)
                 }
@@ -49,7 +61,14 @@ struct SpaceBrowserIntegration: View {
     
     private var loadingOverlay: some View {
         ZStack {
-            Color.black.opacity(0.5).ignoresSafeArea()
+            // Full screen background to capture all touches
+            Color.clear
+                .contentShape(Rectangle())
+                .ignoresSafeArea(.all)
+            
+            // Dark background
+            Color.black.opacity(0.7)
+                .ignoresSafeArea(.all)
             
             VStack(spacing: 20) {
                 Image(systemName: "cube.transparent.fill")
@@ -85,6 +104,7 @@ struct SpaceBrowserIntegration: View {
             .cornerRadius(20)
             .shadow(radius: 10)
         }
+        .zIndex(1000) // Ensure loading overlay is above everything
         .transition(.opacity)
         .animation(.easeInOut(duration: 0.3), value: isLoadingSpace)
     }
@@ -92,37 +112,46 @@ struct SpaceBrowserIntegration: View {
     // MARK: - Body
     
     var body: some View {
-        VStack {
-            if service.isLoading {
-                ProgressView("Loading spaces...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let errorMessage = service.errorMessage {
-                VStack(spacing: 16) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 40))
-                        .foregroundColor(.red)
-                    Text(errorMessage)
-                        .multilineTextAlignment(.center)
-                    Button("Retry") {
-                        service.fetchSpaces()
+        ZStack {
+            // Main content
+            VStack {
+                if service.isLoading {
+                    ProgressView("Loading spaces...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let errorMessage = service.errorMessage {
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 40))
+                            .foregroundColor(.red)
+                        Text(errorMessage)
+                            .multilineTextAlignment(.center)
+                        Button("Retry") {
+                            service.fetchSpaces()
+                        }
+                        .buttonStyle(.bordered)
                     }
-                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if service.spaces.isEmpty {
+                    VStack(spacing: 20) {
+                        Image(systemName: "cube.transparent")
+                            .font(.system(size: 60))
+                            .foregroundColor(.secondary)
+                        Text("No Spaces Available")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        Text("No volumetric spaces found in the database.")
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    spaceGrid
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if service.spaces.isEmpty {
-                VStack(spacing: 20) {
-                    Image(systemName: "cube.transparent")
-                        .font(.system(size: 60))
-                        .foregroundColor(.secondary)
-                    Text("No Spaces Available")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                    Text("No volumetric spaces found in the database.")
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                spaceGrid
+            }
+            .zIndex(0) // Ensure main content is below loading overlay
+            
+            // Loading overlay - only show when loading
+            if isLoadingSpace {
+                loadingOverlay
             }
         }
         .toolbar {
@@ -145,11 +174,6 @@ struct SpaceBrowserIntegration: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text("Please go to the Settings app and set a username before joining a shared space.")
-        }
-        .overlay {
-            if isLoadingSpace {
-                loadingOverlay
-            }
         }
     }
     
