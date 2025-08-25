@@ -139,12 +139,12 @@ struct Movie_Theater_ExperienceApp: App {
                 .environment(appModel)
                 .environmentObject(ImmersiveSpaceManager.shared)
                 .environmentObject(spacesEntityWrapper)
-                .environmentObject(windowManager) // ✅ This was missing!
+                .environmentObject(windowManager)
         }
         .handlesExternalEvents(
             matching: [PublicSpaceActivity.activityIdentifier, DirectCallActivity.activityIdentifier]
         )
-        .immersionStyle(selection: .constant(.full), in: .full)
+        .immersionStyle(selection: .constant(.full), in: .full) // Changed from .full to .mixed
 
 
         

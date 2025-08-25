@@ -44,6 +44,8 @@
 		C416BA4A2E0A4E35006399D8 /* BarePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C416BA492E0A4E35006399D8 /* BarePlayerView.swift */; };
 		C416BA4D2E0FCB87006399D8 /* StoryRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C416BA4C2E0FCB87006399D8 /* StoryRowView.swift */; };
 		C41817C82CBE319F00A94ADF /* Emitters.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41817C72CBE319F00A94ADF /* Emitters.swift */; };
+		C41976572E53D2C4006816BE /* CardHoverEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41976562E53D2C4006816BE /* CardHoverEffect.swift */; };
+		C41976592E54355D006816BE /* EnhancedCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41976582E54355D006816BE /* EnhancedCardView.swift */; };
 		C41C81622E093B970050BCB3 /* InteractiveStoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41C81612E093B970050BCB3 /* InteractiveStoryViewModel.swift */; };
 		C43DBA2E2CF5B9EB00E79D3F /* SpatialAudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43DBA2D2CF5B9EB00E79D3F /* SpatialAudioManager.swift */; };
 		C4413F592DC028D7008A7BD8 /* Song.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4413F582DC028D7008A7BD8 /* Song.swift */; };
@@ -84,6 +86,7 @@
 		C474B5D32DC9BE12004084CE /* EndScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = C474B5D22DC9BE11004084CE /* EndScreen.swift */; };
 		C474B5D52DC9BE46004084CE /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C474B5D42DC9BE3C004084CE /* ConfettiView.swift */; };
 		C4790EB22DAEE35B0080BB7C /* SeatSelectionModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4790EB12DAEE35B0080BB7C /* SeatSelectionModel.swift */; };
+		C47ADCAE2E57A9DA0083B75F /* PortalConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = C47ADCAD2E57A9DA0083B75F /* PortalConfig.swift */; };
 		C48090912DDE5F1E007FA1A7 /* VideoSyncServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C48090902DDE5F1E007FA1A7 /* VideoSyncServiceTests.swift */; };
 		C48090922DDE735C007FA1A7 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = C4F478BC2CEBD46300965502 /* GoogleService-Info.plist */; };
 		C49134412B9B072900A824DF /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134402B9B072900A824DF /* ChatMessage.swift */; };
@@ -235,6 +238,8 @@
 		C416BA4C2E0FCB87006399D8 /* StoryRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryRowView.swift; sourceTree = "<group>"; };
 		C416BA4E2E0FD9B4006399D8 /* GEMINI.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = GEMINI.md; sourceTree = "<group>"; };
 		C41817C72CBE319F00A94ADF /* Emitters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Emitters.swift; sourceTree = "<group>"; };
+		C41976562E53D2C4006816BE /* CardHoverEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardHoverEffect.swift; sourceTree = "<group>"; };
+		C41976582E54355D006816BE /* EnhancedCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedCardView.swift; sourceTree = "<group>"; };
 		C41C81612E093B970050BCB3 /* InteractiveStoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveStoryViewModel.swift; sourceTree = "<group>"; };
 		C43DBA2D2CF5B9EB00E79D3F /* SpatialAudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpatialAudioManager.swift; sourceTree = "<group>"; };
 		C4413F582DC028D7008A7BD8 /* Song.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Song.swift; sourceTree = "<group>"; };
@@ -276,6 +281,7 @@
 		C474B5D22DC9BE11004084CE /* EndScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndScreen.swift; sourceTree = "<group>"; };
 		C474B5D42DC9BE3C004084CE /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
 		C4790EB12DAEE35B0080BB7C /* SeatSelectionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeatSelectionModel.swift; sourceTree = "<group>"; };
+		C47ADCAD2E57A9DA0083B75F /* PortalConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortalConfig.swift; sourceTree = "<group>"; };
 		C48090902DDE5F1E007FA1A7 /* VideoSyncServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoSyncServiceTests.swift; sourceTree = "<group>"; };
 		C49134402B9B072900A824DF /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		C49134422B9C1EA600A824DF /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
@@ -775,6 +781,8 @@
 				C4D88C9C2D74E529004F226E /* FlowLayout.swift */,
 				C4D88CA02D74E5EE004F226E /* SpaceBrowserIntegration.swift */,
 				C4D88C9E2D74E56E004F226E /* SpaceDetailView.swift */,
+				C41976582E54355D006816BE /* EnhancedCardView.swift */,
+				C41976562E53D2C4006816BE /* CardHoverEffect.swift */,
 			);
 			path = "Space Tab";
 			sourceTree = "<group>";
@@ -787,6 +795,7 @@
 				C4CEBBC52DA330CF00731652 /* SelectedSpace.swift */,
 				C4DEA8CD2D87526F008F16F3 /* Seat Selection */,
 				C4E815572D55C982007FE604 /* SpacesView.swift */,
+				C47ADCAD2E57A9DA0083B75F /* PortalConfig.swift */,
 				C4D88CA22D74F86B004F226E /* SpacesEntityWrapper.swift */,
 				C444C9222D53FDA10046F92D /* SpaceService.swift */,
 			);
@@ -1035,10 +1044,12 @@
 				C4115ED72B994AF9007AD9B0 /* Movie_Theater_ExperienceApp.swift in Sources */,
 				C41817C82CBE319F00A94ADF /* Emitters.swift in Sources */,
 				C45D34772E074824004407F4 /* AudioWaveFormView.swift in Sources */,
+				C41976592E54355D006816BE /* EnhancedCardView.swift in Sources */,
 				C4E71ACC2DC69F2A0017914B /* SeatButtonStyle.swift in Sources */,
 				C49134452B9C1F6B00A824DF /* ChatViewModel.swift in Sources */,
 				C4D88C9F2D74E56E004F226E /* SpaceDetailView.swift in Sources */,
 				C473DCAF2D308BC7008AA51D /* FirebaseEventManager.swift in Sources */,
+				C41976572E53D2C4006816BE /* CardHoverEffect.swift in Sources */,
 				C416BA4A2E0A4E35006399D8 /* BarePlayerView.swift in Sources */,
 				C4FA39F82E274855004BB564 /* WelcomeView.swift in Sources */,
 				C4115EDB2B994AF9007AD9B0 /* ImmersiveView.swift in Sources */,
@@ -1081,6 +1092,7 @@
 				C4AF48A92C9E6D61006FE6C8 /* ToggleImmersiveSpaceButton.swift in Sources */,
 				C4F478C92CEDBD2900965502 /* TheatreLightManager.swift in Sources */,
 				C4790EB22DAEE35B0080BB7C /* SeatSelectionModel.swift in Sources */,
+				C47ADCAE2E57A9DA0083B75F /* PortalConfig.swift in Sources */,
 				C405E5892D4CAC6200681E60 /* TopNavigationView.swift in Sources */,
 				C43DBA2E2CF5B9EB00E79D3F /* SpatialAudioManager.swift in Sources */,
 				C444C91F2D53FC9F0046F92D /* IntroSpace.swift in Sources */,

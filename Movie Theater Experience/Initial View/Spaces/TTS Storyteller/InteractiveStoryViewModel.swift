@@ -48,6 +48,8 @@ class InteractiveStoryViewModel: ObservableObject {
 
     @Published var errorMessage: String = ""
     @Published var showingError: Bool = false
+    @Published var isTextFieldFocused = false
+
     
     // MARK: - Waveform
     private let barCount = 128
@@ -89,8 +91,14 @@ class InteractiveStoryViewModel: ObservableObject {
         loadCurrentVideo()
         loadNarrationTrack()
         startDisplayLink()
+        
         setupVolumeBinding()
         setupVideoPlayerStateObserver()
+        
+        // Request microphone permission early for visionOS
+        AVAudioApplication.requestRecordPermission { granted in
+            print("Microphone permission: \(granted)")
+        }
     }
     
     private func setupVolumeBinding() {
@@ -100,6 +108,13 @@ class InteractiveStoryViewModel: ObservableObject {
                 self?.narrationAudioService.player.volume = Float(vol)
             }
             .store(in: &playerCancellables)
+    }
+    
+    func handleTextFieldFocusChange(_ isFocused: Bool) {
+        isTextFieldFocused = isFocused
+        if sessionState == .interacting {
+            liveStorytellerService.handleTextFieldFocus(isFocused: isFocused)
+        }
     }
     
     private func setupVideoPlayerStateObserver() {
@@ -204,25 +219,30 @@ class InteractiveStoryViewModel: ObservableObject {
         // Cancel any previous interaction listeners to prevent conflicts
         interactionCancellables.removeAll()
         
-        // Stop the narration audio service and pause the video
-        videoPlayer.pause()
+        // CRITICAL: Stop and clean up narration audio service FIRST
         narrationAudioService.stop()
+        videoPlayer.pause()
         
-        // Set UI state
-        sessionState = .connecting
-        errorMessage = ""
-        showingError = false
-        
-        // Set up connection status listener
-        liveStorytellerService.$status
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] status in
-                self?.handleConnectionStatus(status)
-            }
-            .store(in: &interactionCancellables)
-        
-        // Start connection
-        liveStorytellerService.connectAndStart(urlString: webSocketURL)
+        // Wait a moment for audio cleanup to complete
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self = self else { return }
+            
+            // Set UI state
+            self.sessionState = .connecting
+            self.errorMessage = ""
+            self.showingError = false
+            
+            // Set up connection status listener
+            self.liveStorytellerService.$status
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] status in
+                    self?.handleConnectionStatus(status)
+                }
+                .store(in: &self.interactionCancellables)
+            
+            // Start connection
+            self.liveStorytellerService.connectAndStart(urlString: self.webSocketURL)
+        }
     }
     
     private func handleConnectionStatus(_ status: LiveStorytellerService.Status) {
@@ -249,14 +269,28 @@ class InteractiveStoryViewModel: ObservableObject {
     func returnToStory() {
         // Cancel listeners before disconnecting
         interactionCancellables.removeAll()
-        liveStorytellerService.disconnect(silent: true)
         
-        sessionState = .playing
-        showingError = false
+        // Ensure complete cleanup of LiveStorytellerService
+        liveStorytellerService.disconnect(silent: false)  // Use false to ensure full reset
         
-        // Restore audio session and reload narration
-        setupAudioSession()
-        loadNarrationTrack()
+        // Create a new instance for clean state
+        liveStorytellerService = LiveStorytellerService()
+        liveStorytellerService.configure(
+            voice: story.voice,
+            instruction: story.instructions
+        )
+        
+        // Wait for cleanup
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self = self else { return }
+            
+            self.sessionState = .playing
+            self.showingError = false
+            
+            // Restore audio session and reload narration
+            self.setupAudioSession()
+            self.loadNarrationTrack()
+        }
     }
 
     // MARK: - Lifecycle & Helpers
@@ -295,7 +329,9 @@ class InteractiveStoryViewModel: ObservableObject {
     private func setupAudioSession() {
         Task.detached(priority: .utility) {
             do {
-                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: .mixWithOthers)
+                // Use playAndRecord when we might need the microphone
+                let category: AVAudioSession.Category = await (self.sessionState == .interacting) ? .playAndRecord : .playback
+                try AVAudioSession.sharedInstance().setCategory(category, mode: .default, options: .mixWithOthers)
                 try AVAudioSession.sharedInstance().setActive(true)
             } catch {
                 print("AVAudioSession error:", error)

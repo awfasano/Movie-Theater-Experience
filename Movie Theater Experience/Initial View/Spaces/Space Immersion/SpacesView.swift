@@ -22,21 +22,17 @@ struct SpacesView: View {
     
     @State private var navBarOpened = false
     @State private var mapOpened = false
+    @State private var userVerticalOffset: Float = 0.0
+    @State private var isCleaningUp = false
+    @State private var ambientAudioEnabled: Bool = true
 
-    
+
     // State
     @State private var selectedSpace: SpaceData?
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var lastSpaceID: Entity.ID? = nil   // memo
     @State private var previousSeatID: String = "seat_1"
-    @State private var portalEntity: ModelEntity? = nil
-    @State private var portalPaneEntity: ModelEntity? = nil // <-- ENSURE THIS LINE EXISTS
-    @State private var userVerticalOffset: Float = 0.0 // <-- ADD THIS LINE
-    @State private var isCleaningUp = false
-
-
-
 
     // Anchor for placing content in the scene
     @State private var anchorEntity = AnchorEntity()
@@ -60,15 +56,12 @@ struct SpacesView: View {
     @State private var participantEntities: [Participant.ID: Entity] = [:]
     @State private var userRotation: Float = 0.0
 
-    
-
     private var sharePlayParticipantManager: some View {
         Color.clear
             .onChange(of: sharePlayManager.participants) { _, newParticipants in
                 updateParticipantEntities(participants: newParticipants)
             }
     }
-    
     
     // MARK: - Body
     var body: some View {
@@ -79,7 +72,6 @@ struct SpacesView: View {
 
             // Loading and error overlays
             overlayViews
-
 
             // Volume control toggle button
             volumeToggleButton
@@ -102,9 +94,6 @@ struct SpacesView: View {
         }
         .onChange(of: entityWrapper.getSpaceEntity()?.id) { oldId, newId in
             handleEntityIdChangeForNotification(oldId: oldId, newId: newId)
-        }
-        .onChange(of: appModel.viewTransparency) { _, _ in
-            //updateWorldPortalTransparency()
         }
         .onChange(of: appModel.selectedSpace?.currentSeat) { _, newSeat in
             if let seat = newSeat, let entity = entityWrapper.getSpaceEntity() {
@@ -133,13 +122,32 @@ struct SpacesView: View {
             // Following your working pattern, we call moveUserToSeat to update the position
             moveUserToSeat(named: seat, in: entity, from: previousSeatID, animated: false)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .updateAmbientVolume)) { notification in
+            guard let volumePercentage = notification.userInfo?["volume"] as? Float else { return }
+
+            // Convert Percentage to Decibels
+            let gainDB: Float
+            if volumePercentage <= 0 {
+                // -96 dB is a common value for "near silence" in digital audio.
+                gainDB = -96.0 // CHANGED to -96.0
+            } else {
+                // This formula now maps the 1-100 range to the -96 to 0 dB range.
+                let normalizedVolume = volumePercentage / 100.0
+                gainDB = -96.0 + (normalizedVolume * 96.0) // CHANGED to -96.0 and 96.0
+            }
+
+            // Update all ambient audio components in the scene with the new dB value.
+            if let entity = rootEntity ?? entityWrapper.getSpaceEntity() {
+                updateAmbientAudioGain(in: entity, gainDB: gainDB)
+            }
+        }
+
     }
 
-    
     // MARK: - View Components
     private var mainRealityView: some View {
         RealityView { content in
-            // UPDATED: Set up the rotation hierarchy
+            // Set up the rotation hierarchy
             setupRotationHierarchy(content: content)
         } update: { _ in
             // lightweight – runs every frame
@@ -151,9 +159,9 @@ struct SpacesView: View {
             }
         }
         .ignoresSafeArea()
+        .allowsHitTesting(false)
     }
 
-    
     private var overlayViews: some View {
         Group {
             if isLoading && notificationSentForEntityID == nil {
@@ -192,7 +200,6 @@ struct SpacesView: View {
     
     // MARK: - Core Functionality
     
-    // Missing method that was causing the compilation error
     private func handleEntityIdChangeForNotification(oldId: Entity.ID?, newId: Entity.ID?) {
         notificationPostTask?.cancel()
         notificationPostTask = nil
@@ -214,26 +221,33 @@ struct SpacesView: View {
         }
     }
     
-    // Add this to initializeSpace() in SpacesView.swift
-    // In SpacesView.swift
+    private func saveVolumePreference(_ volume: Float) {
+        if let spaceId = selectedSpace?.id {
+            UserDefaults.standard.set(volume, forKey: "AmbientVolume_\(spaceId)")
+        }
+    }
 
-    // ✅ Mark as @MainActor and async
+    private func loadVolumePreference() -> Float {
+        if let spaceId = selectedSpace?.id {
+            return UserDefaults.standard.float(forKey: "AmbientVolume_\(spaceId)")
+        }
+        return 0.0 // Default to full volume
+    }
+    
     // MARK: - Complete initializeSpace Function
-
     @MainActor
     private func initializeSpace() async {
         // Use the manager to open the correct windows on entry
         windowManager.openSpaceEntryWindows(openWindow: openWindow)
         
-        // ... rest of your initializeSpace function ...
-        // ① ---- Initial State Reset -------------------------------------------
+        // Initial State Reset
         notificationSentForEntityID = nil
         notificationPostTask?.cancel()
         isLoading = true
         errorMessage = nil
         rootEntity = nil
 
-        // ---- Join the space ---------------------------------------------------
+        // Join the space
         guard let spaceId = appModel.selectedSpace?.id else {
             print("❌ Cannot initialize space, no space ID found.")
             await dismissImmersiveSpace()
@@ -250,26 +264,21 @@ struct SpacesView: View {
             return
         }
         print("✅ Successfully joined space backend: \(spaceId)")
-
         
-        //await setupWorldPortal()
-        // This will set the initial state correctly
-        //updateWorldPortalTransparency()
-        
-        // ---- Make sure a seat is selected ------------------------------------
+        // Make sure a seat is selected
         if let cs = appModel.selectedSpace,
            (cs.currentSeat ?? "").isEmpty {
             appModel.updateSelectedSpaceSeat(to: "seat_1")
         }
 
-        // ② ---- PRIME the map *before* we show it -----------------------------
+        // PRIME the map *before* we show it
         if let space = appModel.selectedSpace {
             Task.detached(priority: .userInitiated) {
                 await SpaceMapResources.prime(for: space)   // warm-up image + meshes
             }
         }
 
-        // ---- If the entity is already cached, attach & go --------------------
+        // If the entity is already cached, attach & go
         if let currentSpace = appModel.selectedSpace,
            let entity = entityWrapper.getSpaceEntity(),
            entity.name == currentSpace.spaceName {
@@ -279,15 +288,12 @@ struct SpacesView: View {
             
             // Ensure entity is in the scene
             ensureEntityIsParented(entity)
-            
-            // Apply viewer offset from database
-
+            startAmbientAudio(in: entity)
             
             // Move to the current seat and update tracker
             let seat = currentSpace.currentSeat ?? "seat_1"
             moveUserToSeat(named: seat, in: entity, from: nil, animated: false)
             
-            // Load audio
             //await audioLoader.loadAudioForSpace(rootEntity: entity)
             
         } else {
@@ -295,109 +301,6 @@ struct SpacesView: View {
             loadSpace()
         }
     }
-
-    // Make the function async to allow for loading
-    // In SpacesView.swift
-
-    // In SpacesView.swift
-
-    // In SpacesView.swift
-
-    private func setupWorldPortal() async {
-        // 1. Define the portal's dimensions
-        let frameThickness: Float = 0.1  // How thick the frame is
-        let portalWidth: Float = 1.2     // How wide the portal opening is
-        let portalHeight: Float = 1.6    // How tall the portal opening is
-
-        // 2. Create a container for all the portal parts
-        let portalContainer = Entity()
-        portalContainer.name = "PortalContainer"
-
-        // 3. Create the visible FRAME from 4 boxes
-        let frameMaterial = SimpleMaterial(color: .darkGray, roughness: 0.3, isMetallic: true)
-
-        // Top bar
-        let topBar = ModelEntity(
-            mesh: .generateBox(width: portalWidth + frameThickness, height: frameThickness, depth: frameThickness),
-            materials: [frameMaterial]
-        )
-        topBar.position.y = portalHeight / 2 + (frameThickness / 2)
-
-        // Bottom bar
-        let bottomBar = ModelEntity(
-            mesh: .generateBox(width: portalWidth + frameThickness, height: frameThickness, depth: frameThickness),
-            materials: [frameMaterial]
-        )
-        bottomBar.position.y = -portalHeight / 2 - (frameThickness / 2)
-
-        // Left bar
-        let leftBar = ModelEntity(
-            mesh: .generateBox(width: frameThickness, height: portalHeight, depth: frameThickness),
-            materials: [frameMaterial]
-        )
-        leftBar.position.x = -portalWidth / 2 - (frameThickness / 2)
-
-        // Right bar
-        let rightBar = ModelEntity(
-            mesh: .generateBox(width: frameThickness, height: portalHeight, depth: frameThickness),
-            materials: [frameMaterial]
-        )
-        rightBar.position.x = portalWidth / 2 + (frameThickness / 2)
-
-        // Add all bars to the container
-        portalContainer.addChild(topBar)
-        portalContainer.addChild(bottomBar)
-        portalContainer.addChild(leftBar)
-        portalContainer.addChild(rightBar)
-
-        // 4. Create the PANE that shows the passthrough
-        let paneMesh = MeshResource.generatePlane(width: portalWidth, height: portalHeight)
-        let paneEntity = ModelEntity(mesh: paneMesh)
-        paneEntity.name = "PortalPane"
-        
-        // This is the critical part for making occlusion work
-        paneEntity.components.set(CollisionComponent(shapes: [ShapeResource.generateBox(size: paneMesh.bounds.extents)]))
-
-        portalContainer.addChild(paneEntity)
-
-        // 5. Position the portal 2 meters in front of the user
-        portalContainer.setPosition([0, 1.5, -2], relativeTo: nil)
-
-        // 6. Add the finished portal to the scene's main anchor
-        self.anchorEntity.addChild(portalContainer)
-
-        // 7. Store a reference to the pane for material swapping
-        // We don't need a reference to the frame (portalEntity) anymore unless you want to change it later.
-        self.portalPaneEntity = paneEntity
-        
-        print("✅ Rectangular Window Portal created with a frame and a pane.")
-    }
-
-
-    // ADD or REPLACE with this new function to control the fade
-    // In SpacesView.swift
-    
-    @MainActor
-    private func updateWorldPortalTransparency() {
-        print("SLIDER: Transparency value is now \(appModel.viewTransparency)")
-
-        // --- V V V THIS IS THE FIX V V V ---
-        // The guard should check for portalPANEEntity.
-        guard let pane = self.portalPaneEntity else {
-            print("DEBUG: updateWorldPortalTransparency was called, but portalPANEEntity is nil!")
-            return
-        }
-        // --- ^ ^ ^ THIS IS THE FIX ^ ^ ^ ---
-
-        if appModel.viewTransparency > 0 {
-            print("DEBUG: Applying OcclusionMaterial to pane...")
-            pane.model?.materials = [OcclusionMaterial()]
-        } else {
-            print("DEBUG: Applying clear UnlitMaterial to pane...")
-            pane.model?.materials = [UnlitMaterial(color: .clear)]
-        }
-    }
-
     
     private func loadSpace() {
         resetViewState()
@@ -420,11 +323,9 @@ struct SpacesView: View {
         errorMessage = nil
         notificationPostTask?.cancel()
         rootEntity = nil
-        
 
         entityWrapper.setSpaceEntity(nil)
         entityWrapper.setActiveSceneEntity(nil)
-        // UPDATED: Clear the user rotation entity instead of anchor
     }
     
     private func fetchSpacesAndLoadFirst() {
@@ -448,27 +349,23 @@ struct SpacesView: View {
             .store(in: &cancellables)
     }
     
-    // UPDATED: New method to set up the rotation hierarchy
-    // UPDATED: Simpler setup function
+    // Set up the rotation hierarchy
     private func setupRotationHierarchy(content: RealityViewContent) {
         // Add the main anchor to the scene
         content.add(anchorEntity)
         anchorEntity.addChild(userRotationEntity)
     }
     
-    /// UPDATED: Adds entity to userRotationEntity instead of anchorEntity
+    /// Adds entity to userRotationEntity instead of anchorEntity
     @MainActor
     private func ensureEntityIsParented(_ entity: Entity) {
         // Check if the entity is already a child of the anchor
         let hasEntity = userRotationEntity.children.contains(where: { $0.id == entity.id })
         guard !hasEntity else { return }
 
-        // Always ensure the anchor is clear before adding the new space
-        //anchorEntity.children.removeAll()
         userRotationEntity.addChild(entity)
     }
 
-    
     private func debugPrintAllTransforms(of entity: Entity, level: Int = 0) {
         let indent = String(repeating: "  ", count: level)
         let q = entity.orientation.vector
@@ -502,9 +399,9 @@ struct SpacesView: View {
                     ensureEntityIsParented(entity)
                     
                     print("DEBUG: Space '\(entity.name)' was successfully loaded and added to the anchorEntity.")
-                    // Apply viewer offset first
-                    
-                    // Then move to initial seat and update tracker
+                    startAmbientAudio(in: entity)
+
+                    // Move to initial seat and update tracker
                     let seat = space.currentSeat ?? "seat_1"
                     moveUserToSeat(named: seat, in: entity, from: nil, animated: false)
                     
@@ -617,8 +514,6 @@ struct SpacesView: View {
             entityWrapper.setSpaceEntity(nil)
             entityWrapper.setActiveSceneEntity(nil)
         }
-        
-        // Stop all audio playback on error
 
         self.notificationSentForEntityID = nil
         self.notificationPostTask?.cancel()
@@ -626,8 +521,60 @@ struct SpacesView: View {
         self.rootEntity = nil
     }
     
-    // In SpacesView.swift
-
+    private func updateAmbientAudioGain(in entity: Entity, gainDB: Float) {
+        // Update this entity if it has ambient audio
+        if var ambientAudio = entity.components[AmbientAudioComponent.self] {
+            ambientAudio.gain = AudioPlaybackController.Decibel(gainDB)
+            entity.components[AmbientAudioComponent.self] = ambientAudio
+            print("🔊 Updated ambient audio gain to \(gainDB) dB for entity: \(entity.name)")
+        }
+        
+        // Recursively update all children
+        //for child in entity.children {
+        //    updateAmbientAudioGain(in: child, gainDB: gainDB)
+        //}
+    }
+    
+    private func startAmbientAudio(in entity: Entity) {
+        guard let scene = realityKitScene else { return }
+        
+        // Set initial volume if needed (you can read this from UserDefaults if you want persistence)
+        let initialVolume: Float = 0.0 // or read from saved preference
+        updateAmbientAudioGain(in: entity, gainDB: initialVolume)
+        
+        NotificationCenter.default.post(
+            name: NSNotification.Name("RealityKit.NotificationTrigger"),
+            object: nil,
+            userInfo: [
+                "RealityKit.NotificationTrigger.Scene": scene,
+                "RealityKit.NotificationTrigger.Entity": entity,
+                "RealityKit.NotificationTrigger.Identifier": "ambient_audio"
+            ]
+        )
+    }
+    
+    private func stopAmbientAudio(in entity: Entity) {
+        // Stop only animations with the "ambient_audio" identifier
+        entity.stopAllAnimations(recursive: false)
+        
+        // Or if you have access to the specific animation controller:
+        // entity.stopAnimation(for: "ambient_audio")
+        
+        // Alternatively, post a stop notification
+        guard let scene = realityKitScene else { return }
+        
+        NotificationCenter.default.post(
+            name: NSNotification.Name("RealityKit.NotificationTrigger"),
+            object: nil,
+            userInfo: [
+                "RealityKit.NotificationTrigger.Scene": scene,
+                "RealityKit.NotificationTrigger.Entity": entity,
+                "RealityKit.NotificationTrigger.Identifier": "stop_ambient_audio"
+            ]
+        )
+    }
+    
+    
     private func updateParticipantEntities(participants: Set<Participant>) {
         // Ensure we can identify the local user to avoid creating an entity for ourselves.
         guard let localParticipantID = sharePlayManager.localParticipantID else {
@@ -652,7 +599,7 @@ struct SpacesView: View {
                 let placeholder = Entity()
                 placeholder.name = "participant-\(participant.id)"
                 
-                // UPDATED: Add to anchorEntity so participants rotate with the user's view
+                // Add to anchorEntity so participants rotate with the user's view
                 anchorEntity.addChild(placeholder)
                 
                 participantEntities[participant.id] = placeholder
@@ -684,48 +631,35 @@ struct SpacesView: View {
         previousSeatID = seatID
     }
 
-
-    
     private func cleanupView() {
         guard !isCleaningUp else { return }
         isCleaningUp = true
         
-        // Use the manager to perform the full exit sequence
         windowManager.closeAllSpaceWindows(dismissWindow: dismissWindow)
         windowManager.openMainWindow(openWindow: openWindow)
-
-        // Reset any other necessary app state
+        
         appModel.selectedSpace = nil
         appModel.currentActiveSpace = nil
         
-        // --- Leave Space ---
-        // Leave the space before cleaning up the view state
         if let spaceId = selectedSpace?.id {
             Task {
                 await spaceService.leaveSpace(spaceId)
                 print("✅ Successfully left space: \(spaceId)")
             }
         }
-        // --- End Leave Space ---
+        
         saveRotationPreference()
         cancellables.forEach { $0.cancel() }
         cancellables.removeAll()
         notificationPostTask?.cancel()
         notificationPostTask = nil
         
-        // Stop all audio playback
-
         Task {
             await entityWrapper.cleanup()
         }
         
         navBarOpened = false
-         mapOpened = false
-        
-        portalEntity?.removeFromParent()
-        portalEntity = nil
-        appModel.viewTransparency = 0.0 // Reset slider value
-        appModel.isPortalOpen = false
+        mapOpened = false
         
         notificationSentForEntityID = nil
         selectedSpace = nil
@@ -847,7 +781,6 @@ struct SpacesView: View {
         // Rotate the final position by the user's rotation
         let rotatedFinalAnchorPosition = rotation.act(finalAnchorPosition)
 
-
         // For initial placement or non-animated transitions
         if !animated {
             anchorEntity.position = rotatedFinalAnchorPosition
@@ -900,7 +833,6 @@ struct SpacesView: View {
         }
     }
 
-
     // Update the existing applyRotationToAnchor to use the new method
     private func applyRotationToAnchor() {
         let radians = userRotation * .pi / 180
@@ -914,8 +846,6 @@ struct SpacesView: View {
             userRotationEntity.transform = currentTransform
         }
     }
-    
-    
     
     // Helper function to print the entire entity hierarchy
     private func printEntityHierarchy(_ entity: Entity, level: Int) {
@@ -945,12 +875,10 @@ struct SpacesView: View {
     private func loadRotationPreference() {
         if let spaceId = selectedSpace?.id {
             userRotation = UserDefaults.standard.float(forKey: "SpaceRotation_\(spaceId)")
-            applyRotationToAnchor() // UPDATED
+            applyRotationToAnchor()
         }
     }
-    
 }
-
 
 // Helper extension for matrix operations
 extension float4x4 {

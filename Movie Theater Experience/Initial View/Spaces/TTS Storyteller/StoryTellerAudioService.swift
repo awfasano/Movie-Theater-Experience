@@ -31,13 +31,19 @@ class StorytellerAudioService {
     
     func stop() {
         player.pause()
-
-        // Detach the tap •before• StorytellerAudioService dies
+        
+        // Remove any audio mix/tap BEFORE clearing the item
         if let item = player.currentItem {
-            item.audioMix = nil        // this invalidates the tap
+            item.audioMix = nil  // This invalidates the tap
         }
+        
+        // Clear the tap reference
         tap = nil
+        
+        // Now replace the item
         player.replaceCurrentItem(with: nil)
+        
+        print("[StorytellerAudioService] Stopped and cleaned up")
     }
 
     deinit {        // belt-and-suspenders

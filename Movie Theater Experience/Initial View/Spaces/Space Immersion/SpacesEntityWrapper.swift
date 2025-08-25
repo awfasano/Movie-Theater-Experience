@@ -17,7 +17,7 @@ class SpacesEntityWrapper: ObservableObject {
     @Published private(set) var spaceEntity: Entity?
     @Published private(set) var activeSceneEntity: Entity?
 
-    @AppStorage("showEmojis") var showEmojis = true // User preference
+    @Published var showEmojis: Bool = true
     @Published private(set) var isEmitting = false // State of the emitter
 
     // Task for auto-resetting the emitter

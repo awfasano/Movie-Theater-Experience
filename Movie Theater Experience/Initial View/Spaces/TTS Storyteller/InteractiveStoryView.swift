@@ -13,6 +13,8 @@ struct InteractiveStoryView: View {
 
     @StateObject private var viewModel: InteractiveStoryViewModel
     @State private var showTranscripts = false
+    @FocusState private var isTextFieldFocused: Bool  // Add this
+
     
     init(story: Story) {
         _viewModel = StateObject(wrappedValue: InteractiveStoryViewModel(story: story))
@@ -245,9 +247,49 @@ struct InteractiveStoryView: View {
             // Status and transcript toggle
             HStack {
                 connectionStatusIndicator
+                
+                // Show sending/waiting indicators
+                if viewModel.liveStorytellerService.isSendingAudio {
+                    HStack(spacing: 4) {
+                        Image(systemName: "mic.fill")
+                            .foregroundColor(.red)
+                            .symbolEffect(.pulse)
+                        Text("Speaking...")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .transition(.scale.combined(with: .opacity))
+                } else if viewModel.liveStorytellerService.isSendingText {
+                    HStack(spacing: 4) {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                        Text("Sending...")
+                            .font(.caption)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .transition(.scale.combined(with: .opacity))
+                } else if viewModel.liveStorytellerService.isWaitingForResponse {
+                    HStack(spacing: 4) {
+                        Image(systemName: "ellipsis")
+                            .symbolEffect(.pulse)
+                        Text("Thinking...")
+                            .font(.caption)
+                            .foregroundColor(.purple)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .transition(.scale.combined(with: .opacity))
+                }
+                
                 Spacer()
                 
-                // Show transcript count badge if there are messages
+                // Transcript badge
                 if !viewModel.liveStorytellerService.transcripts.isEmpty {
                     Button(action: { showTranscripts.toggle() }) {
                         HStack(spacing: 4) {
@@ -266,18 +308,31 @@ struct InteractiveStoryView: View {
                 }
             }
             .padding(.horizontal, 24)
-            .transition(.opacity)
+            .animation(.easeInOut(duration: 0.3), value: viewModel.liveStorytellerService.isSendingAudio)
+            .animation(.easeInOut(duration: 0.3), value: viewModel.liveStorytellerService.isSendingText)
+            .animation(.easeInOut(duration: 0.3), value: viewModel.liveStorytellerService.isWaitingForResponse)
             
             AudioWaveformView(audioLevels: viewModel.audioLevels)
                 .frame(height: 50)
 
             HStack(spacing: 12) {
+                // Mic button with visual feedback when active
                 if viewModel.liveStorytellerService.isMicrophoneAvailable {
                     Button(action: { viewModel.toggleMic() }) {
-                        Image(systemName: viewModel.isMicMuted ? "mic.slash.fill" : "mic.fill")
+                        ZStack {
+                            if !viewModel.isMicMuted && viewModel.liveStorytellerService.isSendingAudio {
+                                Circle()
+                                    .fill(Color.red.opacity(0.2))
+                                    .frame(width: 44, height: 44)
+                                    .scaleEffect(1.2)
+                                    .animation(.easeInOut(duration: 0.5).repeatForever(), value: viewModel.liveStorytellerService.isSendingAudio)
+                            }
+                            
+                            Image(systemName: viewModel.isMicMuted ? "mic.slash.fill" : "mic.fill")
+                                .font(.title3)
+                                .foregroundColor(viewModel.isMicMuted ? .gray : (viewModel.liveStorytellerService.isSendingAudio ? .red : .purple))
+                        }
                     }
-                    .font(.title3)
-                    .foregroundColor(viewModel.isMicMuted ? .gray : .purple)
                 } else {
                     Image(systemName: "mic.slash.fill")
                         .font(.title3)
@@ -287,11 +342,21 @@ struct InteractiveStoryView: View {
 
                 TextField("Type a message…", text: $viewModel.textDraft, onCommit: viewModel.sendTextMessage)
                     .textFieldStyle(.roundedBorder)
+                    .disabled(viewModel.liveStorytellerService.isSendingText)
+                    .focused($isTextFieldFocused)  // Add focus binding
+                    .onChange(of: isTextFieldFocused) { newValue in
+                        viewModel.handleTextFieldFocusChange(newValue)
+                    }
 
                 Button(action: { viewModel.sendTextMessage() }) {
-                    Image(systemName: "paperplane.fill")
+                    if viewModel.liveStorytellerService.isSendingText {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "paperplane.fill")
+                    }
                 }
-                .disabled(viewModel.textDraft.isEmpty)
+                .disabled(viewModel.textDraft.isEmpty || viewModel.liveStorytellerService.isSendingText)
 
                 Button(action: { viewModel.returnToStory() }) { Text("Back") }
                     .buttonStyle(.bordered)

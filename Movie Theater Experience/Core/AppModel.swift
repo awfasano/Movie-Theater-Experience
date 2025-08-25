@@ -32,7 +32,9 @@ class AppModel: ObservableObject { // Removed ObservableObject as @Observable is
     var viewTransparency: Double = 0.0
     // var currentPlaybackTime: CMTime? // This is handled by VideoSyncService.currentTime
     var currentActiveSpace: String?
+    
     var isPortalOpen: Bool = false
+
 
     
     private(set) var currentUserId: String = ""
