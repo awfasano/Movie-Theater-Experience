@@ -57,8 +57,8 @@ struct SpaceMapView: View {
 
     
     // Map dimensions
-    private let mapDisplayWidth: CGFloat = 1568
-    private let mapDisplayHeight: CGFloat = 1024
+    private let mapDisplayWidth: CGFloat = 784
+    private let mapDisplayHeight: CGFloat = 512
 
     // MARK: - Body
     var body: some View {
@@ -141,6 +141,7 @@ struct SpaceMapView: View {
     private func createSeatEntities(content: RealityViewContent, seats: [SeatPosition]) async {
         let sceneScale: Float = 1.0 / Float(mapDisplayWidth)
         let batchParent = Entity()
+        
 
         for seat in seats {
             let isInitiallySelected = (seat.id == currentSeatId)
@@ -175,7 +176,8 @@ struct SpaceMapView: View {
             ))
             sphere.components.set(InputTargetComponent(allowedInputTypes: .indirect))
             sphere.components.set(HoverEffectComponent())
-            
+            batchParent.position.z = -0.11
+
             // Add to batch parent
             batchParent.addChild(sphere)
             

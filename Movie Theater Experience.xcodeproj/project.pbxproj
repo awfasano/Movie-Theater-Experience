@@ -38,6 +38,7 @@
 		C4115EDF2B994AFA007AD9B0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C4115EDE2B994AFA007AD9B0 /* Assets.xcassets */; };
 		C4115EE22B994AFA007AD9B0 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C4115EE12B994AFA007AD9B0 /* Preview Assets.xcassets */; };
 		C4115EED2B994AFA007AD9B0 /* Movie_Theater_ExperienceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4115EEC2B994AFA007AD9B0 /* Movie_Theater_ExperienceTests.swift */; };
+		C413B1002E6231B2008A309E /* AmbientAudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C413B0FF2E6231B2008A309E /* AmbientAudioManager.swift */; };
 		C413FA4C2DBC2E0D008FABEB /* SpatialAudioLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = C413FA4B2DBC2E0D008FABEB /* SpatialAudioLoader.swift */; };
 		C413FA4F2DBC2E41008FABEB /* AudioPositionSynchronizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C413FA4E2DBC2E41008FABEB /* AudioPositionSynchronizer.swift */; };
 		C416BA482E09DDA7006399D8 /* WaveformViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C416BA472E09DDA7006399D8 /* WaveformViewModel.swift */; };
@@ -231,6 +232,7 @@
 		C4115EE32B994AFA007AD9B0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C4115EE82B994AFA007AD9B0 /* Movie Theater ExperienceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Movie Theater ExperienceTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C4115EEC2B994AFA007AD9B0 /* Movie_Theater_ExperienceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Movie_Theater_ExperienceTests.swift; sourceTree = "<group>"; };
+		C413B0FF2E6231B2008A309E /* AmbientAudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmbientAudioManager.swift; sourceTree = "<group>"; };
 		C413FA4B2DBC2E0D008FABEB /* SpatialAudioLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpatialAudioLoader.swift; sourceTree = "<group>"; };
 		C413FA4E2DBC2E41008FABEB /* AudioPositionSynchronizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPositionSynchronizer.swift; sourceTree = "<group>"; };
 		C416BA472E09DDA7006399D8 /* WaveformViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformViewModel.swift; sourceTree = "<group>"; };
@@ -795,6 +797,7 @@
 				C4CEBBC52DA330CF00731652 /* SelectedSpace.swift */,
 				C4DEA8CD2D87526F008F16F3 /* Seat Selection */,
 				C4E815572D55C982007FE604 /* SpacesView.swift */,
+				C413B0FF2E6231B2008A309E /* AmbientAudioManager.swift */,
 				C47ADCAD2E57A9DA0083B75F /* PortalConfig.swift */,
 				C4D88CA22D74F86B004F226E /* SpacesEntityWrapper.swift */,
 				C444C9222D53FDA10046F92D /* SpaceService.swift */,
@@ -1089,6 +1092,7 @@
 				C4FA39F42E24498C004BB564 /* AudioService.swift in Sources */,
 				C4D88C9B2D74E519004F226E /* SpaceCard.swift in Sources */,
 				C416BA4D2E0FCB87006399D8 /* StoryRowView.swift in Sources */,
+				C413B1002E6231B2008A309E /* AmbientAudioManager.swift in Sources */,
 				C4AF48A92C9E6D61006FE6C8 /* ToggleImmersiveSpaceButton.swift in Sources */,
 				C4F478C92CEDBD2900965502 /* TheatreLightManager.swift in Sources */,
 				C4790EB22DAEE35B0080BB7C /* SeatSelectionModel.swift in Sources */,

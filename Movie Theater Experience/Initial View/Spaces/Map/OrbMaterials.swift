@@ -13,7 +13,7 @@ struct OrbMaterials {
     static let durUp: TimeInterval = 0.25
     static let durDn: TimeInterval = 0.25
     static let durSet: TimeInterval = 0.3
-    static let sphereRadius: Float = 0.02 // 2 cm radius
+    static let sphereRadius: Float = 0.01 // 2 cm radius
 
     static func halo() -> PhysicallyBasedMaterial {
         var m = PhysicallyBasedMaterial()

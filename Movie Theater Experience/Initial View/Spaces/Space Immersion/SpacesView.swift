@@ -24,7 +24,8 @@ struct SpacesView: View {
     @State private var mapOpened = false
     @State private var userVerticalOffset: Float = 0.0
     @State private var isCleaningUp = false
-    @State private var ambientAudioEnabled: Bool = true
+    @State private var isPlaying = false
+    @State private var rootEntity: Entity? = nil
 
 
     // State
@@ -41,10 +42,7 @@ struct SpacesView: View {
     // Notification State
     @State private var notificationSentForEntityID: Entity.ID? = nil
     @State private var notificationPostTask: Task<Void, Never>? = nil
-    
-    // Root entity reference
-    @State private var rootEntity: Entity? = nil
-    
+        
     // Volume control visibility
     @State private var showVolumeControl = false
     
@@ -125,20 +123,21 @@ struct SpacesView: View {
         .onReceive(NotificationCenter.default.publisher(for: .updateAmbientVolume)) { notification in
             guard let volumePercentage = notification.userInfo?["volume"] as? Float else { return }
 
-            // Convert Percentage to Decibels
-            let gainDB: Float
-            if volumePercentage <= 0 {
-                // -96 dB is a common value for "near silence" in digital audio.
-                gainDB = -96.0 // CHANGED to -96.0
-            } else {
-                // This formula now maps the 1-100 range to the -96 to 0 dB range.
-                let normalizedVolume = volumePercentage / 100.0
-                gainDB = -96.0 + (normalizedVolume * 96.0) // CHANGED to -96.0 and 96.0
-            }
+            // Use the AmbientAudioManager's consistent volume calculation
+            let gainDB = AmbientAudioManager.percentageToDecibels(volumePercentage)
 
-            // Update all ambient audio components in the scene with the new dB value.
+            if let rootEntity = self.rootEntity {
+                AmbientAudioManager.shared.setVolume(gainDB, for: rootEntity)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .startAmbientAudio)) { _ in
             if let entity = rootEntity ?? entityWrapper.getSpaceEntity() {
-                updateAmbientAudioGain(in: entity, gainDB: gainDB)
+                startAmbientAudio(in: entity)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .stopAmbientAudio)) { _ in
+            if let entity = rootEntity ?? entityWrapper.getSpaceEntity() {
+                stopAmbientAudio(in: entity)
             }
         }
 
@@ -229,78 +228,108 @@ struct SpacesView: View {
 
     private func loadVolumePreference() -> Float {
         if let spaceId = selectedSpace?.id {
-            return UserDefaults.standard.float(forKey: "AmbientVolume_\(spaceId)")
+            let savedVolume = UserDefaults.standard.float(forKey: "AmbientVolume_\(spaceId)")
+            // Return 75% as default if no saved preference (0.0 means no saved value)
+            return savedVolume == 0.0 ? 75.0 : savedVolume
         }
-        return 0.0 // Default to full volume
+        return 75.0 // Default to 75% volume instead of 0%
     }
     
     // MARK: - Complete initializeSpace Function
     @MainActor
-    private func initializeSpace() async {
-        // Use the manager to open the correct windows on entry
-        windowManager.openSpaceEntryWindows(openWindow: openWindow)
-        
-        // Initial State Reset
-        notificationSentForEntityID = nil
-        notificationPostTask?.cancel()
-        isLoading = true
-        errorMessage = nil
-        rootEntity = nil
+       private func initializeSpace() async {
+           print("📱 SpacesView initializeSpace called")
+           
+           // ALWAYS open the nav bar when SpacesView appears - this should happen every time
+           windowManager.openSpaceEntryWindows(
+               openWindow: openWindow,
+               dismissWindow: dismissWindow
+           )
+           print("✅ [SpacesView] Nav bar opening requested")
+           
+           // Check if we're already initialized for this specific space
+           if let activeSpace = appModel.currentActiveSpace,
+              let selectedSpaceId = appModel.selectedSpace?.id,
+              activeSpace == selectedSpaceId {
+               print("✅ [SpacesView] Already initialized for space: \(activeSpace)")
+               // Even though we're already initialized, we might need to rejoin or refresh
+               // But we can skip the full initialization
+               return
+           }
+           
+           // If we get here, we need to do full initialization
+           print("🚀 [SpacesView] Performing full initialization")
+           
+           // Initial State Reset
+           notificationSentForEntityID = nil
+           notificationPostTask?.cancel()
+           isLoading = true
+           errorMessage = nil
+           rootEntity = nil
+           
+           // IMPORTANT: Reset rotations to prevent head orientation affecting particles
+           anchorEntity.orientation = simd_quatf()
+           userRotationEntity.orientation = simd_quatf()
+           userRotation = 0  // Reset user rotation
 
-        // Join the space
-        guard let spaceId = appModel.selectedSpace?.id else {
-            print("❌ Cannot initialize space, no space ID found.")
-            await dismissImmersiveSpace()
-            return
-        }
+           // Join the space
+           guard let spaceId = appModel.selectedSpace?.id else {
+               print("❌ Cannot initialize space, no space ID found.")
+               await dismissImmersiveSpace()
+               // Open tab bar again since we're exiting
+               windowManager.openMainWindow(openWindow: openWindow)
+               return
+           }
 
-        // Load rotation preference if you're using it
-        loadRotationPreference()
+           // Load rotation preference AFTER resetting
+           loadRotationPreference()
 
-        let success = await spaceService.joinSpace(spaceId)
-        guard success else {
-            print("❌ Failed to join space backend.")
-            await dismissImmersiveSpace()
-            return
-        }
-        print("✅ Successfully joined space backend: \(spaceId)")
-        
-        // Make sure a seat is selected
-        if let cs = appModel.selectedSpace,
-           (cs.currentSeat ?? "").isEmpty {
-            appModel.updateSelectedSpaceSeat(to: "seat_1")
-        }
+           let success = await spaceService.joinSpace(spaceId)
+           guard success else {
+               print("❌ Failed to join space backend.")
+               await dismissImmersiveSpace()
+               appModel.currentActiveSpace = nil  // Clear active space
+               windowManager.openMainWindow(openWindow: openWindow)
+               return
+           }
+           print("✅ Successfully joined space backend: \(spaceId)")
+           
+           // Make sure a seat is selected
+           if let cs = appModel.selectedSpace,
+              (cs.currentSeat ?? "").isEmpty {
+               appModel.updateSelectedSpaceSeat(to: "seat_1")
+           }
 
-        // PRIME the map *before* we show it
-        if let space = appModel.selectedSpace {
-            Task.detached(priority: .userInitiated) {
-                await SpaceMapResources.prime(for: space)   // warm-up image + meshes
-            }
-        }
+           // PRIME the map *before* we show it
+           if let space = appModel.selectedSpace {
+               Task.detached(priority: .userInitiated) {
+                   await SpaceMapResources.prime(for: space)
+               }
+           }
 
-        // If the entity is already cached, attach & go
-        if let currentSpace = appModel.selectedSpace,
-           let entity = entityWrapper.getSpaceEntity(),
-           entity.name == currentSpace.spaceName {
+           // If the entity is already cached, attach & go
+           if let currentSpace = appModel.selectedSpace,
+              let entity = entityWrapper.getSpaceEntity(),
+              entity.name == currentSpace.spaceName {
 
-            self.selectedSpace = currentSpace
-            self.isLoading = false
-            
-            // Ensure entity is in the scene
-            ensureEntityIsParented(entity)
-            startAmbientAudio(in: entity)
-            
-            // Move to the current seat and update tracker
-            let seat = currentSpace.currentSeat ?? "seat_1"
-            moveUserToSeat(named: seat, in: entity, from: nil, animated: false)
-            
-            //await audioLoader.loadAudioForSpace(rootEntity: entity)
-            
-        } else {
-            // Otherwise load from scratch
-            loadSpace()
-        }
-    }
+               self.selectedSpace = currentSpace
+               self.isLoading = false
+               
+               // Ensure entity is in the scene
+               ensureEntityIsParented(entity)
+               
+               // Always setup ambient audio, even from cache
+               // The AmbientAudioManager will check if it's already setup
+               await setupAmbientAudioFromFirebase(entity: entity, space: currentSpace)
+               
+               // Move to the current seat with proper rotation
+               let seat = currentSpace.currentSeat ?? "seat_1"
+               moveUserToSeat(named: seat, in: entity, from: nil, animated: false)
+           } else {
+               // Otherwise load from scratch
+               loadSpace()
+           }
+       }
     
     private func loadSpace() {
         resetViewState()
@@ -350,11 +379,82 @@ struct SpacesView: View {
     }
     
     // Set up the rotation hierarchy
+    // MARK: - Modified setupRotationHierarchy to fix particle orientation issue
     private func setupRotationHierarchy(content: RealityViewContent) {
+        // Reset transforms to identity before adding to scene
+        anchorEntity.transform = Transform.identity
+        userRotationEntity.transform = Transform.identity
+        
         // Add the main anchor to the scene
         content.add(anchorEntity)
         anchorEntity.addChild(userRotationEntity)
+        
+        // Set the anchor at world origin initially
+        anchorEntity.position = SIMD3<Float>(0, 0, 0)
+        anchorEntity.orientation = simd_quatf()
     }
+    
+    private func handleAmbientVolumeChange(_ notification: Notification) {
+        guard let volumePercentage = notification.userInfo?["volume"] as? Float,
+              let rootEntity = self.rootEntity else { return }
+        
+        let gainDB = AmbientAudioManager.percentageToDecibels(volumePercentage)
+        AmbientAudioManager.shared.setVolume(gainDB, for: rootEntity)
+    }
+    
+    private func handleStartAmbientAudio(_ notification: Notification) {
+        guard let rootEntity = self.rootEntity else { return }
+        AmbientAudioManager.shared.play(entity: rootEntity)
+    }
+    
+    private func handleStopAmbientAudio(_ notification: Notification) {
+        guard let rootEntity = self.rootEntity else { return }
+        AmbientAudioManager.shared.pause(entity: rootEntity)
+    }
+    
+    @MainActor
+    private func setupAmbientAudioFromFirebase(entity: Entity, space: SpaceData) async {
+        // Check if space has ambient audio URL
+        guard let audioURLString = space.ambient_audio,
+              !audioURLString.isEmpty else {
+            print("ℹ️ No ambient audio URL for space: \(space.spaceName)")
+            return
+        }
+        
+        // Find Root entity
+        guard let rootEntity = findEntityDeep(named: "Root", in: entity) else {
+            print("⚠️ Cannot find Root entity for ambient audio")
+            return
+        }
+        
+        do {
+            // Setup ambient audio component
+            try await AmbientAudioManager.shared.setupAmbientAudio(
+                for: rootEntity,
+                audioURLString: audioURLString
+            )
+            
+            // Store reference for later control
+            self.rootEntity = rootEntity
+            
+            // Load volume preference if saved
+            let savedVolume = loadVolumePreference()
+            if savedVolume != 0 {
+                let gainDB = AmbientAudioManager.percentageToDecibels(savedVolume)
+                AmbientAudioManager.shared.setVolume(gainDB, for: rootEntity)
+            }
+            
+            // Auto-play ambient audio
+            AmbientAudioManager.shared.play(entity: rootEntity)
+            self.isPlaying = true
+            
+            print("🎵 Ambient audio setup complete and playing")
+            
+        } catch {
+            print("❌ Failed to setup ambient audio: \(error)")
+        }
+    }
+
     
     /// Adds entity to userRotationEntity instead of anchorEntity
     @MainActor
@@ -398,14 +498,15 @@ struct SpacesView: View {
                     
                     ensureEntityIsParented(entity)
                     
-                    print("DEBUG: Space '\(entity.name)' was successfully loaded and added to the anchorEntity.")
-                    startAmbientAudio(in: entity)
-
-                    // Move to initial seat and update tracker
+                    print("DEBUG: Space '\(entity.name)' was successfully loaded")
+                    
+                    // Setup ambient audio
+                    await self.setupAmbientAudioFromFirebase(entity: entity, space: space)
+                    
+                    // Move to initial seat
                     let seat = space.currentSeat ?? "seat_1"
                     moveUserToSeat(named: seat, in: entity, from: nil, animated: false)
-                    
-                    //await audioLoader.loadAudioForSpace(rootEntity: entity)
+
                     
                 case .failure(let error):
                     self.handleLoadError("Failed to load \(space.spaceName): \(error.localizedDescription)")
@@ -522,56 +623,29 @@ struct SpacesView: View {
     }
     
     private func updateAmbientAudioGain(in entity: Entity, gainDB: Float) {
-        // Update this entity if it has ambient audio
-        if var ambientAudio = entity.components[AmbientAudioComponent.self] {
-            ambientAudio.gain = AudioPlaybackController.Decibel(gainDB)
-            entity.components[AmbientAudioComponent.self] = ambientAudio
-            print("🔊 Updated ambient audio gain to \(gainDB) dB for entity: \(entity.name)")
+        guard let rootEntity = self.rootEntity else {
+            print("⚠️ No root entity for ambient audio")
+            return
         }
-        
-        // Recursively update all children
-        //for child in entity.children {
-        //    updateAmbientAudioGain(in: child, gainDB: gainDB)
-        //}
+        AmbientAudioManager.shared.setVolume(gainDB, for: rootEntity)
     }
     
     private func startAmbientAudio(in entity: Entity) {
-        guard let scene = realityKitScene else { return }
-        
-        // Set initial volume if needed (you can read this from UserDefaults if you want persistence)
-        let initialVolume: Float = 0.0 // or read from saved preference
-        updateAmbientAudioGain(in: entity, gainDB: initialVolume)
-        
-        NotificationCenter.default.post(
-            name: NSNotification.Name("RealityKit.NotificationTrigger"),
-            object: nil,
-            userInfo: [
-                "RealityKit.NotificationTrigger.Scene": scene,
-                "RealityKit.NotificationTrigger.Entity": entity,
-                "RealityKit.NotificationTrigger.Identifier": "ambient_audio"
-            ]
-        )
+        guard let rootEntity = self.rootEntity else {
+            print("⚠️ No root entity for ambient audio")
+            return
+        }
+        AmbientAudioManager.shared.play(entity: rootEntity)
+        isPlaying = true
     }
-    
+
     private func stopAmbientAudio(in entity: Entity) {
-        // Stop only animations with the "ambient_audio" identifier
-        entity.stopAllAnimations(recursive: false)
-        
-        // Or if you have access to the specific animation controller:
-        // entity.stopAnimation(for: "ambient_audio")
-        
-        // Alternatively, post a stop notification
-        guard let scene = realityKitScene else { return }
-        
-        NotificationCenter.default.post(
-            name: NSNotification.Name("RealityKit.NotificationTrigger"),
-            object: nil,
-            userInfo: [
-                "RealityKit.NotificationTrigger.Scene": scene,
-                "RealityKit.NotificationTrigger.Entity": entity,
-                "RealityKit.NotificationTrigger.Identifier": "stop_ambient_audio"
-            ]
-        )
+        guard let rootEntity = self.rootEntity else {
+            print("⚠️ No root entity for ambient audio")
+            return
+        }
+        AmbientAudioManager.shared.pause(entity: rootEntity)
+        isPlaying = false
     }
     
     
@@ -631,41 +705,86 @@ struct SpacesView: View {
         previousSeatID = seatID
     }
 
-    private func cleanupView() {
-        guard !isCleaningUp else { return }
-        isCleaningUp = true
-        
-        windowManager.closeAllSpaceWindows(dismissWindow: dismissWindow)
-        windowManager.openMainWindow(openWindow: openWindow)
-        
-        appModel.selectedSpace = nil
-        appModel.currentActiveSpace = nil
-        
-        if let spaceId = selectedSpace?.id {
+    @MainActor
+        private func cleanupView() {
+            guard !isCleaningUp else {
+                print("⚠️ [SpacesView] Already cleaning up, skipping duplicate cleanup")
+                return
+            }
+            isCleaningUp = true
+            
+            print("🧹 [SpacesView] Starting cleanup sequence")
+            
+            // Stop ambient audio using the manager
+            if let rootEntity = self.rootEntity {
+                AmbientAudioManager.shared.stop(entity: rootEntity)
+            }
+            
+            // Reset audio state
+            isPlaying = false
+            self.rootEntity = nil
+
+            // Close all space-related windows
+            windowManager.closeAllSpaceWindows(dismissWindow: dismissWindow)
+            
+            // Leave the space if one was selected
+            if let spaceId = selectedSpace?.id {
+                Task {
+                    await spaceService.leaveSpace(spaceId)
+                    print("✅ Successfully left space: \(spaceId)")
+                    
+                    // Only dismiss if we're actually in the Spaces immersive space
+                    if appModel.currentActiveSpace == appModel.spacesID {
+                        await dismissImmersiveSpace()
+                        print("✅ Immersive space dismissed")
+                    }
+                }
+            } else {
+                // Only dismiss if we're actually in an immersive space
+                Task {
+                    if appModel.currentActiveSpace == appModel.spacesID {
+                        await dismissImmersiveSpace()
+                        print("✅ Immersive space dismissed (no space selected)")
+                    }
+                }
+            }
+            
+            // Save preferences
+            saveRotationPreference()
+            
+            // Cancel all subscriptions and tasks
+            cancellables.forEach { $0.cancel() }
+            cancellables.removeAll()
+            notificationPostTask?.cancel()
+            notificationPostTask = nil
+            
+            // Clean up entity wrapper
             Task {
-                await spaceService.leaveSpace(spaceId)
-                print("✅ Successfully left space: \(spaceId)")
+                await entityWrapper.cleanup()
+            }
+            
+            // Reset state
+            navBarOpened = false
+            mapOpened = false
+            notificationSentForEntityID = nil
+            selectedSpace = nil
+            
+            // Clear the scene
+            anchorEntity.children.removeAll()
+            userRotationEntity.children.removeAll()
+            
+            // Reset AppModel state - this will clear currentActiveSpace
+            appModel.selectedSpace = nil
+            appModel.currentActiveSpace = nil
+            
+            // Open main window after a short delay - WindowManager will check for duplicates
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(500))
+                windowManager.openMainWindow(openWindow: openWindow)
+                print("✅ [SpacesView] Cleanup complete")
+                isCleaningUp = false
             }
         }
-        
-        saveRotationPreference()
-        cancellables.forEach { $0.cancel() }
-        cancellables.removeAll()
-        notificationPostTask?.cancel()
-        notificationPostTask = nil
-        
-        Task {
-            await entityWrapper.cleanup()
-        }
-        
-        navBarOpened = false
-        mapOpened = false
-        
-        notificationSentForEntityID = nil
-        selectedSpace = nil
-        rootEntity = nil
-        anchorEntity.children.removeAll()
-    }
     
     // MARK: - Helper Methods
     private func getSpaceForScene(for entityID: Entity.ID) -> SpaceData? {
@@ -755,35 +874,76 @@ struct SpacesView: View {
         }
     }
     
+    private func applyUserAndSeatRotation(seatRotation: simd_quatf, animated: Bool) {
+        // Extract Y-axis rotation from seat
+        let seatYRotation = extractYRotation(from: seatRotation)
+        
+        // Combine with user rotation
+        let combinedRotationDegrees = userRotation + seatYRotation
+        let radians = combinedRotationDegrees * .pi / 180
+        let finalRotation = simd_quatf(angle: radians, axis: SIMD3<Float>(0, 1, 0))
+        
+        var currentTransform = userRotationEntity.transform
+        currentTransform.rotation = finalRotation
+        
+        if animated {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                userRotationEntity.transform = currentTransform
+            }
+        } else {
+            userRotationEntity.transform = currentTransform
+        }
+    }
+    
+    private func extractYRotation(from quaternion: simd_quatf) -> Float {
+        // Convert quaternion to euler angles and extract Y rotation
+        let matrix = float3x3(quaternion)
+        let yaw = atan2(matrix[0][2], matrix[2][2])
+        return yaw * 180 / .pi  // Convert to degrees
+    }
+
+    
+    
     private func moveUserToSeat(named seatID: String, in spaceEntity: Entity, from previousSeat: String? = nil, animated: Bool) {
         guard let seatEntity = findEntityDeep(named: seatID, in: spaceEntity) else {
             print("💺❌ Could not find seat named '\(seatID)'")
             return
         }
         
-        // Ensure we have the space data to get the adjustment value.
+        // Ensure we have the space data to get the adjustment value
         guard let space = self.selectedSpace else {
             print("❌ Cannot move to seat, selectedSpace is nil.")
             return
         }
 
-        // Calculate the seat's position relative to the main space entity.
+        // Get the seat's world transform relative to the space
+        let seatWorldTransform = seatEntity.transformMatrix(relativeTo: spaceEntity)
+        
+        // Extract the seat's rotation (Y-axis only for horizontal rotation)
+        let seatRotation = simd_quatf(seatWorldTransform)
+        let seatEuler = seatRotation.angle * 180 / .pi  // Convert to degrees
+        
+        // Calculate the seat's position relative to the main space entity
         let seatLocalPos = seatEntity.position(relativeTo: spaceEntity)
         
-        // The final target position for the anchor.
-        // This moves the seat to the origin AND applies the viewer offset.
-        let finalAnchorPosition = -seatLocalPos - space.viewerAdjustment + SIMD3<Float>(0, self.userVerticalOffset, 0)
-
-        // Create a rotation quaternion from the user's rotation
-        let radians = userRotation * .pi / 180
+        // The final target position for the anchor
+        let baseAnchorPosition = -seatLocalPos - space.viewerAdjustment + SIMD3<Float>(0, self.userVerticalOffset, 0)
+        
+        // Combine seat rotation with user rotation
+        let combinedRotation = userRotation + extractYRotation(from: seatRotation)
+        let radians = combinedRotation * .pi / 180
         let rotation = simd_quatf(angle: radians, axis: SIMD3<Float>(0, 1, 0))
-
-        // Rotate the final position by the user's rotation
-        let rotatedFinalAnchorPosition = rotation.act(finalAnchorPosition)
+        
+        // Apply the combined rotation to the position
+        let rotatedFinalAnchorPosition = rotation.act(baseAnchorPosition)
 
         // For initial placement or non-animated transitions
         if !animated {
             anchorEntity.position = rotatedFinalAnchorPosition
+            
+            // Apply seat orientation to userRotationEntity
+            applyUserAndSeatRotation(seatRotation: seatRotation, animated: false)
+            
             print("💺 Initial placement at seat '\(seatID)' with adjustment. Anchor: \(anchorEntity.position)")
             previousSeatID = seatID
             return
@@ -793,14 +953,15 @@ struct SpacesView: View {
         guard let oldSeatID = previousSeat,
               let oldSeatEntity = findEntityDeep(named: oldSeatID, in: spaceEntity)
         else {
-            // Fallback to non-animated placement if the old seat isn't found.
+            // Fallback to non-animated placement if the old seat isn't found
             print("⚠️ Could not find previous seat '\(previousSeat ?? "nil")', snapping to new seat.")
             anchorEntity.position = rotatedFinalAnchorPosition
+            applyUserAndSeatRotation(seatRotation: seatRotation, animated: false)
             previousSeatID = seatID
             return
         }
 
-        // The starting position is the current anchor position.
+        // The starting position is the current anchor position
         let startAnchorPosition = anchorEntity.position
         
         print("🪑 Moving from seat '\(oldSeatID)' to '\(seatID)'")
@@ -811,40 +972,37 @@ struct SpacesView: View {
             anchorEntity.position = rotatedFinalAnchorPosition
         }
         
-        // Update the tracker for the next move.
+        // Apply combined rotation with animation
+        applyUserAndSeatRotation(seatRotation: seatRotation, animated: true)
+        
+        // Update the tracker for the next move
         previousSeatID = seatID
     }
     
     // Modified applyRotationToAnchor to support animation parameter
-    private func applyUserRotationToAnchor(animated: Bool = true) {
-        let radians = userRotation * .pi / 180
-        let userRotationQuat = simd_quatf(angle: radians, axis: SIMD3<Float>(0, 1, 0))
-        
-        // Get current transform and update only the rotation
-        var currentTransform = anchorEntity.transform
-        currentTransform.rotation = userRotationQuat
-        
-        if animated {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                anchorEntity.transform = currentTransform
-            }
-        } else {
-            anchorEntity.transform = currentTransform
-        }
-    }
-
-    // Update the existing applyRotationToAnchor to use the new method
     private func applyRotationToAnchor() {
-        let radians = userRotation * .pi / 180
-        let rotation = simd_quatf(angle: radians, axis: SIMD3<Float>(0, 1, 0))
-        
-        // Only apply rotation, preserve position
-        var currentTransform = userRotationEntity.transform
-        currentTransform.rotation = rotation
-        
-        withAnimation(.easeInOut(duration: 0.3)) {
-            userRotationEntity.transform = currentTransform
+        // This now only applies user rotation adjustment
+        // Seat rotation is handled in moveUserToSeat
+        guard let spaceEntity = entityWrapper.getSpaceEntity(),
+              let currentSeat = appModel.selectedSpace?.currentSeat,
+              let seatEntity = findEntityDeep(named: currentSeat, in: spaceEntity) else {
+            // If no seat, just apply user rotation
+            let radians = userRotation * .pi / 180
+            let rotation = simd_quatf(angle: radians, axis: SIMD3<Float>(0, 1, 0))
+            
+            var currentTransform = userRotationEntity.transform
+            currentTransform.rotation = rotation
+            
+            withAnimation(.easeInOut(duration: 0.3)) {
+                userRotationEntity.transform = currentTransform
+            }
+            return
         }
+        
+        // Get seat rotation and combine with user rotation
+        let seatWorldTransform = seatEntity.transformMatrix(relativeTo: spaceEntity)
+        let seatRotation = simd_quatf(seatWorldTransform)
+        applyUserAndSeatRotation(seatRotation: seatRotation, animated: true)
     }
     
     // Helper function to print the entire entity hierarchy

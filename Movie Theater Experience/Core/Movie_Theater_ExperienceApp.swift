@@ -172,7 +172,7 @@ struct Movie_Theater_ExperienceApp: App {
                 .environmentObject(ImmersiveSpaceManager.shared)
                 .environmentObject(windowManager)
         }
-        .defaultSize(width: 1600, height: 1300)
+        .defaultSize(width: 800, height: 750)
         .windowStyle(.plain)
         
         // Space Nav Bar window.
@@ -195,6 +195,7 @@ struct Movie_Theater_ExperienceApp: App {
         }
         .defaultSize(width: 400, height: 600)
         .windowStyle(.plain)
+        
         
         // Space Emoji window.
         WindowGroup(id: "spaceEmojiWindow") {

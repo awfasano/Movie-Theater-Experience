@@ -14,6 +14,7 @@ struct SpaceData: Identifiable, Codable, Equatable {
     var tags: [String]?
     var introEntityName: String?
     var currentSeat:String?
+    var ambient_audio: String?
     
     // ✅ RENAMED: Property is now more specific.
     var initialTargetEntityForVolume: String?

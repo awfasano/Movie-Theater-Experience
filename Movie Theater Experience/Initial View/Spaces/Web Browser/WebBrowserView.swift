@@ -38,7 +38,13 @@ struct WebBrowserView: View {
             visibility: .visible,
             attachmentAnchor: .scene(.bottom),
             contentAlignment: .center
-        ) { browserControls }
+        ) {
+            VStack {
+                Spacer()
+                    .frame(height: 20) // Add space between toolbar and bottom edge
+                browserControls
+            }
+        }
         .onChange(of: navigationState.urlString) { newValue in
             urlFieldText = newValue
         }
@@ -106,7 +112,8 @@ struct WebBrowserView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))  // Changed from .thinMaterial to .regularMaterial
+            .hoverEffect(.highlight)
 
             Button(action: loadUrl) {
                 Text("Go")
@@ -117,24 +124,38 @@ struct WebBrowserView: View {
                     .background(Color(hex: accentColorHex))
                     .clipShape(Capsule())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(HighlightButtonStyle())
+            .hoverEffect(.highlight)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 24))
-        .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 5)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))  // Changed from .thinMaterial to .regularMaterial
+        .shadow(color: .black.opacity(0.8), radius: 10, x: 0, y: 5)
     }
 
     private func browserNavButton(systemName: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 16, weight: .medium))
-                .frame(width: 36, height: 36)
-                .background(Color(hex: accentColorHex).opacity(enabled ? 0.5 : 0))
-                .clipShape(Circle())
+            ZStack {
+                // More opaque background circle
+                Circle()
+                    .fill((Color(hex: accentColorHex) ?? Color.blue).opacity(enabled ? 0.7 : 0.35))  // Increased from 0.15/0.05
+                    .frame(width: 36, height: 36)
+                    .overlay(
+                        // Add a subtle material background for depth
+                        Circle()
+                            .fill(.regularMaterial)  // Changed from no background to regularMaterial
+                            .opacity(0.8)  // Make it quite opaque
+                    )
+                
+                // Icon
+                Image(systemName: systemName)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(enabled ? Color.primary : Color.primary.opacity(0.4))  // Slightly more visible when disabled
+            }
         }
         .disabled(!enabled)
-        .buttonStyle(BrowserButtonStyle())
+        .buttonStyle(EnhancedButtonStyle(disabled: !enabled))
+        .hoverEffect(.automatic, isEnabled: enabled)
     }
 
     private func loadUrl() {
@@ -158,6 +179,50 @@ struct WebBrowserView: View {
         if let url = URL(string: navigationState.homeURLString) {
             navigationState.pendingRequest = URLRequest(url: url)
         }
+    }
+}
+
+// MARK: - Enhanced Button Style with Hover Support
+struct EnhancedButtonStyle: ButtonStyle {
+    let disabled: Bool
+    @State private var isHovered: Bool = false
+    
+    init(disabled: Bool = false) {
+        self.disabled = disabled
+    }
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.92 : (isHovered && !disabled ? 1.08 : 1.0))
+            .brightness(configuration.isPressed ? -0.1 : (isHovered && !disabled ? 0.1 : 0))
+            .opacity(disabled ? 0.5 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+            .animation(.easeInOut(duration: 0.15), value: isHovered)
+            .onHover { hovering in
+                isHovered = hovering
+            }
+    }
+}
+
+// MARK: - Highlighting Button Style (for compatibility)
+struct HighlightButtonStyle: ButtonStyle {
+    let disabled: Bool
+    
+    init(disabled: Bool = false) {
+        self.disabled = disabled
+    }
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .brightness(configuration.isPressed ? -0.1 : 0)
+            .overlay(
+                RoundedRectangle(cornerRadius: 50)
+                    .fill(Color.primary.opacity(configuration.isPressed ? 0.8 : 0))
+                    .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
+            )
+            .opacity(disabled ? 0.6 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 
@@ -301,7 +366,7 @@ private struct WebViewRepresentable: UIViewRepresentable {
         var parent: WebViewRepresentable
         init(_ parent: WebViewRepresentable) { self.parent = parent }
 
-        // Prefer sites’ native dark themes when they support it
+        // Prefer sites' native dark themes when they support it
         // Drop the variant that has `preferences:`; use this one instead.
         func webView(_ webView: WKWebView,
                      decidePolicyFor navigationAction: WKNavigationAction,
@@ -335,7 +400,7 @@ private struct WebViewRepresentable: UIViewRepresentable {
     }
 }
 
-// MARK: - Button Style / Helpers (unchanged)
+// MARK: - Legacy Button Style (kept for compatibility)
 struct BrowserButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label

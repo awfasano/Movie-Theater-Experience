@@ -15,13 +15,14 @@ struct SpaceBrowserIntegration: View {
     @StateObject private var spaceViewModel = VolumetricSpaceViewModel()
     
     @State private var showJoinFailedAlert = false
+    @State private var showAlreadyInSpaceAlert = false  // NEW: Alert for already in space
     @State private var isLoadingSpace = false
     @State private var loadError: Error?
     @State private var loadingProgress: Double = 0.0
     @State private var loadingMessage: String = ""
     @State private var activeSpaceID: String? = nil
-    @State private var loadingTask: Task<Void, Never>? = nil  // Track the loading task
-    @State private var isCancelled = false  // Track cancellation state
+    @State private var loadingTask: Task<Void, Never>? = nil
+    @State private var isCancelled = false
 
     // MARK: - Child Views
 
@@ -45,8 +46,15 @@ struct SpaceBrowserIntegration: View {
                 print("ℹ️ Info tapped for \(space.spaceName)")
             },
             onCardTapped: {
-                // Card tap action - enter immersive space
+                // Card tap action - check if already in space first
                 if let spaceIDString = space.id {
+                    // NEW: Check if already in a space
+                    if appModel.currentActiveSpace != nil {
+                        print("⚠️ Already in space '\(appModel.currentActiveSpace!)'. Showing alert.")
+                        showAlreadyInSpaceAlert = true
+                        return
+                    }
+                    
                     activeSpaceID = spaceIDString
                     loadingTask = Task {
                         await enterImmersiveSpace(space: space)
@@ -94,7 +102,7 @@ struct SpaceBrowserIntegration: View {
             ) {
                 ForEach(Array(service.spaces.enumerated()), id: \.element.id) { index, space in
                     cardView(for: space, index: index)
-                        .frame(width: 320, height: 280)  // Enforce consistent card size
+                        .frame(width: 320, height: 280)
                 }
             }
             .padding(32)
@@ -200,6 +208,12 @@ struct SpaceBrowserIntegration: View {
         } message: {
             Text("Please go to the Chat Settings and set a username before joining a shared space. This is so you have a username.")
         }
+        // NEW: Alert for already in space
+        .alert("Already in a Space", isPresented: $showAlreadyInSpaceAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Please exit the current space before entering a new one.")
+        }
         .overlay {
             if isLoadingSpace { loadingOverlay }
         }
@@ -209,8 +223,24 @@ struct SpaceBrowserIntegration: View {
     
     @MainActor
     private func enterImmersiveSpace(space: SpaceData) async {
+        // Check username
         guard !appModel.username.isEmpty else {
             showJoinFailedAlert = true
+            return
+        }
+        
+        // NEW: Double-check if already in a space (defensive programming)
+        if appModel.currentActiveSpace != nil {
+            print("⚠️ Cannot enter space - already in space '\(appModel.currentActiveSpace!)'")
+            showAlreadyInSpaceAlert = true
+            activeSpaceID = nil
+            return
+        }
+        
+        // NEW: Check if immersive space manager is transitioning
+        if appModel.immersiveSpaceState.isTransitioning {
+            print("⚠️ Immersive space is transitioning. Please wait.")
+            activeSpaceID = nil
             return
         }
         
@@ -228,10 +258,17 @@ struct SpaceBrowserIntegration: View {
             
             await updateProgress(0.1, message: "Preparing space...")
             appModel.selectedSpace = space
+            
+            // NEW: Set the active space immediately to prevent double-entry
+            appModel.currentActiveSpace = space.id
+            
             try await Task.sleep(for: .milliseconds(200))
             
             try Task.checkCancellation()
-            guard !isCancelled else { throw CancellationError() }
+            guard !isCancelled else {
+                appModel.currentActiveSpace = nil  // Clear on cancellation
+                throw CancellationError()
+            }
             
             await updateProgress(0.2, message: "Downloading \(space.spaceName)...")
             try await withThrowingTaskGroup(of: Void.self) { group in
@@ -242,37 +279,70 @@ struct SpaceBrowserIntegration: View {
             }
             
             try Task.checkCancellation()
-            guard !isCancelled else { throw CancellationError() }
+            guard !isCancelled else {
+                appModel.currentActiveSpace = nil  // Clear on cancellation
+                throw CancellationError()
+            }
             
             await updateProgress(0.5, message: "Processing 3D content...")
             try await Task.sleep(for: .milliseconds(300))
             
             try Task.checkCancellation()
-            guard !isCancelled else { throw CancellationError() }
+            guard !isCancelled else {
+                appModel.currentActiveSpace = nil  // Clear on cancellation
+                throw CancellationError()
+            }
             
             await updateProgress(0.6, message: "Preparing immersive environment...")
+            
+            // The switchToSpace method already checks for active spaces
             let success = await appModel.switchToSpace(appModel.spacesID)
             guard success else {
+                appModel.currentActiveSpace = nil  // Clear on failure
                 throw SpaceLoadError.transitionFailed
             }
             
             try Task.checkCancellation()
-            guard !isCancelled else { throw CancellationError() }
+            guard !isCancelled else {
+                appModel.currentActiveSpace = nil  // Clear on cancellation
+                throw CancellationError()
+            }
             
             await updateProgress(0.7, message: "Setting up scene...")
             try await Task.sleep(for: .milliseconds(200))
             
             try Task.checkCancellation()
-            guard !isCancelled else { throw CancellationError() }
+            guard !isCancelled else {
+                appModel.currentActiveSpace = nil  // Clear on cancellation
+                throw CancellationError()
+            }
             
             await updateProgress(0.8, message: "Entering space...")
-            await openImmersiveSpace(id: appModel.spacesID)
+            
+            // NEW: Dismiss tab bar before opening immersive space
+            dismissWindow(id: "tabBar")
+            print("🚪 Dismissed tab bar window")
+            
+            // Wait a moment to ensure tab bar is dismissed
+            try? await Task.sleep(for: .milliseconds(100))
+            
+            let result = await openImmersiveSpace(id: appModel.spacesID)
+            
+            // Check if the immersive space actually opened
+            guard result == .opened else {
+                print("❌ Failed to open immersive space, result: \(result)")
+                appModel.currentActiveSpace = nil
+                throw SpaceLoadError.transitionFailed
+            }
+            
+            print("✅ Immersive space opened successfully")
             
             await updateProgress(0.9, message: "Finalizing...")
             openCompanionWindows()
             await updateProgress(1.0, message: "Welcome to \(space.spaceName)!")
             try await Task.sleep(for: .milliseconds(500))
             
+            // Dismiss the main content window after everything is loaded
             dismissWindow(id: "mainContent")
             print("🚪 Dismissed ContentView window")
             
@@ -280,11 +350,13 @@ struct SpaceBrowserIntegration: View {
             print("⚠️ Loading was cancelled by user")
             activeSpaceID = nil
             appModel.selectedSpace = nil
+            appModel.currentActiveSpace = nil  // Clear active space on cancellation
         } catch {
             print("❌ Failed to enter immersive space: \(error)")
             loadError = error
             activeSpaceID = nil
             appModel.selectedSpace = nil
+            appModel.currentActiveSpace = nil  // Clear active space on error
             
             if !isCancelled {
                 await showErrorAlert(error: error)
@@ -378,8 +450,9 @@ struct SpaceBrowserIntegration: View {
             activeSpaceID = nil
         }
         
-        // Clear selected space
+        // Clear selected space and active space
         appModel.selectedSpace = nil
+        appModel.currentActiveSpace = nil  // NEW: Clear active space on cancel
     }
     
     private func openCompanionWindows() {

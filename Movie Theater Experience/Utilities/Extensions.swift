@@ -12,7 +12,7 @@ import UIKit  // Needed for UIColor
 // MARK: - Color Definitions
 
 extension Color {
-    static let accentColor = Color("AccentColor") // Assuming you've added this in your asset catalog
+   // static let accentColor = Color("AccentColor") // Assuming you've added this in your asset catalog
     static let accentColor2 = Color(red: 0.2, green: 0.8, blue: 0.6) // Example
 
     static let incomingBubble = Color(red: 0.2, green: 0.4, blue: 1) // A pleasant blue

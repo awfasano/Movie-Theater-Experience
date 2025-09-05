@@ -24,29 +24,32 @@ extension Notification.Name {
 }
 
 // MARK: - Spaces Nav Bar View
+// SpacesNavBarView.swift - Updated with proper exit handling
+// SpacesNavBarView.swift - Updated with proper exit handling
+// SpacesNavBarView.swift - Updated with proper exit handling
+import SwiftUI
+
 struct SpacesNavBarView: View {
     // MARK: - Environment
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismissWindow) private var dismissWindow
     @Environment(AppModel.self) private var appModel
     @EnvironmentObject private var spacesEntityWrapper: SpacesEntityWrapper
     @EnvironmentObject private var windowManager: WindowManager
 
     // MARK: - State Properties
-    
-    // UI State
     @State private var isContentHidden: Bool = false
-    
-    // Transform State
+    @State private var ambientVolume: Float = 75.0
     @State private var currentRotation: Float = 0.0
     private let rotationIncrement: Float = 5.0
     @State private var verticalOffset: Float = 0.0
     private let verticalIncrement: Float = 0.1
     @State private var ambientAudioEnabled: Bool = true
     @State private var showVolumeSlider = false
-    @State private var ambientVolume: Float = 0.0  // 0 dB = full volume
-
+    
     // Button Animation State
+    @State private var isExiting = false
     @State private var isOpeningMap = false
     @State private var isOpeningStoryteller = false
     @State private var isOpeningEmoji = false
@@ -55,23 +58,26 @@ struct SpacesNavBarView: View {
     @State private var isOpeningAudioControls = false
     @State private var isOpeningBrowser = false
     @State private var isOpeningSettings = false
-    @State private var isOpeningPortal = false
     
-    // Services
     @StateObject private var audioService = AudioService.shared
-        
+
     var body: some View {
         HStack(spacing: 20) {
-            // --- CORE CONTROLS ---
-            
+            // --- ENHANCED EXIT BUTTON ---
             Button(action: {
                 Task {
-                    await dismissImmersiveSpace()
+                    await handleSmartExit()
                 }
             }) {
-                Image(systemName: "xmark.circle.fill")
+                if isExiting {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: "xmark.circle.fill")
+                }
             }
             .buttonStyle(.borderedProminent)
+            .disabled(isExiting)
             .help("Exit immersive space")
             
             Toggle(isOn: $spacesEntityWrapper.showEmojis) {
@@ -84,7 +90,7 @@ struct SpacesNavBarView: View {
             
             // --- MOVEMENT CONTROLS ---
             VStack(spacing: 10) {
-                // Rotation
+                // Rotation controls
                 HStack(spacing: 10) {
                     Button(action: { rotateUser(degrees: -rotationIncrement) }) {
                         Image(systemName: "arrow.counterclockwise")
@@ -103,7 +109,7 @@ struct SpacesNavBarView: View {
                     .buttonStyle(.bordered)
                 }
                 
-                // Vertical Offset
+                // Vertical Offset controls
                 HStack(spacing: 10) {
                     Button(action: { moveUserVertically(amount: verticalIncrement) }) {
                         Image(systemName: "arrow.down")
@@ -124,30 +130,42 @@ struct SpacesNavBarView: View {
             }
             
             Divider().frame(height: 20)
-
-            // --- WINDOW-OPENING BUTTONS ---
             
+            // Rest of your buttons...
             windowOpeningButton(id: "spaceMap", state: $isOpeningMap, systemImage: "chair.lounge", helpText: "Change seat")
             windowOpeningButton(id: "storytellerWindow", state: $isOpeningStoryteller, systemImage: "waveform", helpText: "Open stories")
             windowOpeningButton(id: "spaceEmojiWindow", state: $isOpeningEmoji, systemImage: "face.smiling", helpText: "Send emoji reactions")
             windowOpeningButton(id: "spaceChatWindow", state: $isOpeningChat, systemImage: "message.fill", helpText: "Open chat messages")
             
-            // --- AUDIO CONTROLS ---
-            
-            // Volume Control Button
-            Button(action: {
-                showVolumeSlider.toggle()
-            }) {
-                Image(systemName: "slider.vertical.3")
-            }
-            .buttonStyle(.bordered)
-            .help("Adjust volume")
-            .disabled(!ambientAudioEnabled)
-            // This is the correct way to show the slider.
-            .popover(isPresented: $showVolumeSlider,
-                     attachmentAnchor: .point(.top),
-                     arrowEdge: .bottom) {
-                volumeSliderPopover
+            // Audio controls...
+            HStack(spacing: 10) {
+                Button(action: {
+                    ambientAudioEnabled.toggle()
+                    if ambientAudioEnabled {
+                        startAmbientAudio()
+                        updateAmbientVolume(ambientVolume)
+                    } else {
+                        stopAmbientAudio()
+                    }
+                }) {
+                    Image(systemName: ambientAudioEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                }
+                .buttonStyle(.bordered)
+                .help(ambientAudioEnabled ? "Mute ambient audio" : "Enable ambient audio")
+                
+                Button(action: {
+                    showVolumeSlider.toggle()
+                }) {
+                    Image(systemName: "slider.vertical.3")
+                }
+                .buttonStyle(.bordered)
+                .help("Adjust volume")
+                .disabled(!ambientAudioEnabled)
+                .popover(isPresented: $showVolumeSlider,
+                         attachmentAnchor: .point(.top),
+                         arrowEdge: .bottom) {
+                    volumeSliderPopover
+                }
             }
             
             // Music Controls
@@ -185,98 +203,65 @@ struct SpacesNavBarView: View {
         .opacity(isContentHidden ? 0.0 : 1.0)
     }
     
-    // MARK: - Volume Slider Popover
-    // MARK: - Volume Slider Popover
-    // MARK: - Volume Slider Popover
+    // MARK: - Smart Exit Handler
+    @MainActor
+    private func handleSmartExit() async {
+        guard !isExiting else { return }
+        isExiting = true
+        
+        defer { isExiting = false }
+        
+        print("🚪 [SpacesNavBar] Initiating smart exit sequence")
+        
+        // Check if we have an active entity in the space
+        let hasActiveEntity = spacesEntityWrapper.getSpaceEntity() != nil
+        let hasRootEntity = spacesEntityWrapper.getSpaceEntity()?.findEntity(named: "Root") != nil
+        
+        if !hasActiveEntity || !hasRootEntity {
+            print("⚠️ [SpacesNavBar] No active entity/root detected - performing emergency exit")
+            // Use the WindowManager's emergency exit method
+            await windowManager.performEmergencyExit(
+                dismissWindow: dismissWindow,
+                openWindow: openWindow,
+                dismissImmersiveSpace: { await dismissImmersiveSpace() }
+            )
+            
+            // Clean up app state
+            await appModel.cleanupImmersiveSpace()
+        } else {
+            print("✅ [SpacesNavBar] Active entity found - normal exit")
+            // Normal dismissal - SpacesView will handle cleanup
+            await dismissImmersiveSpace()
+        }
+    }
+    
+    // MARK: - Volume Slider Popover (keep your existing implementation)
     private var volumeSliderPopover: some View {
-        VStack(spacing: 8) {
-            volumeHighIcon
+        VStack(spacing: 16) {
+            Image(systemName: volumeIconName)
+                .font(.largeTitle)
+                .foregroundColor(.secondary)
+            
             volumeSliderTrack
-            volumeLowIcon
             volumeDisplay
-                .padding(.top, 4)
         }
-        // Add padding around the content inside the popover bubble.
-        .padding(.vertical)
-        // The custom .background modifier has been removed.
-    }
-
-    
-    private var volumeDisplay: some View {
-        Text("\(Int(ambientVolume))%")
-            .font(.caption)
-            .monospacedDigit()
-            .foregroundColor(.primary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(.thinMaterial, in: Capsule())
+        .padding()
+        .frame(width: 100)
     }
     
-    private var volumeHighIcon: some View {
-        Image(systemName: "speaker.wave.3.fill")
-            .font(.caption2)
-            .foregroundColor(.secondary)
-    }
-    
-    private var volumeLowIcon: some View {
-        Image(systemName: "speaker.fill")
-            .font(.caption2)
-            .foregroundColor(.secondary)
-    }
-    
-    private var volumeSliderTrack: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .bottom) {
-                // Background track
-                Capsule()
-                    .fill(.quaternary)
-                    .frame(width: 6)
-
-                // Active fill based on 0-100 range
-                Capsule()
-                    .fill(Color.accentColor)
-                    .frame(width: 6, height: CGFloat(ambientVolume / 100.0) * geometry.size.height)
-
-                // Thumb positioned precisely
-                Circle()
-                    .fill(Color.white)
-                    .frame(width: 16, height: 16)
-                    .shadow(radius: 2)
-                    .position(x: geometry.size.width / 2,
-                              y: CGFloat(1 - (ambientVolume / 100.0)) * geometry.size.height)
-            }
-            .frame(width: 20)
-            .gesture(volumeDragGesture(in: geometry.size.height))
+    private var volumeIconName: String {
+        if ambientVolume == 0 {
+            return "speaker.fill"
+        } else if ambientVolume < 33 {
+            return "speaker.wave.1.fill"
+        } else if ambientVolume < 66 {
+            return "speaker.wave.2.fill"
+        } else {
+            return "speaker.wave.3.fill"
         }
-        .frame(width: 20, height: 150)
-    }
-
-    private func volumeDragGesture(in height: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { value in
-                // Clamp the drag location to the bounds of the slider
-                let clampedY = max(0, min(value.location.y, height))
-                let percent = 1.0 - (clampedY / height)
-                
-                // Calculate new value based on 0-100 range
-                let newValue = Float(percent * 100.0)
-                ambientVolume = max(0.0, min(100.0, newValue))
-                
-                updateAmbientVolume(ambientVolume)
-            }
-    }
-
-
-    
-    private func handleVolumeChange(at xPosition: CGFloat, in width: CGFloat) {
-        let percent = xPosition / width
-        let newValue = Float(-60.0 + (60.0 * percent))
-        ambientVolume = max(-60.0, min(0.0, newValue))
-        updateAmbientVolume(ambientVolume)
     }
     
-    // MARK: - Helper Functions
-    
+    // Keep all your other existing methods...
     private func rotateUser(degrees: Float) {
         currentRotation += degrees
         if currentRotation >= 360 { currentRotation -= 360 }
@@ -299,19 +284,7 @@ struct SpacesNavBarView: View {
         NotificationCenter.default.post(name: .userVerticalOffsetChanged, object: nil, userInfo: userInfo)
     }
     
-    private func updateAmbientVolume(_ volume: Float) {
-        guard ambientAudioEnabled else { return }
-        
-        let userInfo: [String: Any] = [
-            "volume": volume
-        ]
-        NotificationCenter.default.post(
-            name: .updateAmbientVolume,
-            object: nil,
-            userInfo: userInfo
-        )
-    }
-
+    // Rest of your existing methods...
     private func windowOpeningButton(id: String, state: Binding<Bool>, systemImage: String, helpText: String, customAction: (() -> Void)? = nil) -> some View {
         Button(action: {
             state.wrappedValue = true
@@ -333,46 +306,83 @@ struct SpacesNavBarView: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: state.wrappedValue)
     }
     
-    private func setupWorldPortal() async {
-        // Post notification to SpacesView to setup portal
-        NotificationCenter.default.post(name: .setupPortal, object: nil)
-    }
-
-    private func removePortal() {
-        // Post notification to SpacesView to remove portal
-        NotificationCenter.default.post(name: .removePortal, object: nil)
+    // Keep your other helper methods...
+    private func startAmbientAudio() {
+        NotificationCenter.default.post(name: .startAmbientAudio, object: nil)
     }
     
-    private func getVisibilityDescription() -> String {
-        let percentage = Int(appModel.viewTransparency)
-        switch percentage {
-        case 0:
-            return "Everything hidden"
-        case 1..<25:
-            return "Showing top portion"
-        case 25..<50:
-            return "Showing upper half"
-        case 50:
-            return "Half visible"
-        case 51..<75:
-            return "Mostly visible"
-        case 75..<100:
-            return "Nearly full"
-        case 100:
-            return "Fully visible"
-        default:
-            return ""
-        }
+    private func stopAmbientAudio() {
+        NotificationCenter.default.post(name: .stopAmbientAudio, object: nil)
     }
-}
-
-// MARK: - Preview
-struct SpacesNavBarView_Previews: PreviewProvider {
-    static var previews: some View {
-        SpacesNavBarView()
-            .environment(AppModel())
-            .environmentObject(SpacesEntityWrapper.shared)
-            .environmentObject(WindowManager())
-            .glassBackgroundEffect()
+    
+    private func updateAmbientVolume(_ volume: Float) {
+        guard ambientAudioEnabled else { return }
+        let userInfo: [String: Any] = ["volume": volume]
+        NotificationCenter.default.post(name: .updateAmbientVolume, object: nil, userInfo: userInfo)
+    }
+    
+    private var volumeDisplay: some View {
+        VStack(spacing: 4) {
+            Text("\(Int(ambientVolume))%")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .monospacedDigit()
+            
+            Text("Volume")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(.regularMaterial, in: Capsule())
+    }
+    
+    private var volumeSliderTrack: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .bottom) {
+                Capsule()
+                    .fill(Color.gray.opacity(0.2))
+                    .frame(width: 14)
+                
+                Capsule()
+                    .fill(Color.accentColor)
+                    .frame(width: 14, height: CGFloat(ambientVolume / 100.0) * geometry.size.height)
+                
+                ZStack {
+                    Circle()
+                        .fill(Color.clear)
+                        .frame(width: 60, height: 60)
+                    
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 36, height: 36)
+                        .shadow(color: Color.black.opacity(0.3), radius: 6, x: 0, y: 3)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.accentColor, lineWidth: 3)
+                        )
+                    
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 8, height: 8)
+                }
+                .position(x: geometry.size.width / 2,
+                         y: CGFloat(1 - (ambientVolume / 100.0)) * geometry.size.height)
+            }
+            .frame(width: 60)
+            .gesture(volumeDragGesture(in: geometry.size.height))
+        }
+        .frame(width: 60, height: 200)
+    }
+    
+    private func volumeDragGesture(in height: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                let clampedY = max(0, min(value.location.y, height))
+                let percent = 1.0 - (clampedY / height)
+                let newValue = Float(percent * 100.0)
+                ambientVolume = max(0.0, min(100.0, newValue))
+                updateAmbientVolume(ambientVolume)
+            }
     }
 }
