@@ -133,11 +133,11 @@ struct InteractiveStoryView: View {
     
     private var disconnectedOverlay: some View {
         VStack(spacing: 20) {
-            Image(systemName: "wifi.exclamationmark")
+            Image(systemName: getErrorIcon())
                 .font(.largeTitle)
-                .foregroundStyle(.red)
+                .foregroundStyle(getErrorColor())
             
-            Text("Connection Lost")
+            Text(getErrorTitle())
                 .font(.headline)
             
             Text(viewModel.errorMessage)
@@ -152,8 +152,14 @@ struct InteractiveStoryView: View {
                 .buttonStyle(.bordered)
                 .tint(.secondary)
                 
-                Button(action: { viewModel.retryConnection() }) {
-                    Label("Retry", systemImage: "arrow.clockwise")
+                Button(action: {
+                    if isServiceUnavailable() {
+                        //viewModel.liveStorytellerService.retryConnection()
+                    } else {
+                        viewModel.retryConnection()
+                    }
+                }) {
+                    Label(getRetryButtonText(), systemImage: "arrow.clockwise")
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.purple)
@@ -163,6 +169,41 @@ struct InteractiveStoryView: View {
         .padding(.vertical, 30)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .padding(.horizontal)
+    }
+
+    private func isServiceUnavailable() -> Bool {
+        return viewModel.errorMessage.contains("service is temporarily unavailable") ||
+               viewModel.errorMessage.contains("internal error") ||
+               viewModel.errorMessage.contains("AI storyteller service is temporarily unavailable") ||
+               viewModel.errorMessage.contains("high demand")
+    }
+
+    private func getErrorIcon() -> String {
+        if isServiceUnavailable() {
+            return "exclamationmark.triangle"
+        }
+        return "wifi.exclamationmark"
+    }
+
+    private func getErrorColor() -> Color {
+        if isServiceUnavailable() {
+            return .orange
+        }
+        return .red
+    }
+
+    private func getErrorTitle() -> String {
+        if isServiceUnavailable() {
+            return "Service Temporarily Unavailable"
+        }
+        return "Connection Lost"
+    }
+
+    private func getRetryButtonText() -> String {
+        if isServiceUnavailable() {
+            return "Try Again"
+        }
+        return "Retry"
     }
 
     // MARK: - Bottom AUDIO overlay

@@ -1,17 +1,20 @@
-// FIXED: AmbientAudioManager.swift - Implemented a persistent cache to prevent resource conflicts
+// AmbientAudioManager.swift
+// Persistent cache + safe ambient playback (RealityKit-compatible API)
+
 import Foundation
 import RealityKit
 import AVFoundation
 
-class AmbientAudioManager {
+final class AmbientAudioManager {
     static let shared = AmbientAudioManager()
 
+    // Controllers per entity
     private var audioControllers: [Entity: AudioPlaybackController] = [:]
     private var pendingVolumes: [Entity: Float] = [:]
 
     private init() {}
 
-    // MARK: - Caching Logic
+    // MARK: - Caching
 
     /// Returns a URL for the cached audio file if it exists.
     private func getCachedURL(for remoteURL: URL) -> URL? {
@@ -19,8 +22,8 @@ class AmbientAudioManager {
             print("❌ Could not get caches directory.")
             return nil
         }
-        
-        // Create a consistent, safe filename from the remote URL
+
+        // Use the lastPathComponent as the local filename
         let fileName = remoteURL.lastPathComponent
         let localURL = cachesDirectory.appendingPathComponent(fileName)
 
@@ -28,47 +31,55 @@ class AmbientAudioManager {
             print("✅ Found cached audio file at: \(localURL.path)")
             return localURL
         }
-        
         return nil
     }
-    
+
     /// Downloads and saves the audio file to the cache.
     private func downloadAndCacheAudio(from remoteURL: URL) async throws -> URL {
         guard let cachesDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
             throw AmbientAudioError.cacheError
         }
-        
+
         let fileName = remoteURL.lastPathComponent
         let localURL = cachesDirectory.appendingPathComponent(fileName)
 
         print("🎵 Downloading audio to cache from: \(remoteURL.absoluteString)")
         let (data, _) = try await URLSession.shared.data(from: remoteURL)
-        
-        try data.write(to: localURL)
+        try data.write(to: localURL, options: [.atomic])
         print("💾 Saved cached audio file: \(localURL.path)")
-        
+
         return localURL
     }
 
-    /// Sets up ambient audio for a Root entity from a Firebase Storage URL
+    // MARK: - Setup
+
+    /// Sets up ambient audio for a Root entity from a Firebase Storage URL.
+    /// - Parameters:
+    ///   - rootEntity: The entity to attach audio to.
+    ///   - audioURLString: Firebase Storage (or remote) URL string.
+    ///   - defaultVolumePercent: 0–100 scale; applied on first play.
     func setupAmbientAudio(
         for rootEntity: Entity,
-        audioURLString: String
+        audioURLString: String,
+        defaultVolumePercent: Float = 50
     ) async throws {
         guard let remoteURL = URL(string: audioURLString) else {
             print("❌ Invalid URL format: \(audioURLString)")
             throw AmbientAudioError.invalidURL
         }
-        
-        // Don't re-setup if a controller already exists for this entity.
-        // This prevents issues if setup is called multiple times.
+
+        // Avoid re-setup for same entity
         if audioControllers[rootEntity] != nil {
             print("✅ Audio is already set up for this entity. Skipping.")
             return
         }
 
+        // Prepare system audio session (best-effort; don't crash on failure)
+        try? AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+        try? AVAudioSession.sharedInstance().setActive(true, options: [])
+
         do {
-            // 1. Check for a cached file or download it.
+            // 1) Use cache if available; otherwise download.
             let audioFileURL: URL
             if let cachedURL = getCachedURL(for: remoteURL) {
                 audioFileURL = cachedURL
@@ -76,21 +87,25 @@ class AmbientAudioManager {
                 audioFileURL = try await downloadAndCacheAudio(from: remoteURL)
             }
 
-            // 2. Try to load the audio resource from the stable cached URL.
+            // 2) Load the audio resource (RealityKit API: no configuration args in this overload).
             let audioResource = try await AudioFileResource.load(
                 contentsOf: audioFileURL,
-                withName: remoteURL.lastPathComponent // The name is now consistently tied to the same file path.
+                withName: remoteURL.lastPathComponent
             )
-            print("✅ Successfully loaded AudioFileResource from cache.")
-            
-            // 3. Create and add ambient audio component.
-            let ambientComponent = ChannelAudioComponent()
-            rootEntity.components.set(ambientComponent)
 
-            // 4. Prepare the audio controller.
+            print("✅ Successfully loaded AudioFileResource from cache or download.")
+
+            // 3) Add an audio channel so the controller can play on the entity.
+            let channel = ChannelAudioComponent()
+            rootEntity.components.set(channel)
+
+            // 4) Prepare controller and store it.
             let controller = await rootEntity.prepareAudio(audioResource)
             audioControllers[rootEntity] = controller
-            
+
+            // Stage default volume to apply on first play()
+            pendingVolumes[rootEntity] = Self.percentageToDecibels(defaultVolumePercent)
+
             print("✅ Ambient audio component added and controller prepared for \(await rootEntity.name)")
 
         } catch {
@@ -100,23 +115,24 @@ class AmbientAudioManager {
         }
     }
 
+    // MARK: - Controls
+
     /// Start playing ambient audio
     func play(entity: Entity) {
         guard let controller = audioControllers[entity] else {
             print("⚠️ No audio controller found for entity - call setupAmbientAudio first")
             return
         }
-        
+
         let volumeToApply: Float
-        if let pendingVolume = pendingVolumes[entity] {
+        if let pendingVolume = pendingVolumes.removeValue(forKey: entity) {
             volumeToApply = pendingVolume
-            pendingVolumes.removeValue(forKey: entity)
             print("🔊 Applied pending volume: \(pendingVolume) dB")
         } else {
             volumeToApply = Self.percentageToDecibels(50.0)
             print("🔊 Applied default volume: \(volumeToApply) dB (50%)")
         }
-        
+
         controller.gain = Audio.Decibel(volumeToApply)
         controller.play()
         print("▶️ Started ambient audio playback")
@@ -138,9 +154,9 @@ class AmbientAudioManager {
             pendingVolumes.removeValue(forKey: entity)
             print("⏹ Stopped and removed ambient audio controller.")
         }
-        // No need to clean up the cached file anymore.
+        // Cached file is intentionally retained.
     }
-    
+
     /// Update volume (in decibels)
     func setVolume(_ gainDB: Float, for entity: Entity) {
         if let controller = audioControllers[entity] {
@@ -152,12 +168,16 @@ class AmbientAudioManager {
         }
     }
 
+    // MARK: - Helpers
+
     static func percentageToDecibels(_ percentage: Float) -> Float {
         guard percentage > 0 else { return -200 } // Effectively silent
-        let normalized = percentage / 100.0
-        return (normalized * 20.0) - 20
+        let normalized = max(0, min(1, percentage / 100.0))
+        return (normalized * 20.0) - 20.0
     }
 }
+
+// MARK: - Errors
 
 enum AmbientAudioError: Error {
     case invalidURL
@@ -165,4 +185,3 @@ enum AmbientAudioError: Error {
     case entityNotFound
     case cacheError
 }
-
