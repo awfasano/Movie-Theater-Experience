@@ -26,6 +26,9 @@ struct SpacesView: View {
     @State private var isCleaningUp = false
     @State private var isPlaying = false
     @State private var rootEntity: Entity? = nil
+    
+    @State private var footButtonEntity: Entity? = nil
+
 
 
     // State
@@ -42,9 +45,11 @@ struct SpacesView: View {
     // Notification State
     @State private var notificationSentForEntityID: Entity.ID? = nil
     @State private var notificationPostTask: Task<Void, Never>? = nil
+    // Add near the top of SpacesView
+    @State private var wasPlayingBeforeOverlay = false
+
         
     // Volume control visibility
-    @State private var showVolumeControl = false
     
     // Combine subscriptions
     @State private var cancellables = Set<AnyCancellable>()
@@ -72,17 +77,13 @@ struct SpacesView: View {
             overlayViews
 
             // Volume control toggle button
-            volumeToggleButton
         }
         .task {
             print("📱 SpacesView appeared")
             await initializeSpace()
         }
-        .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .inactive {
-                cleanupView()
-            }
-        }
+        .onChange(of: scenePhase, perform: handleScenePhaseChange)
+
         .onChange(of: sharePlayManager.isSessionActive) { _, isActive in
             if isActive {
                 print("SharePlay: Session just became active.")
@@ -148,17 +149,67 @@ struct SpacesView: View {
         RealityView { content in
             // Set up the rotation hierarchy
             setupRotationHierarchy(content: content)
+            
+            // Create and add the subtle foot button
+            createFootButton(content: content)
         } update: { _ in
-            // lightweight – runs every frame
+            guard RenderGuard.shared.isActive else { return }
             if let e = entityWrapper.getSpaceEntity(),
                e.id != lastSpaceID {
-                Task { @MainActor in
-                    ensureEntityIsParented(e)
-                }
+                Task { @MainActor in ensureEntityIsParented(e) }
             }
         }
         .ignoresSafeArea()
-        .allowsHitTesting(false)
+        .allowsHitTesting(true) // Changed to true to allow interaction with foot button
+    }
+    
+    private func handleFootButtonTap() {
+        print("🦶 Foot button tapped - checking nav bar status")
+        
+        // Check if nav bar is already open to prevent duplicates
+        guard !windowManager.isWindowOpen(.spaceNavBar) else {
+            print("⚠️ Nav bar already open, ignoring tap")
+            return
+        }
+        
+        print("✅ Opening nav bar")
+        windowManager.openWindow(.spaceNavBar, openWindow: openWindow)
+    }
+    
+    
+    // MARK: - Foot Button Creation
+    // MARK: - Foot Button Creation
+    private func createFootButton(content: RealityViewContent) {
+        // Create a subtle button entity positioned at user's feet
+        let buttonMesh = MeshResource.generateBox(width: 0.1, height: 0.02, depth: 0.1)
+        var buttonMaterial = SimpleMaterial()
+        buttonMaterial.baseColor = .color(UIColor.gray.withAlphaComponent(0.3))
+        buttonMaterial.roughness = .float(0.8)
+        buttonMaterial.metallic = .float(0.1)
+        
+        let buttonEntity = ModelEntity(mesh: buttonMesh, materials: [buttonMaterial])
+        buttonEntity.name = "nav_reopen_button"
+        
+        // Position it at the user's feet (slightly below ground level and forward)
+        buttonEntity.position = SIMD3<Float>(0, -1.5, 0.3)
+        
+        // Add collision component for tap detection
+        let buttonShape = ShapeResource.generateBox(width: 0.1, height: 0.02, depth: 0.1)
+        buttonEntity.components.set(CollisionComponent(shapes: [buttonShape]))
+        
+        // Add input target component to make it tappable
+        buttonEntity.components.set(InputTargetComponent())
+        
+        // Add it to the userRotationEntity so it rotates with the user view
+        userRotationEntity.addChild(buttonEntity)
+        self.footButtonEntity = buttonEntity
+        
+        // Subscribe to tap gestures
+        content.subscribe(to: CollisionEvents.Began.self, on: buttonEntity) { _ in
+            Task { @MainActor in
+                self.handleFootButtonTap()
+            }
+        }
     }
 
     private var overlayViews: some View {
@@ -172,27 +223,6 @@ struct SpacesView: View {
                     .foregroundColor(.red)
                     .padding()
                     .background(.thinMaterial, in: .rect(cornerRadius: 10))
-            }
-        }
-    }
-    
-    // MARK: - Volume Control Toggle Button
-    private var volumeToggleButton: some View {
-        VStack {
-            Spacer()
-            HStack {
-                Spacer()
-                Button(action: {
-                    showVolumeControl.toggle()
-                }) {
-                    Image(systemName: showVolumeControl ? "speaker.wave.2.fill" : "speaker.wave.2")
-                        .font(.title2)
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(.thinMaterial, in: .circle)
-                }
-                .padding(.trailing)
-                .padding(.bottom)
             }
         }
     }
@@ -234,6 +264,52 @@ struct SpacesView: View {
         }
         return 75.0 // Default to 75% volume instead of 0%
     }
+    
+    
+    // Add these helpers inside SpacesView
+    @MainActor
+    private func handleScenePhaseChange(_ phase: ScenePhase) {
+        switch phase {
+        case .active:
+            // Resume lightweight things; do NOT rebuild entities here
+            RenderGuard.shared.setActive(true)
+            if wasPlayingBeforeOverlay, let root = rootEntity {
+                AmbientAudioManager.shared.play(entity: root)
+                isPlaying = true
+                
+                // Notify about state change
+                NotificationCenter.default.post(
+                    name: .ambientAudioStateChanged,
+                    object: nil,
+                    userInfo: ["isPlaying": true]
+                )
+            }
+
+        case .inactive:
+            // Pause only; do not dismiss immersive space or remove anchors
+            RenderGuard.shared.setActive(false)
+            if let root = rootEntity {
+                wasPlayingBeforeOverlay = isPlaying
+                AmbientAudioManager.shared.pause(entity: root)   // don't stop()
+                isPlaying = false
+                
+                // Notify about state change
+                NotificationCenter.default.post(
+                    name: .ambientAudioStateChanged,
+                    object: nil,
+                    userInfo: ["isPlaying": false]
+                )
+            }
+
+        case .background:
+            // Real cleanup is okay here
+            Task { await cleanupView() }
+
+        @unknown default:
+            break
+        }
+    }
+
     
     // MARK: - Complete initializeSpace Function
     @MainActor
@@ -637,6 +713,13 @@ struct SpacesView: View {
         }
         AmbientAudioManager.shared.play(entity: rootEntity)
         isPlaying = true
+        
+        // Notify the nav bar about the state change
+        NotificationCenter.default.post(
+            name: .ambientAudioStateChanged,
+            object: nil,
+            userInfo: ["isPlaying": true]
+        )
     }
 
     private func stopAmbientAudio(in entity: Entity) {
@@ -646,7 +729,15 @@ struct SpacesView: View {
         }
         AmbientAudioManager.shared.pause(entity: rootEntity)
         isPlaying = false
+        
+        // Notify the nav bar about the state change
+        NotificationCenter.default.post(
+            name: .ambientAudioStateChanged,
+            object: nil,
+            userInfo: ["isPlaying": false]
+        )
     }
+
     
     
     private func updateParticipantEntities(participants: Set<Participant>) {
@@ -726,6 +817,9 @@ struct SpacesView: View {
 
             // Close all space-related windows
             windowManager.closeAllSpaceWindows(dismissWindow: dismissWindow)
+            
+            footButtonEntity?.removeFromParent()
+            footButtonEntity = nil
             
             // Leave the space if one was selected
             if let spaceId = selectedSpace?.id {
@@ -1043,4 +1137,13 @@ extension float4x4 {
     var translation: SIMD3<Float> {
         return SIMD3<Float>(columns.3.x, columns.3.y, columns.3.z)
     }
+}
+
+
+// RenderGuard.swift
+@MainActor
+final class RenderGuard {
+    static let shared = RenderGuard()
+    private(set) var isActive = true
+    func setActive(_ active: Bool) { isActive = active }
 }

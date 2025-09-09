@@ -1,5 +1,6 @@
 // SpacesNavBarView.swift
 import SwiftUI
+import Combine
 
 // MARK: - Notification Definitions
 extension Notification.Name {
@@ -21,13 +22,10 @@ extension Notification.Name {
     static let startAmbientAudio = Notification.Name("StartAmbientAudio")
     static let stopAmbientAudio = Notification.Name("StopAmbientAudio")
     static let updateAmbientVolume = Notification.Name("UpdateAmbientVolume")
+    
+    /// Audio state change notifications
+    static let ambientAudioStateChanged = Notification.Name("AmbientAudioStateChanged")
 }
-
-// MARK: - Spaces Nav Bar View
-// SpacesNavBarView.swift - Updated with proper exit handling
-// SpacesNavBarView.swift - Updated with proper exit handling
-// SpacesNavBarView.swift - Updated with proper exit handling
-import SwiftUI
 
 struct SpacesNavBarView: View {
     // MARK: - Environment
@@ -46,7 +44,10 @@ struct SpacesNavBarView: View {
     @State private var verticalOffset: Float = 0.0
     private let verticalIncrement: Float = 0.1
     @State private var ambientAudioEnabled: Bool = true
+    @State private var isAudioPlaying: Bool = false  // Track actual playback state
     @State private var showVolumeSlider = false
+    @State private var showInfoPopover = false
+    
     
     // Button Animation State
     @State private var isExiting = false
@@ -60,6 +61,7 @@ struct SpacesNavBarView: View {
     @State private var isOpeningSettings = false
     
     @StateObject private var audioService = AudioService.shared
+    @State private var cancellables = Set<AnyCancellable>()
 
     var body: some View {
         HStack(spacing: 20) {
@@ -85,7 +87,21 @@ struct SpacesNavBarView: View {
             }
             .toggleStyle(.button)
             .help(spacesEntityWrapper.showEmojis ? "Hide Emojis" : "Show Emojis")
-
+            
+            Button(action: {
+                showInfoPopover.toggle()
+            }) {
+                Image(systemName: "info.circle")
+            }
+            .buttonStyle(.bordered)
+            .help("Control overview")
+            .popover(isPresented: $showInfoPopover,
+                     attachmentAnchor: .point(.bottom),
+                     arrowEdge: .top) {
+                controlsOverviewPopover
+            }
+            
+            
             Divider().frame(height: 20)
             
             // --- MOVEMENT CONTROLS ---
@@ -140,27 +156,32 @@ struct SpacesNavBarView: View {
             // Audio controls...
             HStack(spacing: 10) {
                 Button(action: {
-                    ambientAudioEnabled.toggle()
-                    if ambientAudioEnabled {
+                    if isAudioPlaying {
+                        // Audio is playing, so stop it
+                        stopAmbientAudio()
+                        ambientAudioEnabled = false
+                    } else {
+                        // Audio is not playing, so start it
+                        ambientAudioEnabled = true
                         startAmbientAudio()
                         updateAmbientVolume(ambientVolume)
-                    } else {
-                        stopAmbientAudio()
                     }
                 }) {
-                    Image(systemName: ambientAudioEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                    Image(systemName: audioButtonIcon)
+                        .foregroundColor(isAudioPlaying ? .primary : .secondary)
                 }
                 .buttonStyle(.bordered)
-                .help(ambientAudioEnabled ? "Mute ambient audio" : "Enable ambient audio")
+                .help(isAudioPlaying ? "Stop ambient audio" : "Start ambient audio")
                 
                 Button(action: {
                     showVolumeSlider.toggle()
                 }) {
                     Image(systemName: "slider.vertical.3")
+                        .foregroundColor(isAudioPlaying ? .primary : .secondary)
                 }
                 .buttonStyle(.bordered)
                 .help("Adjust volume")
-                .disabled(!ambientAudioEnabled)
+                .disabled(!isAudioPlaying)  // Disable when not playing
                 .popover(isPresented: $showVolumeSlider,
                          attachmentAnchor: .point(.top),
                          arrowEdge: .bottom) {
@@ -201,6 +222,61 @@ struct SpacesNavBarView: View {
         .cornerRadius(10)
         .shadow(radius: 5)
         .opacity(isContentHidden ? 0.0 : 1.0)
+        .onAppear {
+            setupAudioStateListeners()
+        }
+        .onDisappear {
+            cancellables.removeAll()
+        }
+    }
+    
+    // MARK: - Audio State Monitoring
+    private var audioButtonIcon: String {
+        if !ambientAudioEnabled || !isAudioPlaying {
+            return "speaker.slash.fill"
+        } else {
+            return "speaker.wave.2.fill"
+        }
+    }
+    
+    private func setupAudioStateListeners() {
+        // Listen for audio state changes
+        NotificationCenter.default.publisher(for: .ambientAudioStateChanged)
+            .sink { notification in
+                if let isPlaying = notification.userInfo?["isPlaying"] as? Bool {
+                    Task { @MainActor in
+                        self.isAudioPlaying = isPlaying
+                        
+                        // If audio stopped unexpectedly, update our enabled state
+                        if !isPlaying {
+                            self.ambientAudioEnabled = false
+                        }
+                    }
+                }
+            }
+            .store(in: &cancellables)
+        
+        // Monitor audio playing state every few seconds
+        Timer.publish(every: 2.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { _ in
+                checkAudioPlayingState()
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func checkAudioPlayingState() {
+        guard let entity = spacesEntityWrapper.getSpaceEntity(),
+              let rootEntity = entity.findEntity(named: "Root") else {
+            isAudioPlaying = false
+            return
+        }
+        
+        let actuallyPlaying = AmbientAudioManager.shared.isAudioPlaying(for: rootEntity)
+        if actuallyPlaying != isAudioPlaying {
+            isAudioPlaying = actuallyPlaying
+            ambientAudioEnabled = actuallyPlaying
+        }
     }
     
     // MARK: - Smart Exit Handler
@@ -235,12 +311,12 @@ struct SpacesNavBarView: View {
         }
     }
     
-    // MARK: - Volume Slider Popover (keep your existing implementation)
+    // MARK: - Volume Slider Popover
     private var volumeSliderPopover: some View {
         VStack(spacing: 16) {
             Image(systemName: volumeIconName)
                 .font(.largeTitle)
-                .foregroundColor(.secondary)
+                .foregroundColor(isAudioPlaying ? .primary : .secondary)
             
             volumeSliderTrack
             volumeDisplay
@@ -250,7 +326,7 @@ struct SpacesNavBarView: View {
     }
     
     private var volumeIconName: String {
-        if ambientVolume == 0 {
+        if !isAudioPlaying || ambientVolume == 0 {
             return "speaker.fill"
         } else if ambientVolume < 33 {
             return "speaker.wave.1.fill"
@@ -261,7 +337,7 @@ struct SpacesNavBarView: View {
         }
     }
     
-    // Keep all your other existing methods...
+    // MARK: - User Controls
     private func rotateUser(degrees: Float) {
         currentRotation += degrees
         if currentRotation >= 360 { currentRotation -= 360 }
@@ -284,7 +360,112 @@ struct SpacesNavBarView: View {
         NotificationCenter.default.post(name: .userVerticalOffsetChanged, object: nil, userInfo: userInfo)
     }
     
-    // Rest of your existing methods...
+    // MARK: - Audio Controls
+    private func startAmbientAudio() {
+        NotificationCenter.default.post(name: .startAmbientAudio, object: nil)
+        
+        // Update state optimistically, but will be confirmed by state listener
+        ambientAudioEnabled = true
+    }
+    
+    private func stopAmbientAudio() {
+        NotificationCenter.default.post(name: .stopAmbientAudio, object: nil)
+        
+        // Update state optimistically
+        ambientAudioEnabled = false
+        isAudioPlaying = false
+    }
+    
+    private func updateAmbientVolume(_ volume: Float) {
+        // Only update volume if audio is actually playing
+        guard isAudioPlaying else {
+            print("📝 Volume change ignored - audio not playing")
+            return
+        }
+        
+        let userInfo: [String: Any] = ["volume": volume]
+        NotificationCenter.default.post(name: .updateAmbientVolume, object: nil, userInfo: userInfo)
+    }
+    
+    // MARK: - Controls Overview Popover
+    private var controlsOverviewPopover: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Space Controls Overview")
+                    .font(.headline)
+                    .padding(.bottom, 8)
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    controlDescription(icon: "eye.fill", title: "Show/Hide Emojis", description: "Toggle visibility of emoji reactions in the space")
+                    
+                    Divider()
+                    
+                    Text("Movement Controls")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    
+                    controlDescription(icon: "arrow.counterclockwise", title: "Rotate View", description: "Rotate your view left and right in 5° increments")
+                    controlDescription(icon: "arrow.up", title: "Vertical Position", description: "Adjust your height up and down in 0.1m increments")
+                    
+                    Divider()
+                    
+                    Text("Windows & Features")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    
+                    controlDescription(icon: "chair.lounge", title: "Change Seat", description: "Switch to a different seat in the space")
+                    controlDescription(icon: "waveform", title: "Stories", description: "Access audio stories and content")
+                    controlDescription(icon: "face.smiling", title: "Emoji Reactions", description: "Send emoji reactions to other users")
+                    controlDescription(icon: "message.fill", title: "Chat", description: "Open text chat with other users")
+                    
+                    Divider()
+                    
+                    Text("Audio Controls")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    
+                    controlDescription(icon: "speaker.wave.2.fill", title: "Ambient Audio", description: "Start/stop ambient background audio.  If the ambient audio stops at any point, just toggle it off and back on, and it should work again")
+                    controlDescription(icon: "slider.vertical.3", title: "Volume Control", description: "Adjust ambient audio volume.  If you are having issues with the volume.  You make need to go to the control panel and increase volume for applications")
+                    controlDescription(icon: "music.note", title: "Music Player", description: "Control spatial music playback")
+                    
+                    Divider()
+                    
+                    Text("Additional Features")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    
+                    controlDescription(icon: "safari.fill", title: "Web Browser", description: "Browse the internet, toggle for day or night mode, and save bookmarks")
+                    controlDescription(icon: "gear", title: "Settings", description: "Adjust color preferences on buttons and chat messages")
+                }
+            }
+            .padding()
+        }
+        .frame(width: 350, height: 500)
+    }
+
+    private func controlDescription(icon: String, title: String, description: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .foregroundColor(.accentColor)
+                .frame(width: 20)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                Text(description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            
+            Spacer()
+        }
+    }
+    
+    
+    
+    // MARK: - Helper Methods
     private func windowOpeningButton(id: String, state: Binding<Bool>, systemImage: String, helpText: String, customAction: (() -> Void)? = nil) -> some View {
         Button(action: {
             state.wrappedValue = true
@@ -306,27 +487,13 @@ struct SpacesNavBarView: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: state.wrappedValue)
     }
     
-    // Keep your other helper methods...
-    private func startAmbientAudio() {
-        NotificationCenter.default.post(name: .startAmbientAudio, object: nil)
-    }
-    
-    private func stopAmbientAudio() {
-        NotificationCenter.default.post(name: .stopAmbientAudio, object: nil)
-    }
-    
-    private func updateAmbientVolume(_ volume: Float) {
-        guard ambientAudioEnabled else { return }
-        let userInfo: [String: Any] = ["volume": volume]
-        NotificationCenter.default.post(name: .updateAmbientVolume, object: nil, userInfo: userInfo)
-    }
-    
     private var volumeDisplay: some View {
         VStack(spacing: 4) {
             Text("\(Int(ambientVolume))%")
                 .font(.title3)
                 .fontWeight(.semibold)
                 .monospacedDigit()
+                .foregroundColor(isAudioPlaying ? .primary : .secondary)
             
             Text("Volume")
                 .font(.caption)
@@ -345,7 +512,7 @@ struct SpacesNavBarView: View {
                     .frame(width: 14)
                 
                 Capsule()
-                    .fill(Color.accentColor)
+                    .fill(isAudioPlaying ? Color.accentColor : Color.gray)
                     .frame(width: 14, height: CGFloat(ambientVolume / 100.0) * geometry.size.height)
                 
                 ZStack {
@@ -359,11 +526,11 @@ struct SpacesNavBarView: View {
                         .shadow(color: Color.black.opacity(0.3), radius: 6, x: 0, y: 3)
                         .overlay(
                             Circle()
-                                .stroke(Color.accentColor, lineWidth: 3)
+                                .stroke(isAudioPlaying ? Color.accentColor : Color.gray, lineWidth: 3)
                         )
                     
                     Circle()
-                        .fill(Color.accentColor)
+                        .fill(isAudioPlaying ? Color.accentColor : Color.gray)
                         .frame(width: 8, height: 8)
                 }
                 .position(x: geometry.size.width / 2,
@@ -378,6 +545,9 @@ struct SpacesNavBarView: View {
     private func volumeDragGesture(in height: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
+                // Only allow volume changes if audio is playing
+                guard isAudioPlaying else { return }
+                
                 let clampedY = max(0, min(value.location.y, height))
                 let percent = 1.0 - (clampedY / height)
                 let newValue = Float(percent * 100.0)

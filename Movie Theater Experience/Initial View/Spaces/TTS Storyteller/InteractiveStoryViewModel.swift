@@ -2,7 +2,7 @@
 //  InteractiveStoryViewModel.swift
 //  Movie Theater Experience
 //
-//  Updated to include transcript functionality
+//  Updated to improve AVAudioSession management during state transitions.
 //
 
 import Foundation
@@ -10,7 +10,7 @@ import AVFoundation
 import Combine
 import QuartzCore
 
-// MARK: - Transcript Model
+// MARK: - Transcript Model (No changes)
 struct TranscriptMessage: Identifiable {
     let id = UUID()
     let role: MessageRole
@@ -62,13 +62,9 @@ class InteractiveStoryViewModel: ObservableObject {
     // MARK: - Services
     private(set) var videoPlayer = AVPlayer()
     private(set) var narrationAudioService = StorytellerAudioService()
+    // Lazy initialization ensures configuration happens only when needed.
     private(set) lazy var liveStorytellerService: LiveStorytellerService = {
-        let service = LiveStorytellerService()
-        service.configure(
-            voice: self.story.voice,
-            instruction: self.story.instructions
-        )
-        return service
+        createLiveStorytellerService()
     }()
 
     // MARK: - Private
@@ -89,7 +85,8 @@ class InteractiveStoryViewModel: ObservableObject {
     
     @MainActor
     func prepare() async {
-        setupAudioSession()
+        // Configure the session for initial playback
+        await configureAudioSessionForPlayback()
         loadCurrentVideo()
         loadNarrationTrack()
         startDisplayLink()
@@ -97,10 +94,20 @@ class InteractiveStoryViewModel: ObservableObject {
         setupVolumeBinding()
         setupVideoPlayerStateObserver()
         
-        // Request microphone permission early for visionOS
+        // Request microphone permission early
         AVAudioApplication.requestRecordPermission { granted in
             print("Microphone permission: \(granted)")
         }
+    }
+    
+    // Helper to create and configure the Live service
+    private func createLiveStorytellerService() -> LiveStorytellerService {
+        let service = LiveStorytellerService()
+        service.configure(
+            voice: self.story.voice,
+            instruction: self.story.instructions
+        )
+        return service
     }
     
     private func setupVolumeBinding() {
@@ -114,9 +121,6 @@ class InteractiveStoryViewModel: ObservableObject {
     
     func handleTextFieldFocusChange(_ isFocused: Bool) {
         isTextFieldFocused = isFocused
-        if sessionState == .interacting {
-            //liveStorytellerService.handleTextFieldFocus(isFocused: isFocused)
-        }
     }
     
     private func setupVideoPlayerStateObserver() {
@@ -197,16 +201,25 @@ class InteractiveStoryViewModel: ObservableObject {
             .compactMap { $0 }
             .flatMap { item in
                 let bufferingPublisher = item.publisher(for: \.isPlaybackBufferEmpty).map { $0 }
-                let readyPublisher = item.publisher(for: \.status).filter { $0 == .readyToPlay }.map { _ in item.duration.seconds }
+                // Ensure we only proceed when status is readyToPlay
+                let readyPublisher = item.publisher(for: \.status)
+                    .filter { $0 == .readyToPlay }
+                    .map { _ in item.duration.seconds }
+                    // Use prefix(1) to ensure we only capture the duration once when ready
+                    .prefix(1)
+                
                 return Publishers.CombineLatest(bufferingPublisher, readyPublisher)
             }
             .receive(on: DispatchQueue.main)
             .sink { [weak self] (isBuffering, duration) in
                 guard let self = self else { return }
                 self.isNarrationBuffering = isBuffering
-                if duration.isFinite && duration > 0 { self.audioDuration = duration }
+                if duration.isFinite && duration > 0 {
+                    self.audioDuration = duration
+                }
+                // Setup time observer only once
                 if self.timeObserverToken == nil {
-                     self.timeObserverToken = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.1, preferredTimescale: 600), queue: .main) { [weak self] time in
+                    self.timeObserverToken = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.1, preferredTimescale: 600), queue: .main) { [weak self] time in
                         guard let self = self, !self.isScrubbing else { return }
                         self.audioCurrentTime = time.seconds
                     }
@@ -217,47 +230,39 @@ class InteractiveStoryViewModel: ObservableObject {
 
     // MARK: - Interaction Flow
     
+    // REVISED: Simplified transition logic.
     func skipToInteraction() {
-        // Cancel any previous interaction listeners to prevent conflicts
+        // Cancel any previous interaction listeners
         interactionCancellables.removeAll()
         
-        // CRITICAL: Stop and clean up narration audio service FIRST
+        // 1. Stop current playback systems
         narrationAudioService.stop()
         videoPlayer.pause()
         
-        // Deactivate audio session before switching
+        // Set UI state immediately
+        self.sessionState = .connecting
+        self.errorMessage = ""
+        self.showingError = false
+
+        // 2. Wait briefly for the narration service (AVPlayer) to release resources.
         Task {
-            do {
-                // First deactivate the current session
-                try AVAudioSession.sharedInstance().setActive(false)
+            // A short delay (e.g., 100ms) helps ensure AVPlayer is quiet before switching modes.
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            
+            await MainActor.run {
+                // 3. Set up connection status listener
+                self.liveStorytellerService.$status
+                    .receive(on: DispatchQueue.main)
+                    .sink { [weak self] status in
+                        self?.handleConnectionStatus(status)
+                    }
+                    .store(in: &self.interactionCancellables)
                 
-                // Wait for cleanup to complete
-                try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
-                
-                await MainActor.run {
-                    // Set UI state
-                    self.sessionState = .connecting
-                    self.errorMessage = ""
-                    self.showingError = false
-                    
-                    // Set up connection status listener
-                    self.liveStorytellerService.$status
-                        .receive(on: DispatchQueue.main)
-                        .sink { [weak self] status in
-                            self?.handleConnectionStatus(status)
-                        }
-                        .store(in: &self.interactionCancellables)
-                    
-                    // Start connection (this will setup audio session for playAndRecord)
-                    self.liveStorytellerService.connectAndStart(urlString: self.webSocketURL)
-                }
-            } catch {
-                print("[ViewModel] Failed to deactivate audio session: \(error)")
-                // Still try to proceed
-                await MainActor.run {
-                    self.sessionState = .connecting
-                    self.liveStorytellerService.connectAndStart(urlString: self.webSocketURL)
-                }
+                // 4. Start connection.
+                // The LiveStorytellerService is now responsible for configuring
+                // the AVAudioSession to .playAndRecord and activating it.
+                // We do NOT manually deactivate the session here, as it causes errors.
+                self.liveStorytellerService.connectAndStart(urlString: self.webSocketURL)
             }
         }
     }
@@ -271,10 +276,14 @@ class InteractiveStoryViewModel: ObservableObject {
         case .error(let message):
             errorMessage = "Connection lost: \(message)"
             sessionState = .disconnected
-            setupAudioSession()
+            // If connection fails, revert audio session configuration
+            Task { await configureAudioSessionForPlayback() }
         case .permissionDenied:
+            // If permission was denied, we might already be connected (for text)
+            // or still connecting.
             errorMessage = "Microphone permission was denied. You can use text chat."
             showingError = true
+            // Allow interaction (text-only)
             if sessionState == .connecting {
                 sessionState = .interacting
             }
@@ -283,50 +292,33 @@ class InteractiveStoryViewModel: ObservableObject {
         }
     }
 
+    // REVISED: Improved synchronization and session reconfiguration.
     func returnToStory() {
-        // Cancel listeners before disconnecting
         interactionCancellables.removeAll()
         
-        // Ensure mic is off before disconnecting
+        // 1. Ensure mic is off and disconnect.
         liveStorytellerService.setMic(active: false)
-        
-        // Disconnect with full cleanup
+        // The LiveStorytellerService is responsible for deactivating the session during its disconnect.
         liveStorytellerService.disconnect(silent: false)
         
         Task {
-            // Wait for LiveStorytellerService cleanup
-            try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
+            // 2. Wait for LiveStorytellerService cleanup and session deactivation.
+            // This delay is crucial to ensure the session is fully released (setActive(false))
+            // before reconfiguring it for playback.
+            try? await Task.sleep(nanoseconds: 500_000_000) // 500ms
             
-            do {
-                // Deactivate audio session
-                try AVAudioSession.sharedInstance().setActive(false)
-                
-                // Brief pause
-                try await Task.sleep(nanoseconds: 200_000_000) // 200ms
-                
-                // Configure for story playback
-                try AVAudioSession.sharedInstance().setCategory(.playback,
-                                                                mode: .moviePlayback,
-                                                                options: [.mixWithOthers])
-                try AVAudioSession.sharedInstance().setActive(true)
-                
-                print("[ViewModel] Audio session configured for story playback")
-            } catch {
-                print("[ViewModel] Audio session error during return to story: \(error)")
-            }
+            // 3. Configure session back for story playback.
+            await configureAudioSessionForPlayback()
             
             await MainActor.run {
-                // Create a fresh instance of LiveStorytellerService for next time
-                self.liveStorytellerService = LiveStorytellerService()
-                self.liveStorytellerService.configure(
-                    voice: self.story.voice,
-                    instruction: self.story.instructions
-                )
+                // 4. Create a fresh instance of LiveStorytellerService for next time
+                // This ensures a clean state for the next interaction.
+                self.liveStorytellerService = createLiveStorytellerService()
                 
                 self.sessionState = .playing
                 self.showingError = false
                 
-                // Reload narration
+                // 5. Reload narration
                 self.loadNarrationTrack()
             }
         }
@@ -347,9 +339,15 @@ class InteractiveStoryViewModel: ObservableObject {
 
     @objc private func updateWaveform() {
         let spec = (sessionState == .playing)
-                 ? narrationAudioService.getSpectrum()
-                 : liveStorytellerService.getSpectrum()
-        if audioLevels.count != spec.count { audioLevels = Array(repeating: 0, count: spec.count) }
+            ? narrationAudioService.getSpectrum()
+            : liveStorytellerService.getSpectrum()
+        
+        // Ensure array sizes match before updating
+        if audioLevels.count != spec.count {
+            audioLevels = Array(repeating: 0, count: spec.count)
+        }
+        
+        // Apply decay for smoothing
         let decay: Float = 0.75
         for i in 0..<spec.count {
             audioLevels[i] = audioLevels[i] * decay + spec[i] * (1 - decay)
@@ -366,42 +364,41 @@ class InteractiveStoryViewModel: ObservableObject {
             .store(in: &playerCancellables)
     }
 
-    private func setupAudioSession() {
-        Task.detached(priority: .utility) {
+    // REVISED: Centralized configuration for Playback mode.
+    // This function is called when starting the view and when returning from interaction.
+    private func configureAudioSessionForPlayback() async {
+        // Use a detached task for session configuration as it can block.
+        await Task.detached(priority: .userInitiated) {
             do {
-                // Choose category based on current state
-                let category: AVAudioSession.Category
-                let mode: AVAudioSession.Mode
-                let options: AVAudioSession.CategoryOptions
-                
-                if await self.sessionState == .interacting {
-                    category = .playAndRecord
-                    mode = .voiceChat
-                    options = [.defaultToSpeaker, .allowBluetooth, .mixWithOthers]
-                } else {
-                    category = .playback
-                    mode = .moviePlayback
-                    options = .mixWithOthers
-                }
-                
-                try AVAudioSession.sharedInstance().setCategory(category, mode: mode, options: options)
+                // Configure for standard media playback
+                try AVAudioSession.sharedInstance().setCategory(.playback,
+                                                                mode: .moviePlayback,
+                                                                options: [.mixWithOthers])
+                // Activate the session with the new configuration.
                 try AVAudioSession.sharedInstance().setActive(true)
                 
-                print("[ViewModel] Audio session set: \(category.rawValue), mode: \(mode.rawValue)")
+                print("[ViewModel] Audio session configured for story playback")
             } catch {
-                print("[ViewModel] AVAudioSession error:", error)
+                // Log errors if configuration fails (e.g., due to priority conflicts).
+                print("[ViewModel] Audio session error during configuration for playback: \(error)")
             }
-        }
+        }.value
     }
-    
+        
     func sendTextMessage() {
-        guard sessionState == .interacting, !textDraft.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        // Allow sending if interacting or still connecting (to buffer the message)
+        guard sessionState == .interacting || sessionState == .connecting, !textDraft.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        
+        // Send the text via the service
         liveStorytellerService.send(text: textDraft)
+        
+        // Clear the draft immediately for better UX
         textDraft = ""
     }
 
     func toggleMic() {
-        guard sessionState == .interacting, liveStorytellerService.isMicrophoneAvailable else { return }
+        // Check status and availability before toggling
+        guard (sessionState == .interacting || sessionState == .connecting), liveStorytellerService.isMicrophoneAvailable else { return }
         isMicMuted.toggle()
         liveStorytellerService.setMic(active: !isMicMuted)
     }
@@ -418,6 +415,7 @@ class InteractiveStoryViewModel: ObservableObject {
         guard currentVideoIndex < story.videos.count, let url = URL(string: story.videos[currentVideoIndex]) else { return }
         isVideoBuffering = true
         let newItem = AVPlayerItem(asset: AVURLAsset(url: url))
+        // Observe when the video finishes playing
         NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime, object: newItem)
             .sink { [weak self] _ in self?.videoPlayer.pause() }
             .store(in: &playerCancellables)
@@ -425,12 +423,12 @@ class InteractiveStoryViewModel: ObservableObject {
     }
 
     func cleanup() {
-        // Stop all active audio players
+        // Stop all active audio/video players
         videoPlayer.pause()
+        // Disconnect live service (this also deactivates the session)
         liveStorytellerService.disconnect(silent: true)
         
-        // Reset audio session before stopping narration service
-        setupAudioSession()
+        // Stop narration service
         narrationAudioService.stop()
         
         // Clean up remaining components
@@ -442,5 +440,8 @@ class InteractiveStoryViewModel: ObservableObject {
             narrationAudioService.player.removeTimeObserver(tok)
             timeObserverToken = nil
         }
+        
+        // Reset audio session to default (playback) when leaving the view
+        Task { await configureAudioSessionForPlayback() }
     }
 }

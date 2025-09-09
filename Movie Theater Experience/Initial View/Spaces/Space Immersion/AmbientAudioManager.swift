@@ -11,6 +11,7 @@ final class AmbientAudioManager {
     // Controllers per entity
     private var audioControllers: [Entity: AudioPlaybackController] = [:]
     private var pendingVolumes: [Entity: Float] = [:]
+    private var isPlaying: [Entity: Bool] = [:]  // Track playback state
 
     private init() {}
 
@@ -87,13 +88,17 @@ final class AmbientAudioManager {
                 audioFileURL = try await downloadAndCacheAudio(from: remoteURL)
             }
 
-            // 2) Load the audio resource (RealityKit API: no configuration args in this overload).
-            let audioResource = try await AudioFileResource.load(
+            // 2) Load the audio resource with looping configuration
+            var configuration = AudioFileResource.Configuration()
+            configuration.shouldLoop = true
+            
+            let audioResource = try await AudioFileResource(
                 contentsOf: audioFileURL,
-                withName: remoteURL.lastPathComponent
+                withName: remoteURL.lastPathComponent,
+                configuration: configuration
             )
 
-            print("✅ Successfully loaded AudioFileResource from cache or download.")
+            print("✅ Successfully loaded AudioFileResource from cache or download with looping enabled.")
 
             // 3) Add an audio channel so the controller can play on the entity.
             let channel = ChannelAudioComponent()
@@ -105,6 +110,9 @@ final class AmbientAudioManager {
 
             // Stage default volume to apply on first play()
             pendingVolumes[rootEntity] = Self.percentageToDecibels(defaultVolumePercent)
+            
+            // Initialize playback state
+            isPlaying[rootEntity] = false
 
             print("✅ Ambient audio component added and controller prepared for \(await rootEntity.name)")
 
@@ -135,13 +143,15 @@ final class AmbientAudioManager {
 
         controller.gain = Audio.Decibel(volumeToApply)
         controller.play()
-        print("▶️ Started ambient audio playback")
+        isPlaying[entity] = true
+        print("▶️ Started ambient audio playback with automatic looping")
     }
 
     /// Pause ambient audio
     func pause(entity: Entity) {
         if let controller = audioControllers[entity] {
             controller.pause()
+            isPlaying[entity] = false
             print("⏸ Paused ambient audio playback")
         }
     }
@@ -152,6 +162,7 @@ final class AmbientAudioManager {
             controller.stop()
             audioControllers.removeValue(forKey: entity)
             pendingVolumes.removeValue(forKey: entity)
+            isPlaying.removeValue(forKey: entity)
             print("⏹ Stopped and removed ambient audio controller.")
         }
         // Cached file is intentionally retained.
@@ -160,12 +171,24 @@ final class AmbientAudioManager {
     /// Update volume (in decibels)
     func setVolume(_ gainDB: Float, for entity: Entity) {
         if let controller = audioControllers[entity] {
-            controller.gain = Audio.Decibel(gainDB)
-            print("🔊 Set volume to \(gainDB) dB")
+            // Only apply volume if audio is currently playing
+            if isPlaying[entity] == true {
+                controller.gain = Audio.Decibel(gainDB)
+                print("🔊 Set volume to \(gainDB) dB")
+            } else {
+                // Store as pending volume if not playing
+                pendingVolumes[entity] = gainDB
+                print("📝 Stored pending volume: \(gainDB) dB (audio not playing)")
+            }
         } else {
             pendingVolumes[entity] = gainDB
             print("📝 Stored pending volume: \(gainDB) dB")
         }
+    }
+    
+    /// Check if audio is currently playing for an entity
+    func isAudioPlaying(for entity: Entity) -> Bool {
+        return isPlaying[entity] ?? false
     }
 
     // MARK: - Helpers

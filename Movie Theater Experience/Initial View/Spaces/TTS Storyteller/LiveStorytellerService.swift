@@ -2,7 +2,7 @@
 //  LiveStorytellerService.swift
 //  Movie Theater Experience
 //
-//  Revised for correct format handling, simplified playback pipeline, and compilation fixes.
+//  Revised for stable transcripts, correct message handling, improved AVAudioSession management, and compilation fix.
 //
 
 import Foundation
@@ -23,11 +23,20 @@ final class LiveStorytellerService: ObservableObject {
         case error(String)
     }
 
+    // TranscriptEntry ensures the ID remains stable during updates.
     struct TranscriptEntry: Identifiable {
-        let id = UUID()
+        let id: UUID
         let role: String      // "user" or "model"
         let text: String
         let isFinal: Bool
+        
+        // Initialize with an optional ID. If nil (default), create a new one.
+        init(id: UUID? = nil, role: String, text: String, isFinal: Bool) {
+            self.id = id ?? UUID()
+            self.role = role
+            self.text = text
+            self.isFinal = isFinal
+        }
     }
 
     @Published private(set) var status: Status = .idle
@@ -56,22 +65,47 @@ final class LiveStorytellerService: ObservableObject {
 
     private var webSocketTask: URLSessionWebSocketTask?
 
+    // REVISED: Restructured using 'if' statements instead of 'guard'.
     func connectAndStart(urlString: String) {
-        guard status != .connecting, status != .connected else { return }
+        // Check current status to prevent re-entry or determine if a reset is needed.
+        
+        if status == .connecting || status == .connected {
+            // Already connecting or connected, exit early.
+            return
+        }
+        
+        if status == .permissionDenied && webSocketTask != nil {
+            // Already connected (text only), exit early.
+            return
+        }
+        
+        // If we are not idle or in a simple error state, we should reset before attempting to connect.
+        if status != .idle && status != .error("Connection error") {
+             disconnect(silent: true)
+        }
+        
+        // Proceed with connection logic.
         status = .connecting
-        disconnect(silent: true)
 
         checkMicrophonePermission { [weak self] granted in
             guard let self else { return }
             if !granted {
-                self.status = .permissionDenied
+                // Set permission denied status but still allow connection for text chat
+                if self.status == .connecting {
+                     self.status = .permissionDenied
+                }
             }
             Task {
                 do {
+                    // setupAudioEngine configures the AVAudioSession for .playAndRecord
                     try await self.setupAudioEngine()
                     self.openWebSocket(urlString: urlString)
                 } catch {
-                    self.status = .error("Audio setup failed: \(error.localizedDescription)")
+                    print("[Live] Audio setup failed: \(error)")
+                    // If audio setup fails, update status if it hasn't already changed (e.g. to permissionDenied)
+                    if self.status == .connecting {
+                         self.status = .error("Audio setup failed: \(error.localizedDescription)")
+                    }
                 }
             }
         }
@@ -81,6 +115,9 @@ final class LiveStorytellerService: ObservableObject {
         // Allow sending text even if mic permission was denied
         guard (status == .connected || status == .permissionDenied), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         isSendingText = true
+        
+        // We rely on the server to echo the transcript back to us. Do not append manually.
+        
         let message: [String: Any] = ["type": "text", "data": text]
         guard let data = try? JSONSerialization.data(withJSONObject: message),
               let s = String(data: data, encoding: .utf8) else {
@@ -90,7 +127,12 @@ final class LiveStorytellerService: ObservableObject {
         webSocketTask?.send(.string(s)) { [weak self] err in
             Task { @MainActor in
                 self?.isSendingText = false
-                self?.isWaitingForResponse = (err == nil)
+                // Assume we are waiting for a response if the send succeeded
+                if err == nil {
+                    self?.isWaitingForResponse = true
+                } else {
+                    print("[Live] Text send failed: \(String(describing: err))")
+                }
             }
         }
     }
@@ -107,7 +149,7 @@ final class LiveStorytellerService: ObservableObject {
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
 
-        // Audio
+        // Audio (cleanupAudioEngine handles AVAudioSession deactivation)
         cleanupAudioEngine()
 
         // UI state
@@ -120,7 +162,7 @@ final class LiveStorytellerService: ObservableObject {
         isWaitingForResponse = false
     }
 
-    // MARK: - WebSocket internals
+    // MARK: - WebSocket internals (No changes needed below this point)
 
     private func openWebSocket(urlString: String) {
         let wsURLString = urlString.replacingOccurrences(of: "https://", with: "wss://")
@@ -128,7 +170,9 @@ final class LiveStorytellerService: ObservableObject {
         let fullURLString = wsURLString.hasSuffix("/live-chat") ? wsURLString : "\(wsURLString)/live-chat"
 
         guard let url = URL(string: fullURLString) else {
-            status = .error("Invalid WebSocket URL")
+            if status == .connecting {
+                 status = .error("Invalid WebSocket URL")
+            }
             return
         }
 
@@ -151,7 +195,10 @@ final class LiveStorytellerService: ObservableObject {
             case .failure(let error):
                 Task { @MainActor in
                     if (error as NSError).code != NSURLErrorCancelled {
-                        self.status = .error("Connection error: \(error.localizedDescription)")
+                        // Only update status if we haven't already encountered an error or permission issue
+                        if self.status != .permissionDenied {
+                             self.status = .error("Connection error: \(error.localizedDescription)")
+                        }
                     }
                 }
             }
@@ -176,19 +223,24 @@ final class LiveStorytellerService: ObservableObject {
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: config),
               let json = String(data: jsonData, encoding: .utf8) else {
-            status = .error("Failed to encode configuration")
+            if status == .connecting {
+                status = .error("Failed to encode configuration")
+            }
             return
         }
 
         webSocketTask?.send(.string(json)) { [weak self] err in
             Task { @MainActor in
+                guard let self = self else { return }
                 if let err = err {
-                    self?.status = .error("Config send failed: \(err.localizedDescription)")
+                    if self.status == .connecting {
+                        self.status = .error("Config send failed: \(err.localizedDescription)")
+                    }
                 } else {
-                    print("[Live] config sent, setting status .connected")
-                    // self?.debugPlaySine() // Useful for debugging
-                    if self?.status != .permissionDenied {
-                        self?.status = .connected
+                    print("[Live] config sent.")
+                    // If status was connecting, move to connected. If permissionDenied, keep it.
+                    if self.status == .connecting {
+                        self.status = .connected
                     }
                 }
             }
@@ -210,7 +262,9 @@ final class LiveStorytellerService: ObservableObject {
         return Data(base64Encoded: padded, options: [.ignoreUnknownCharacters])
     }
 
+    // Ensure default for 'is_final' is consistently false if missing.
     private func processMessage(_ message: URLSessionWebSocketTask.Message) {
+        // Stop waiting when we receive any message (audio or transcript)
         Task { @MainActor in isWaitingForResponse = false }
 
         switch message {
@@ -219,12 +273,6 @@ final class LiveStorytellerService: ObservableObject {
             handleIncomingAudio(raw)
 
         case .string(let text):
-            // Log the first bit to see shapes during dev
-            // if text.count > 0 {
-            //     let head = text.prefix(160)
-            //     print("[Live<-WS] \(head)...")
-            // }
-
             guard let data = text.data(using: .utf8),
                   let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
                 return
@@ -248,6 +296,8 @@ final class LiveStorytellerService: ObservableObject {
             }
 
             // 2) Transcript variants
+            // Default for 'is_final' is FALSE (partial) if the key is missing.
+            
             if let t = json["transcript"] as? [String: Any] {
                 appendTranscript(role: t["role"] as? String,
                                  text: t["text"] as? String,
@@ -256,7 +306,7 @@ final class LiveStorytellerService: ObservableObject {
             }
             if let role = json["role"] as? String, let content = json["text"] as? String {
                 // e.g. {"role":"assistant","text":"Hello...", "is_final":true}
-                appendTranscript(role: role, text: content, final: json["is_final"] as? Bool ?? true)
+                appendTranscript(role: role, text: content, final: json["is_final"] as? Bool ?? false)
                 return
             }
             if let partial = json["partial"] as? String {
@@ -269,6 +319,7 @@ final class LiveStorytellerService: ObservableObject {
             }
             if let turn = json["turn"] as? [String: Any] {
                 // e.g. {"turn":{"role":"assistant","text":"..."}}
+                // A 'turn' implies a final message.
                 appendTranscript(role: (turn["role"] as? String) ?? "model",
                                  text: turn["text"] as? String,
                                  final: true)
@@ -281,19 +332,34 @@ final class LiveStorytellerService: ObservableObject {
         }
     }
 
+    // Updated to preserve the ID when coalescing partial transcripts.
     @MainActor
     private func appendTranscript(role: String?, text: String?, final: Bool) {
         guard let role = role, let text = text, !text.isEmpty else { return }
+        
+        // Find the index of the last message for this role that is NOT final.
+        let idx = transcripts.lastIndex(where: { $0.role == role && !$0.isFinal })
+
         if !final {
-            if let idx = transcripts.lastIndex(where: { $0.role == role && !$0.isFinal }) {
-                transcripts[idx] = TranscriptEntry(role: role, text: text, isFinal: false)
+            // Handle partial updates
+            if let idx = idx {
+                // If an existing partial entry is found, update it.
+                // CRITICAL: Reuse the existing ID to ensure SwiftUI updates in place.
+                let existingID = transcripts[idx].id
+                transcripts[idx] = TranscriptEntry(id: existingID, role: role, text: text, isFinal: false)
             } else {
+                // Otherwise, create a new partial entry (new ID generated automatically).
                 transcripts.append(TranscriptEntry(role: role, text: text, isFinal: false))
             }
         } else {
-            if let idx = transcripts.lastIndex(where: { $0.role == role && !$0.isFinal }) {
-                transcripts[idx] = TranscriptEntry(role: role, text: text, isFinal: true)
+            // Handle final updates
+            if let idx = idx {
+                // If an existing partial entry is found, finalize it.
+                // CRITICAL: Reuse the existing ID.
+                let existingID = transcripts[idx].id
+                transcripts[idx] = TranscriptEntry(id: existingID, role: role, text: text, isFinal: true)
             } else {
+                // Otherwise, create a new final entry (e.g., if no partial was received).
                 transcripts.append(TranscriptEntry(role: role, text: text, isFinal: true))
             }
         }
@@ -351,12 +417,14 @@ final class LiveStorytellerService: ObservableObject {
         print("\(tag) ROUTE OUT=[\(outs)]  IN=[\(ins)]  SR=\(s.sampleRate)  IOBuffer=\(s.ioBufferDuration)")
     }
 
+    // This function configures the session for PlayAndRecord
     private func setupAudioEngine() async throws {
-        // Duplex session
+        // Duplex session configuration
         try audioSession.setCategory(.playAndRecord,
                                      mode: .voiceChat,
                                      options: [.defaultToSpeaker, .allowBluetooth, .mixWithOthers])
         try audioSession.setPreferredIOBufferDuration(0.01)
+        // Activate the session for this configuration
         try audioSession.setActive(true)
 
         // Player→mixer connection (standardized format)
@@ -507,10 +575,13 @@ final class LiveStorytellerService: ObservableObject {
 
         if let data = out.toPCM16Data() {
             Task { @MainActor in self.isSendingAudio = true }
-            webSocketTask?.send(.data(data)) { [weak self] _ in
+            webSocketTask?.send(.data(data)) { [weak self] err in
                 Task { @MainActor in
                     self?.isSendingAudio = false
-                    self?.isWaitingForResponse = true
+                    // Start waiting for response only if send succeeded
+                    if err == nil {
+                         self?.isWaitingForResponse = true
+                    }
                 }
             }
         }
@@ -619,7 +690,7 @@ final class LiveStorytellerService: ObservableObject {
         }
     }
 
-    // REVISED: Direct scheduling on MainActor with robust activation
+    // Direct scheduling on MainActor with robust activation
     private func scheduleForPlayback(_ buffer: AVAudioPCMBuffer) {
         // Switch back to MainActor to interact with AVAudioEngine/AVAudioPlayerNode.
         Task { @MainActor in
@@ -665,7 +736,7 @@ final class LiveStorytellerService: ObservableObject {
 
     @MainActor
     private func cleanupAudioEngine() {
-        isShuttingDown = true           // <- guard in-flight conversions
+        isShuttingDown = true         // <- guard in-flight conversions
         audioPlayer.stop()
         if isMicrophoneAvailable {
             audioEngine.inputNode.removeTap(onBus: 0)
@@ -690,7 +761,16 @@ final class LiveStorytellerService: ObservableObject {
         micInputConverter = nil
         isMicrophoneAvailable = false
         isMicMuted = true
-        isShuttingDown = false          // ready for next start
+        isShuttingDown = false        // ready for next start
+        
+        // Deactivate the session when fully done with this service.
+        // This allows the ViewModel to successfully reconfigure it for playback.
+        do {
+            try audioSession.setActive(false)
+            print("[Live] Audio session deactivated during cleanup.")
+        } catch {
+            print("[Live] Failed to deactivate audio session during cleanup: \(error)")
+        }
     }
     
     // Helper method to decode PCM data using a specified format.
@@ -751,9 +831,6 @@ final class LiveStorytellerService: ObservableObject {
 private extension AVAudioPCMBuffer {
     func toPCM16Data() -> Data? {
         guard format.commonFormat == .pcmFormatInt16 else { return nil }
-        let channels = Int(format.channelCount)
-        let frames = Int(frameLength)
-        // let bytesPerSample = 2 // Not used in optimized interleaved path
 
         if format.isInterleaved {
             let m = audioBufferList.pointee.mBuffers
@@ -762,6 +839,8 @@ private extension AVAudioPCMBuffer {
         } else {
             // Non-interleaved path (less common for PCM16 but handled for completeness)
             guard let ch = int16ChannelData else { return nil }
+            let channels = Int(format.channelCount)
+            let frames = Int(frameLength)
             let bytesPerSample = 2
             var out = Data(count: frames * channels * bytesPerSample)
             out.withUnsafeMutableBytes { raw in

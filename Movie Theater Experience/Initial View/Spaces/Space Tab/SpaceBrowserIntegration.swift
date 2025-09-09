@@ -152,40 +152,89 @@ struct SpaceBrowserIntegration: View {
         .animation(.easeInOut(duration: 0.3), value: isLoadingSpace)
     }
     
+    private var headerSection: some View {
+        VStack(spacing: 16) {
+            Text("Welcome to Immersive Spaces")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .multilineTextAlignment(.center)
+            
+            Text("Please select a space below to begin your experience")
+                .font(.title2)
+                .foregroundColor(.primary)
+                .multilineTextAlignment(.center)
+            
+            Text("These are immersive virtual environments where you can listen to music, message with others, and explore unique 3D worlds. Each space offers a different atmosphere and experience.")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 20)
+            
+            HStack(spacing: 4) {
+                Text("Have ideas for new spaces?")
+                    .font(.callout)
+                    .foregroundColor(.secondary)
+                
+                Text("Let us know and we can add them!")
+                    .font(.callout)
+                    .foregroundColor(.accentColor)
+                    .fontWeight(.medium)
+            }
+            .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 32)
+        .padding(.vertical, 24)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(.quaternary, lineWidth: 1)
+                )
+        )
+        .padding(.horizontal, 32)
+        .padding(.top, 20)
+        .padding(.bottom, 16)
+    }
+    
     // MARK: - Body
     
     var body: some View {
-        VStack {
-            if service.isLoading {
-                ProgressView("Loading spaces...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let errorMessage = service.errorMessage {
-                VStack(spacing: 16) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 40))
-                        .foregroundColor(.red)
-                    Text(errorMessage)
-                        .multilineTextAlignment(.center)
-                    Button("Retry") {
-                        service.fetchSpaces()
+        VStack(spacing: 0) {
+            headerSection
+            
+            VStack {
+                if service.isLoading {
+                    ProgressView("Loading spaces...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let errorMessage = service.errorMessage {
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 40))
+                            .foregroundColor(.red)
+                        Text(errorMessage)
+                            .multilineTextAlignment(.center)
+                        Button("Retry") {
+                            service.fetchSpaces()
+                        }
+                        .buttonStyle(.bordered)
                     }
-                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if service.spaces.isEmpty {
+                    VStack(spacing: 20) {
+                        Image(systemName: "cube.transparent")
+                            .font(.system(size: 60))
+                            .foregroundColor(.secondary)
+                        Text("No Spaces Available")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        Text("No volumetric spaces found in the database.")
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    spaceGrid
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if service.spaces.isEmpty {
-                VStack(spacing: 20) {
-                    Image(systemName: "cube.transparent")
-                        .font(.system(size: 60))
-                        .foregroundColor(.secondary)
-                    Text("No Spaces Available")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                    Text("No volumetric spaces found in the database.")
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                spaceGrid
             }
         }
         .toolbar {
@@ -208,7 +257,6 @@ struct SpaceBrowserIntegration: View {
         } message: {
             Text("Please go to the Chat Settings and set a username before joining a shared space. This is so you have a username.")
         }
-        // NEW: Alert for already in space
         .alert("Already in a Space", isPresented: $showAlreadyInSpaceAlert) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -218,7 +266,6 @@ struct SpaceBrowserIntegration: View {
             if isLoadingSpace { loadingOverlay }
         }
     }
-    
     // MARK: - Functions
     
     @MainActor

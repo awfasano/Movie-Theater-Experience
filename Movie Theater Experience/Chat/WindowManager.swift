@@ -156,9 +156,17 @@ class WindowManager: ObservableObject {
     }
     
     /// Open a specific window and track it
+    /// Open a specific window and track it
     func openWindow(_ windowType: WindowType, openWindow: OpenWindowAction) {
+        // Check if already open to prevent duplicates
+        guard !activeWindows.contains(windowType.rawValue) else {
+            print("⚠️ [WindowManager] Window \(windowType.rawValue) already open")
+            return
+        }
+        
         openWindow(id: windowType.rawValue)
         activeWindows.insert(windowType.rawValue)
+        print("✅ [WindowManager] Opened window: \(windowType.rawValue)")
     }
     
     /// Close a specific window and untrack it
