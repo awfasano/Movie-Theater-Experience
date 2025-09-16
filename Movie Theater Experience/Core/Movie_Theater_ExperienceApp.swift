@@ -1,5 +1,8 @@
 import SwiftUI
 import FirebaseCore // Required for AppDelegate
+import Hosted_Events_Managers
+import Hosted_Events_Views
+import Hosted_Events_Activities
 
 // AppDelegate for Firebase initialization
 class AppDelegate: NSObject, UIApplicationDelegate {
@@ -34,6 +37,11 @@ struct Movie_Theater_ExperienceApp: App {
     @StateObject private var firebaseEventManager = FirebaseEventManager.shared
     @StateObject private var spacesChatManager = SpacesChatManager.shared
     @StateObject private var sharePlayManager = SharePlayManager.shared
+
+    // Added Hosted Events managers
+    @StateObject private var hostedEventManager = HostedEventManager.shared
+    @StateObject private var personaManager = PersonaTableManager.shared
+    @StateObject private var triviaGameManager = TriviaGameManager.shared
     
     // Activity Identifiers (Ensure these match your Info.plist if using GroupActivities)
     // Assuming PublicSpaceActivity and DirectCallActivity might be defined elsewhere, otherwise use the strings.
@@ -60,6 +68,9 @@ struct Movie_Theater_ExperienceApp: App {
                 .environmentObject(selectedSpace)
                 .environmentObject(firebaseEventManager)
                 // Apply the tracker to this main window
+                .environmentObject(hostedEventManager)
+                .environmentObject(personaManager)
+                .environmentObject(triviaGameManager)
         }
         .defaultSize(width: 1000, height: 600)
         
@@ -120,6 +131,13 @@ struct Movie_Theater_ExperienceApp: App {
         )
         .immersionStyle(selection: .constant(.full), in: .full)
 
+        // ImmersiveSpace for Trivia
+        ImmersiveSpace(id: "TriviaSpace") {
+            TriviaSpaceView()
+                .environmentObject(hostedEventManager)
+                .environmentObject(personaManager)
+                .environmentObject(triviaGameManager)
+        }
         
         // Audio Controls window.
         WindowGroup("Audio Controls", id: WindowType.audioControls.rawValue) {
@@ -307,6 +325,14 @@ struct Movie_Theater_ExperienceApp: App {
         }
         .defaultSize(width: 1200, height: 800)
         .windowStyle(.plain)
+        
+        // Host Controls Window
+        WindowGroup("Host Controls", id: "hostControls") {
+            TriviaHostControlsView()
+                .environmentObject(hostedEventManager)
+                .environmentObject(triviaGameManager)
+        }
+        .defaultSize(width: 1000, height: 800)
         
         // Exiting window.
         WindowGroup(id: WindowType.exitingWindow.rawValue, for: WatchStats.self) { stats in

@@ -76,6 +76,28 @@
 		C45D34712E0740F0004407F4 /* InteractiveStoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C45D34702E0740F0004407F4 /* InteractiveStoryView.swift */; };
 		C45D34732E074203004407F4 /* LiveStorytellerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C45D34722E074203004407F4 /* LiveStorytellerService.swift */; };
 		C45D34772E074824004407F4 /* AudioWaveFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C45D34762E074824004407F4 /* AudioWaveFormView.swift */; };
+		C4712E4F2E79F2930017738E /* EventParticipant.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E4E2E79F2930017738E /* EventParticipant.swift */; };
+		C4712E512E79F2AD0017738E /* EventTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E502E79F2AD0017738E /* EventTable.swift */; };
+		C4712E532E79F2C70017738E /* PersonaTablePosition.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E522E79F2C70017738E /* PersonaTablePosition.swift */; };
+		C4712E552E79F2E40017738E /* TableLayoutCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E542E79F2E40017738E /* TableLayoutCalculator.swift */; };
+		C4712E582E79F3370017738E /* HostedEventManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E572E79F3370017738E /* HostedEventManager.swift */; };
+		C4712E5A2E79F3510017738E /* PersonaTableManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E592E79F3510017738E /* PersonaTableManager.swift */; };
+		C4712E5C2E79F3710017738E /* TriviaGameManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E5B2E79F3710017738E /* TriviaGameManager.swift */; };
+		C4712E5F2E79F41F0017738E /* TriviaEventActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E5E2E79F41F0017738E /* TriviaEventActivity.swift */; };
+		C4712E612E79F4420017738E /* PersonaMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E602E79F4420017738E /* PersonaMessage.swift */; };
+		C4712E642E79F4B20017738E /* EnhancedEventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E632E79F4B20017738E /* EnhancedEventView.swift */; };
+		C4712E662E79F4DD0017738E /* PersonaTableSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E652E79F4DD0017738E /* PersonaTableSelectionView.swift */; };
+		C4712E682E79F4FC0017738E /* TriviaSpaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E672E79F4FC0017738E /* TriviaSpaceView.swift */; };
+		C4712E6A2E79F51E0017738E /* TriviaHostControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E692E79F51E0017738E /* TriviaHostControlsView.swift */; };
+		C4712E6C2E79F5380017738E /* ParticipantTableManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E6B2E79F5380017738E /* ParticipantTableManager.swift */; };
+		C4712E6E2E7A18810017738E /* ParticipantSpatialUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E6D2E7A18810017738E /* ParticipantSpatialUI.swift */; };
+		C4712E702E7A19BF0017738E /* TableQuestionPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E6F2E7A19BF0017738E /* TableQuestionPanel.swift */; };
+		C4712E722E7A19D10017738E /* CollaborateAnswerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E712E7A19D10017738E /* CollaborateAnswerView.swift */; };
+		C4712E742E7A19F50017738E /* TriviaEmojiReactions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E732E7A19F50017738E /* TriviaEmojiReactions.swift */; };
+		C4712E762E7A1A070017738E /* TableDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E752E7A1A070017738E /* TableDashboard.swift */; };
+		C4712E782E7A1A1A0017738E /* HostAnnouncementOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E772E7A1A1A0017738E /* HostAnnouncementOverlay.swift */; };
+		C4712E7A2E7A215B0017738E /* TableCollaborationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E792E7A215B0017738E /* TableCollaborationManager.swift */; };
+		C4712E7C2E7A21B60017738E /* CollaborationAnswerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4712E7B2E7A21B60017738E /* CollaborationAnswerView.swift */; };
 		C473DCAF2D308BC7008AA51D /* FirebaseEventManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C473DCAE2D308BC7008AA51D /* FirebaseEventManager.swift */; };
 		C4790EB22DAEE35B0080BB7C /* SeatSelectionModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4790EB12DAEE35B0080BB7C /* SeatSelectionModel.swift */; };
 		C47ADCAE2E57A9DA0083B75F /* PortalConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = C47ADCAD2E57A9DA0083B75F /* PortalConfig.swift */; };
@@ -255,6 +277,28 @@
 		C45D34702E0740F0004407F4 /* InteractiveStoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveStoryView.swift; sourceTree = "<group>"; };
 		C45D34722E074203004407F4 /* LiveStorytellerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveStorytellerService.swift; sourceTree = "<group>"; };
 		C45D34762E074824004407F4 /* AudioWaveFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioWaveFormView.swift; sourceTree = "<group>"; };
+		C4712E4E2E79F2930017738E /* EventParticipant.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventParticipant.swift; sourceTree = "<group>"; };
+		C4712E502E79F2AD0017738E /* EventTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTable.swift; sourceTree = "<group>"; };
+		C4712E522E79F2C70017738E /* PersonaTablePosition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonaTablePosition.swift; sourceTree = "<group>"; };
+		C4712E542E79F2E40017738E /* TableLayoutCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableLayoutCalculator.swift; sourceTree = "<group>"; };
+		C4712E572E79F3370017738E /* HostedEventManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostedEventManager.swift; sourceTree = "<group>"; };
+		C4712E592E79F3510017738E /* PersonaTableManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonaTableManager.swift; sourceTree = "<group>"; };
+		C4712E5B2E79F3710017738E /* TriviaGameManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriviaGameManager.swift; sourceTree = "<group>"; };
+		C4712E5E2E79F41F0017738E /* TriviaEventActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriviaEventActivity.swift; sourceTree = "<group>"; };
+		C4712E602E79F4420017738E /* PersonaMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonaMessage.swift; sourceTree = "<group>"; };
+		C4712E632E79F4B20017738E /* EnhancedEventView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedEventView.swift; sourceTree = "<group>"; };
+		C4712E652E79F4DD0017738E /* PersonaTableSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonaTableSelectionView.swift; sourceTree = "<group>"; };
+		C4712E672E79F4FC0017738E /* TriviaSpaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriviaSpaceView.swift; sourceTree = "<group>"; };
+		C4712E692E79F51E0017738E /* TriviaHostControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriviaHostControlsView.swift; sourceTree = "<group>"; };
+		C4712E6B2E79F5380017738E /* ParticipantTableManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantTableManager.swift; sourceTree = "<group>"; };
+		C4712E6D2E7A18810017738E /* ParticipantSpatialUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantSpatialUI.swift; sourceTree = "<group>"; };
+		C4712E6F2E7A19BF0017738E /* TableQuestionPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableQuestionPanel.swift; sourceTree = "<group>"; };
+		C4712E712E7A19D10017738E /* CollaborateAnswerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollaborateAnswerView.swift; sourceTree = "<group>"; };
+		C4712E732E7A19F50017738E /* TriviaEmojiReactions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriviaEmojiReactions.swift; sourceTree = "<group>"; };
+		C4712E752E7A1A070017738E /* TableDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableDashboard.swift; sourceTree = "<group>"; };
+		C4712E772E7A1A1A0017738E /* HostAnnouncementOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostAnnouncementOverlay.swift; sourceTree = "<group>"; };
+		C4712E792E7A215B0017738E /* TableCollaborationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableCollaborationManager.swift; sourceTree = "<group>"; };
+		C4712E7B2E7A21B60017738E /* CollaborationAnswerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollaborationAnswerView.swift; sourceTree = "<group>"; };
 		C473DCAE2D308BC7008AA51D /* FirebaseEventManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseEventManager.swift; sourceTree = "<group>"; };
 		C4790EB12DAEE35B0080BB7C /* SeatSelectionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeatSelectionModel.swift; sourceTree = "<group>"; };
 		C47ADCAD2E57A9DA0083B75F /* PortalConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortalConfig.swift; sourceTree = "<group>"; };
@@ -434,6 +478,7 @@
 			isa = PBXGroup;
 			children = (
 				C449192A2E109C3A00C4B087 /* Movie Theater Experience.entitlements */,
+				C4712E4C2E79F2500017738E /* Hosted Events */,
 				C4F478BC2CEBD46300965502 /* GoogleService-Info.plist */,
 				C41817C92CBE3B3600A94ADF /* Sign Up */,
 				C4BFD5BA2CA5F63E007D20BE /* Calendar */,
@@ -589,6 +634,67 @@
 				C449192B2E109D1B00C4B087 /* UsersListView.swift */,
 			);
 			path = SharePlay;
+			sourceTree = "<group>";
+		};
+		C4712E4C2E79F2500017738E /* Hosted Events */ = {
+			isa = PBXGroup;
+			children = (
+				C4712E622E79F4980017738E /* Views */,
+				C4712E5D2E79F40C0017738E /* Activities */,
+				C4712E562E79F32B0017738E /* Managers */,
+				C4712E4D2E79F2590017738E /* Models */,
+			);
+			path = "Hosted Events";
+			sourceTree = "<group>";
+		};
+		C4712E4D2E79F2590017738E /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				C4712E4E2E79F2930017738E /* EventParticipant.swift */,
+				C4712E502E79F2AD0017738E /* EventTable.swift */,
+				C4712E522E79F2C70017738E /* PersonaTablePosition.swift */,
+				C4712E542E79F2E40017738E /* TableLayoutCalculator.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		C4712E562E79F32B0017738E /* Managers */ = {
+			isa = PBXGroup;
+			children = (
+				C4712E572E79F3370017738E /* HostedEventManager.swift */,
+				C4712E592E79F3510017738E /* PersonaTableManager.swift */,
+				C4712E5B2E79F3710017738E /* TriviaGameManager.swift */,
+				C4712E792E7A215B0017738E /* TableCollaborationManager.swift */,
+			);
+			path = Managers;
+			sourceTree = "<group>";
+		};
+		C4712E5D2E79F40C0017738E /* Activities */ = {
+			isa = PBXGroup;
+			children = (
+				C4712E5E2E79F41F0017738E /* TriviaEventActivity.swift */,
+				C4712E602E79F4420017738E /* PersonaMessage.swift */,
+			);
+			path = Activities;
+			sourceTree = "<group>";
+		};
+		C4712E622E79F4980017738E /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				C4712E632E79F4B20017738E /* EnhancedEventView.swift */,
+				C4712E772E7A1A1A0017738E /* HostAnnouncementOverlay.swift */,
+				C4712E752E7A1A070017738E /* TableDashboard.swift */,
+				C4712E732E7A19F50017738E /* TriviaEmojiReactions.swift */,
+				C4712E712E7A19D10017738E /* CollaborateAnswerView.swift */,
+				C4712E6F2E7A19BF0017738E /* TableQuestionPanel.swift */,
+				C4712E6B2E79F5380017738E /* ParticipantTableManager.swift */,
+				C4712E6D2E7A18810017738E /* ParticipantSpatialUI.swift */,
+				C4712E7B2E7A21B60017738E /* CollaborationAnswerView.swift */,
+				C4712E652E79F4DD0017738E /* PersonaTableSelectionView.swift */,
+				C4712E672E79F4FC0017738E /* TriviaSpaceView.swift */,
+				C4712E692E79F51E0017738E /* TriviaHostControlsView.swift */,
+			);
+			path = Views;
 			sourceTree = "<group>";
 		};
 		C48A9B922D528B3400C3B984 /* Core */ = {
@@ -928,9 +1034,11 @@
 				C4413F5B2DC028EE008A7BD8 /* SongService.swift in Sources */,
 				C49134432B9C1EA600A824DF /* ChatView.swift in Sources */,
 				C405E5832D4CAB5300681E60 /* DaySelectionView.swift in Sources */,
+				C4712E7A2E7A215B0017738E /* TableCollaborationManager.swift in Sources */,
 				C444C91B2D53FC740046F92D /* SpaceRowView.swift in Sources */,
 				C4BFD5BC2CA5F645007D20BE /* CalendarView.swift in Sources */,
 				C4C62C962D4D7CB800F26141 /* MessagesRows.swift in Sources */,
+				C4712E6A2E79F51E0017738E /* TriviaHostControlsView.swift in Sources */,
 				C4413F602DC1D323008A7BD8 /* ThinTrackSliderControl.swift in Sources */,
 				C405E5872D4CABC400681E60 /* CurrentTimeLineView.swift in Sources */,
 				C4413F5D2DC0611B008A7BD8 /* VolumeControlView.swift in Sources */,
@@ -940,6 +1048,7 @@
 				C413FA4F2DBC2E41008FABEB /* AudioPositionSynchronizer.swift in Sources */,
 				C4ABF0A82E4E725400284784 /* Transcripts.swift in Sources */,
 				C4D88CA82D74F9BF004F226E /* SeatSelectionPanel.swift in Sources */,
+				C4712E612E79F4420017738E /* PersonaMessage.swift in Sources */,
 				C4D88CA32D74F86B004F226E /* SpacesEntityWrapper.swift in Sources */,
 				C4E71ACE2DC69F490017914B /* SeatOrbEntities.swift in Sources */,
 				C491344B2B9C4B4800A824DF /* Extensions.swift in Sources */,
@@ -956,19 +1065,23 @@
 				C4D88C992D74E457004F226E /* VolumetricSpaceModel.swift in Sources */,
 				C4BFD5B92CA5F628007D20BE /* CalendarEvent.swift in Sources */,
 				C4E815542D546DB6007FE604 /* VolumetricSpaceView.swift in Sources */,
+				C4712E5C2E79F3710017738E /* TriviaGameManager.swift in Sources */,
 				C4CEBBC62DA330CF00731652 /* SelectedSpace.swift in Sources */,
 				C404A8092D46CB00000450D4 /* MessagePosition.swift in Sources */,
+				C4712E7C2E7A21B60017738E /* CollaborationAnswerView.swift in Sources */,
 				C413FA4C2DBC2E0D008FABEB /* SpatialAudioLoader.swift in Sources */,
 				C4AFB1EF2E2ED19F0067EA66 /* BookmarkManager.swift in Sources */,
 				C4AFB1F02E2ED19F0067EA66 /* BookmarksView.swift in Sources */,
 				C444C9272D540D550046F92D /* OccupancyProgressView.swift in Sources */,
 				C404A7F52D3B7038000450D4 /* TimeoutError.swift in Sources */,
+				C4712E6E2E7A18810017738E /* ParticipantSpatialUI.swift in Sources */,
 				C404A7FF2D41D325000450D4 /* WatchStats.swift in Sources */,
 				C4C43A042CA364BB001AC733 /* VideoPicker.swift in Sources */,
 				C40AE3D42D5164020075914F /* WindowManager.swift in Sources */,
 				C4FE99BB2D7F9DA8008AE0D6 /* SpacesEmojiWindow.swift in Sources */,
 				C4BFD5BE2CA5F664007D20BE /* EventView.swift in Sources */,
 				C4D88C9D2D74E529004F226E /* FlowLayout.swift in Sources */,
+				C4712E722E7A19D10017738E /* CollaborateAnswerView.swift in Sources */,
 				C4CEBBC82DA331AF00731652 /* SpaceMapView.swift in Sources */,
 				C4115ED72B994AF9007AD9B0 /* Movie_Theater_ExperienceApp.swift in Sources */,
 				C41817C82CBE319F00A94ADF /* Emitters.swift in Sources */,
@@ -976,7 +1089,9 @@
 				C41976592E54355D006816BE /* EnhancedCardView.swift in Sources */,
 				C4E71ACC2DC69F2A0017914B /* SeatButtonStyle.swift in Sources */,
 				C49134452B9C1F6B00A824DF /* ChatViewModel.swift in Sources */,
+				C4712E762E7A1A070017738E /* TableDashboard.swift in Sources */,
 				C4D88C9F2D74E56E004F226E /* SpaceDetailView.swift in Sources */,
+				C4712E5F2E79F41F0017738E /* TriviaEventActivity.swift in Sources */,
 				C473DCAF2D308BC7008AA51D /* FirebaseEventManager.swift in Sources */,
 				C41976572E53D2C4006816BE /* CardHoverEffect.swift in Sources */,
 				C416BA4A2E0A4E35006399D8 /* BarePlayerView.swift in Sources */,
@@ -986,12 +1101,17 @@
 				C404A8072D46B244000450D4 /* ChatScrollView.swift in Sources */,
 				C40AE3D62D516C070075914F /* ChatSettingsNavBar.swift in Sources */,
 				C4E815582D55C982007FE604 /* SpacesView.swift in Sources */,
+				C4712E662E79F4DD0017738E /* PersonaTableSelectionView.swift in Sources */,
+				C4712E682E79F4FC0017738E /* TriviaSpaceView.swift in Sources */,
+				C4712E4F2E79F2930017738E /* EventParticipant.swift in Sources */,
 				C405E58D2D4CAD2B00681E60 /* TimeLineline.swift in Sources */,
 				C459498F2E700E8C004ADDF6 /* ImmersiveHelper.swift in Sources */,
 				C44919242E10811000C4B087 /* EventManagerProtocol 2.swift in Sources */,
 				C405E58B2D4CACE900681E60 /* PositionedEvents.swift in Sources */,
 				C405E5852D4CABA800681E60 /* TimelineView.swift in Sources */,
 				C44B306E2D4D6F59004CC38A /* ChatSettingsWindow.swift in Sources */,
+				C4712E6C2E79F5380017738E /* ParticipantTableManager.swift in Sources */,
+				C4712E532E79F2C70017738E /* PersonaTablePosition.swift in Sources */,
 				C416BA482E09DDA7006399D8 /* WaveformViewModel.swift in Sources */,
 				C4F478BF2CEC29E900965502 /* ScrollOffsets.swift in Sources */,
 				C45D34732E074203004407F4 /* LiveStorytellerService.swift in Sources */,
@@ -1001,20 +1121,27 @@
 				C4AFB1EA2E2EB98B0067EA66 /* WebBrowserView.swift in Sources */,
 				C4AF48AB2C9E7288006FE6C8 /* AppModel.swift in Sources */,
 				C444C9192D53FBDF0046F92D /* SpaceData.swift in Sources */,
+				C4712E782E7A1A1A0017738E /* HostAnnouncementOverlay.swift in Sources */,
 				C40693EA2D36F9F000072767 /* TabBarWindow.swift in Sources */,
+				C4712E742E7A19F50017738E /* TriviaEmojiReactions.swift in Sources */,
 				C45D346F2E073D72004407F4 /* FirebaseStoryService.swift in Sources */,
+				C4712E512E79F2AD0017738E /* EventTable.swift in Sources */,
 				C4D88C932D73ACCC004F226E /* VolumetricSpaceWrapper.swift in Sources */,
 				C404A80B2D46CB11000450D4 /* MessagePreferenceKey.swift in Sources */,
 				C4FE99B92D7F9D80008AE0D6 /* SpacesChatWindow.swift in Sources */,
+				C4712E552E79F2E40017738E /* TableLayoutCalculator.swift in Sources */,
 				C4FE99B52D7F8F4F008AE0D6 /* SpacesChatViewModel.swift in Sources */,
 				C449192C2E109D1B00C4B087 /* UsersListView.swift in Sources */,
+				C4712E5A2E79F3510017738E /* PersonaTableManager.swift in Sources */,
 				C4D88CA12D74E5EE004F226E /* SpaceBrowserIntegration.swift in Sources */,
 				C44919292E109BD800C4B087 /* SpaceActivities.swift in Sources */,
 				C4FA39F42E24498C004BB564 /* AudioService.swift in Sources */,
+				C4712E642E79F4B20017738E /* EnhancedEventView.swift in Sources */,
 				C4D88C9B2D74E519004F226E /* SpaceCard.swift in Sources */,
 				C416BA4D2E0FCB87006399D8 /* StoryRowView.swift in Sources */,
 				C413B1002E6231B2008A309E /* AmbientAudioManager.swift in Sources */,
 				C4AF48A92C9E6D61006FE6C8 /* ToggleImmersiveSpaceButton.swift in Sources */,
+				C4712E702E7A19BF0017738E /* TableQuestionPanel.swift in Sources */,
 				C4790EB22DAEE35B0080BB7C /* SeatSelectionModel.swift in Sources */,
 				C47ADCAE2E57A9DA0083B75F /* PortalConfig.swift in Sources */,
 				C405E5892D4CAC6200681E60 /* TopNavigationView.swift in Sources */,
@@ -1023,6 +1150,7 @@
 				C4CE14072E1E00A7009603E1 /* SpacesChatManager.swift in Sources */,
 				C444C91D2D53FC8E0046F92D /* OccupancyView.swift in Sources */,
 				C4CEBBC42DA3309000731652 /* SeatPosition.swift in Sources */,
+				C4712E582E79F3370017738E /* HostedEventManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

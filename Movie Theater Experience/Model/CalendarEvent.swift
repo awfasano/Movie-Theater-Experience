@@ -1,142 +1,72 @@
 import Foundation
-import SwiftUI
-import RealityKit
 import FirebaseFirestore
+import _FirebaseFirestore_Swift // For @DocumentID
 
-// The event model matching your Firebase structure
+// Enhanced CalendarEvent for trivia/hosted events
 struct CalendarEvent: Identifiable, Codable {
-    var id: String?
-    let title: String
-    let date: Date
-    let end: Date
-    let description: String
-    let color: Int
-    let videoURL: String
-    
-    // Regular initializer
-    init(id: String? = nil, title: String, date: Date, end: Date, description: String, color: Int, videoURL: String) {
-        self.id = id
-        self.title = title
-        self.date = date
-        self.end = end
-        self.description = description
-        self.color = color
-        self.videoURL = videoURL
-    }
-    
-    // Computed property for color
-    var eventColor: Color {
-        switch color {
-        case 1: return .red
-        case 2: return .green
-        case 3: return .blue
-        case 4: return .purple
-        case 5: return .orange
-        case 6: return .yellow
-        default: return .blue
-        }
-    }
-    
-    var videoURLObject: URL {
-        URL(string: videoURL) ?? URL(string: "about:blank")!
-    }
-    
-    enum CodingKeys: String, CodingKey {
-        case id
-        case title
-        case date
-        case end
-        case description
-        case color
-        case videoURL
-    }
-    
-    // Custom decoder for Firestore
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        
-        id = try container.decodeIfPresent(String.self, forKey: .id)
-        title = try container.decode(String.self, forKey: .title)
-        description = try container.decode(String.self, forKey: .description)
-        color = try container.decode(Int.self, forKey: .color)
-        videoURL = try container.decode(String.self, forKey: .videoURL)
-        
-        let dateTimestamp = try container.decode(Timestamp.self, forKey: .date)
-        date = dateTimestamp.dateValue()
-        
-        let endTimestamp = try container.decode(Timestamp.self, forKey: .end)
-        end = endTimestamp.dateValue()
-    }
+    @DocumentID var id: String?
+
+    // Basic info
+    var title: String
+    var description: String
+    var startTime: Date
+    var endTime: Date
+    var timeZone: String = "America/New_York"
+
+    // Event type and status
+    var eventType: EventType = .space
+    var status: EventStatus = .scheduled
+
+    // Capacity
+    var maxParticipants: Int = 1000
+    var currentParticipants: Int = 0
+    var requiresRegistration: Bool = false
+
+    // Host info
+    var hostId: String?
+    var hostName: String?
+    var moderatorIds: [String] = []
+
+    // Configuration
+    var spaceId: String?
+    var tableConfiguration: TableConfiguration?
+    var gameConfig: GameConfiguration?
+
+    // Computed properties
+    var isHostedEvent: Bool { eventType != .space }
+    var isFull: Bool { currentParticipants >= maxParticipants }
+    var canJoin: Bool { status == .scheduled && !isFull }
 }
 
-class CalendarService: ObservableObject {
-    private let db = Firestore.firestore(database: "movieexperiencedb")
-    @Published var events: [CalendarEvent] = []
-    
-    func fetchAllEvents() {
-        // Reference to the Public Rooms collection
-        let publicRoomsRef = db.collection("Public Rooms")
-        
-        // Get all date documents
-        publicRoomsRef.getDocuments { [weak self] (snapshot, error) in
-            if let error = error {
-                print("Error getting date documents: \(error)")
-                return
-            }
-            
-            guard let dateDocuments = snapshot?.documents else { return }
-            
-            // For each date document, get its Events subcollection
-            for dateDoc in dateDocuments {
-                let eventsRef = dateDoc.reference.collection("Events")
-                
-                eventsRef.getDocuments { (eventSnapshot, eventError) in
-                    if let eventError = eventError {
-                        print("Error getting events for date \(dateDoc.documentID): \(eventError)")
-                        return
-                    }
-                    guard let eventDocuments = eventSnapshot?.documents else { return }
-                    
-                    
-                    // Parse each event document
-                    let newEvents = eventDocuments.compactMap { eventDoc -> CalendarEvent? in
-                        print("eventdoc.data()")
-                        var tempCal = try? eventDoc.data(as: CalendarEvent.self)
-                        tempCal?.id = eventDoc.documentID
-                        print(tempCal as Any)
-                        return tempCal
-                    }
-                                        
-                    // Update the events array on the main thread
-                    DispatchQueue.main.async {
-                        self?.events.append(contentsOf: newEvents)
-                    }
-                }
-            }
-        }
-    }
-    
-    // Optional: Fetch events for a specific date
-    func fetchEvents(forDate dateString: String) {
-        let eventsRef = db.collection("Public Rooms").document(dateString).collection("Events")
-        
-        eventsRef.getDocuments { [weak self] (snapshot, error) in
-            if let error = error {
-                print("Error getting events: \(error)")
-                return
-            }
-            
-            guard let documents = snapshot?.documents else { return }
-            
-            let newEvents = documents.compactMap { document -> CalendarEvent? in
-                try? document.data(as: CalendarEvent.self)
-            }
-            
-            DispatchQueue.main.async {
-                self?.events = newEvents
-            }
-        }
-    }
+enum EventType: String, CaseIterable, Codable {
+    case space = "space"
+    case hostedTrivia = "hosted_trivia"
+    case hostedMovie = "hosted_movie"
+    case hostedPresentation = "hosted_presentation"
 }
 
-// Helper extension for Color hex conversion
+enum EventStatus: String, Codable {
+    case scheduled = "scheduled"
+    case active = "active"
+    case ended = "ended"
+    case cancelled = "cancelled"
+}
+
+struct TableConfiguration: Codable {
+    let maxTables: Int
+    let maxSeatsPerTable: Int
+    let layoutType: TableLayoutType
+}
+
+enum TableLayoutType: String, Codable {
+    case circular = "circular"
+    case classroom = "classroom"
+    case theater = "theater"
+}
+
+struct GameConfiguration: Codable {
+    let triviaGameId: String
+    let totalRounds: Int
+    let pointsPerQuestion: Int
+    let questionTimeLimit: Int
+}
