@@ -43,9 +43,30 @@ struct InteractiveStoryView: View {
             }
 
             /* ── 2  VIDEO BUTTONS (only while playing) ── */
+            /* ── 2  VIDEO BUTTONS AND INFO ── */
             VStack {
                 HStack {
                     Spacer()
+                    
+                    // Info button (always visible)
+                    Button(action: {
+                        viewModel.showInfoPopover.toggle()
+                    }) {
+                        Image(systemName: "info.circle")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                            .padding(8)
+                            .background(.thinMaterial, in: .circle)
+                    }
+                    .padding(.trailing, viewModel.sessionState == .playing ? 10 : 20)
+                    .padding(.top, 10)
+                    .popover(isPresented: $viewModel.showInfoPopover,
+                             attachmentAnchor: .point(.bottom),
+                             arrowEdge: .top) {
+                        viewModel.instructionsPopover
+                    }
+                    
+                    // Video controls (only while playing)
                     if viewModel.sessionState == .playing {
                         topRightVideoControls
                             .transition(.opacity)

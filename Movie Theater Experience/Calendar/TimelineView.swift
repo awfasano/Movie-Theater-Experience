@@ -77,7 +77,7 @@ struct TimelineView: View {
                 )
             }
             // Scroll Handling
-            .onChange(of: scrollToToday) { newValue in
+            .onChange(of: scrollToToday) { oldValue, newValue in
                 if newValue {
                     scrollToCurrentTime(proxy: scrollViewProxy, animated: true)
                 }
@@ -271,3 +271,4 @@ struct TimelineView: View {
         }
     }
 }
+

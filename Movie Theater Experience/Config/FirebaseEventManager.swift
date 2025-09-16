@@ -155,7 +155,7 @@ final class FirebaseEventManager: ObservableObject, EventManagerProtocol {
         let emojiImageName = emojiToImageName(emojiNumber)
         print("🚀 Processing theatre emoji: \(emojiImageName)")
         
-        TheatreEntityWrapper.shared.updateVolumetricEmojiTexture(with: emojiImageName)
+        //TheatreEntityWrapper.shared.updateVolumetricEmojiTexture(with: emojiImageName)
     }
     
     // MARK: - Message Operations

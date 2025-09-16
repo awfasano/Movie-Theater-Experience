@@ -218,7 +218,7 @@ struct EventView: View {
         appModel.currentEvent = event
         
         // Clean up any leftover data
-        await TheatreEntityWrapper.shared.cleanup()
+        //await TheatreEntityWrapper.shared.cleanup()
         SharedSeatSelection.shared.selectedSeatEntity = nil
         
         // Prepare and open the space

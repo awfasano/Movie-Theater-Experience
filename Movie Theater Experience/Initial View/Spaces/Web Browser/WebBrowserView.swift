@@ -45,14 +45,14 @@ struct WebBrowserView: View {
                 browserControls
             }
         }
-        .onChange(of: navigationState.urlString) { newValue in
+        .onChange(of: navigationState.urlString) { _, newValue in
             urlFieldText = newValue
         }
         .sheet(isPresented: $showingBookmarks) {
             BookmarksView(bookmarkManager: bookmarkManager, webView: $webView)
         }
         .preferredColorScheme(isDarkMode ? .dark : .light)
-        .onChange(of: isDarkMode) { _ in
+        .onChange(of: isDarkMode) { _, _ in
             // Call the page helper so SPA pages update immediately
             let fn = isDarkMode ? "__forceDark_apply()" : "__forceDark_remove()"
             webView.evaluateJavaScript(fn, completionHandler: nil)
@@ -421,3 +421,4 @@ extension String {
         } else { return false }
     }
 }
+

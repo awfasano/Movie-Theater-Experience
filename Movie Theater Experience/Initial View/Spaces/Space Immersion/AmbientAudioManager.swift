@@ -102,7 +102,7 @@ final class AmbientAudioManager {
 
             // 3) Add an audio channel so the controller can play on the entity.
             let channel = ChannelAudioComponent()
-            rootEntity.components.set(channel)
+            await rootEntity.components.set(channel)
 
             // 4) Prepare controller and store it.
             let controller = await rootEntity.prepareAudio(audioResource)

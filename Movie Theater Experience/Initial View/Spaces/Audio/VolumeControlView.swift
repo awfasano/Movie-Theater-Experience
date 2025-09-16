@@ -5,14 +5,18 @@ import Combine
 struct VolumeControlView: View {
     // MARK: - Properties
     
-    /// The single, shared instance of the audio service. This is the source of truth for all audio state.
-    @StateObject private var audioService = AudioService.shared
+    @EnvironmentObject private var windowManager: WindowManager
+
     
+    /// The single, shared instance of the audio service. This is the source of truth for all audio state.
+    @ObservedObject private var audioService = AudioService.shared
+
     /// State properties that are specific to the UI of this view only.
     @State private var isExpanded = true
     @State private var isDraggingSlider = false
     @State private var pulse = false
     @State private var sliderVolume: Float = 0.5
+    
 
     // MARK: - Body
     
@@ -34,7 +38,18 @@ struct VolumeControlView: View {
             }
         }
         .onAppear {
+            print("🎵 [VolumeControlView] onAppear called")
             self.sliderVolume = audioService.audioLoader.getVolume()
+        }
+        .onDisappear {
+            print("🎵 [VolumeControlView] onDisappear called")
+            // Backup mechanism: manually untrack if WindowTrackingModifier missed it
+            Task { @MainActor in
+                if windowManager.isWindowOpen(WindowType.audioControls) {
+                    print("🔧 [VolumeControlView] Manually untracking audioControls window")
+                    windowManager.untrackWindow(WindowType.audioControls)
+                }
+            }
         }
     }
 

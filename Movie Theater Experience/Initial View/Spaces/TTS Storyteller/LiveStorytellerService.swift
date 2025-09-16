@@ -708,7 +708,7 @@ final class LiveStorytellerService: ObservableObject {
                     if audioSession.category != .playAndRecord || audioSession.mode != .voiceChat {
                          try audioSession.setCategory(.playAndRecord,
                                                     mode: .voiceChat,
-                                                    options: [.defaultToSpeaker, .allowBluetooth, .mixWithOthers])
+                                                      options: [.defaultToSpeaker,.mixWithOthers, .allowAirPlay, .allowBluetoothHFP, .allowBluetoothA2DP])
                     }
                    
                     // Ensure activation before starting the engine.

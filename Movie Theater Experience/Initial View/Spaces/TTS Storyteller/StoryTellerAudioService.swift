@@ -75,11 +75,10 @@ class StorytellerAudioService {
 
                 // --- CORRECTED SECTION START ---
 
-                // 1. Declare a variable of the direct, optional type.
-                // --- REVISED SECTION START ---
-                var tap: Unmanaged<MTAudioProcessingTap>?
+                // 1. Declare a variable of the correct optional type expected by the API.
+                var tap: MTAudioProcessingTap? = nil
 
-                // 2. Call the creation function, passing a pointer to the Unmanaged variable.
+                // 2. Call the creation function, passing an inout reference to the optional.
                 let err = MTAudioProcessingTapCreate(
                     kCFAllocatorDefault,
                     &callbacks,
@@ -87,17 +86,15 @@ class StorytellerAudioService {
                     &tap
                 )
 
-                // 3. Safely unwrap the Unmanaged object and get a memory-managed instance.
+                // 3. Safely unwrap and store.
                 guard err == noErr, let createdTap = tap else {
                     print("Audio-tap creation failed: \(err)")
                     DispatchQueue.main.async { self.player.replaceCurrentItem(with: item) }
                     return
                 }
 
-                // 4. Assign the retained value to your class property.
-                self.tap = createdTap.takeRetainedValue()
-
-                // --- REVISED SECTION END ---
+                // 4. Assign the created tap to your class property.
+                self.tap = createdTap
 
                 // --- CORRECTED SECTION END ---
 
@@ -174,7 +171,7 @@ private let tapProcess: MTAudioProcessingTapProcessCallback = { (
     // --- 3a. RMS for overall level ----------------------------------------
     var rms: Float = 0
     vDSP_rmsqv(samples, 1, &rms, vDSP_Length(frames))
-    let scaled = pow(rms, 0.5) * 2         // tweak scalar for UI comfort
+    let scaled = rms * 2         // tweak scalar for UI comfort
     service.setCurrentLevel(scaled)
 
     // --- 3b. 128-bucket “spectrum like” snapshot --------------------------
@@ -183,9 +180,9 @@ private let tapProcess: MTAudioProcessingTapProcessCallback = { (
 
     let stride = max(1, frames / buckets)
     for i in 0..<buckets {
-        // pick one sample per slice, take abs for magnitude
-        let idx          = i * stride
-        out[i]           = fabsf(samples[idx])
+        // pick one sample per slice, take abs for magnitude, with bounds check
+        let idx = min(i * stride, max(0, frames - 1))
+        out[i] = fabsf(samples[idx])
     }
     service.setSpectrum(out)
 }

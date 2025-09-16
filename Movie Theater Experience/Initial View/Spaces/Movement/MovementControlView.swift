@@ -69,16 +69,16 @@ struct MovementControlView: View {
         Task {
             do {
                 // Request authorization to use hand tracking.
-                let authorizations = await session.requestAuthorization(for: [.handTracking])
+                _ = await session.requestAuthorization(for: [.handTracking])
                 
                 // Safely check if the authorization for handTracking was granted.
                 //if let handTrackingAuthorization = authorizations[.handTracking], handTrackingAuthorization == .granted {
                     // If granted, run the session with the hand tracking provider.
                  //   try await session.run([handTracking])
                 //}
-            } catch {
-                print("Error: ARKit session failed to start.", error)
-            }
+            } //catch {
+                //print("Error: ARKit session failed to start.", error)
+            //}
         }
     }
     

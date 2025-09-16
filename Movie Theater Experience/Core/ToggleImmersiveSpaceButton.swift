@@ -9,7 +9,7 @@ struct ToggleImmersiveSpaceButton: View {
     
     // MARK: - Services
     private let spaceManager = ImmersiveSpaceManager.shared
-    private let videoSyncService = VideoSyncService.shared
+    //private let videoSyncService = VideoSyncService.shared
     
     // MARK: - Body
     var body: some View {
@@ -38,7 +38,7 @@ struct ToggleImmersiveSpaceButton: View {
         await spaceManager.initiateCleanup()
         
         // Cleanup video sync
-        await videoSyncService.cleanup()
+        //await videoSyncService.cleanup()
         
         // Dismiss the space
         await dismissImmersiveSpace()

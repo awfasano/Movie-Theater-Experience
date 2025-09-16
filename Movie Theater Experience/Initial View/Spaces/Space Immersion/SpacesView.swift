@@ -7,18 +7,21 @@ import Combine
 
 struct SpacesView: View {
     // Environment
-    @EnvironmentObject private var appModel: AppModel
+    @Environment(AppModel.self) private var appModel // NEW
     @EnvironmentObject private var windowManager: WindowManager
-    @Environment(\.openWindow) private var openWindow
-    @Environment(\.dismissWindow) private var dismissWindow
+    @Environment(\.openWindow) private var openWindowAction // NEW
+    @Environment(\.dismissWindow) private var dismissWindowAction // NEW
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
     @Environment(\.scenePhase) private var scenePhase
 
     // MARK: - Properties
     @StateObject private var spaceService = SpaceService.shared
-    @StateObject private var entityWrapper = SpacesEntityWrapper.shared
+    @EnvironmentObject private var entityWrapper: SpacesEntityWrapper // NEW
     @Environment(\.realityKitScene) private var realityKitScene
     //@EnvironmentObject var audioLoader: SpatialAudioLoader
+    
+    private let navBarAttachmentTag = "navBarReopenAttachment"
+
     
     @State private var navBarOpened = false
     @State private var mapOpened = false
@@ -28,6 +31,7 @@ struct SpacesView: View {
     @State private var rootEntity: Entity? = nil
     
     @State private var footButtonEntity: Entity? = nil
+    @State private var hasCleanedUp = false
 
 
 
@@ -41,6 +45,8 @@ struct SpacesView: View {
     // Anchor for placing content in the scene
     @State private var anchorEntity = AnchorEntity()
     @State private var userRotationEntity = Entity()
+    @State private var headAnchor = AnchorEntity(.head) // head-locked anchor
+
     
     // Notification State
     @State private var notificationSentForEntityID: Entity.ID? = nil
@@ -80,8 +86,17 @@ struct SpacesView: View {
         }
         .task {
             print("📱 SpacesView appeared")
+            
+            // Optimization: Prevent initialization during flicker if the app is inactive (e.g., Digital Crown press).
+            if scenePhase != .active {
+                 print("⚠️ [SpacesView] Appeared but scenePhase is \(scenePhase). Skipping initialization.")
+                 return
+            }
+            
+            hasCleanedUp = false
             await initializeSpace()
         }
+
         .onChange(of: scenePhase, perform: handleScenePhaseChange)
 
         .onChange(of: sharePlayManager.isSessionActive) { _, isActive in
@@ -100,8 +115,11 @@ struct SpacesView: View {
             }
         }
         .onDisappear {
-            // This robustly handles the exit sequence
-            cleanupView()
+            print("📱 SpacesView disappeared")
+            // Only cleanup if we haven't already
+            if !hasCleanedUp {
+                cleanupView()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .userRotationChanged)) { notification in
             guard let rotation = notification.userInfo?["rotation"] as? Float,
@@ -141,76 +159,76 @@ struct SpacesView: View {
                 stopAmbientAudio(in: entity)
             }
         }
-
+        .onReceive(NotificationCenter.default.publisher(for: .immersiveSpaceWillDismiss)) { _ in
+            print("🚪 [SpacesView] Received immersive space dismissal notification")
+            // Ensure cleanup happens if triggered by notification (e.g., from NavBar button press)
+             if !hasCleanedUp {
+                 cleanupView()
+             }
+        }
     }
 
     // MARK: - View Components
     private var mainRealityView: some View {
-        RealityView { content in
-            // Set up the rotation hierarchy
+        RealityView { content, attachments in
+            // existing world/content setup
             setupRotationHierarchy(content: content)
-            
-            // Create and add the subtle foot button
-            createFootButton(content: content)
-        } update: { _ in
-            guard RenderGuard.shared.isActive else { return }
-            if let e = entityWrapper.getSpaceEntity(),
-               e.id != lastSpaceID {
-                Task { @MainActor in ensureEntityIsParented(e) }
+
+            // Add the head-locked anchor once
+            if headAnchor.parent == nil {
+                content.add(headAnchor)
             }
+
+            // Get the attachment entity and parent it to the head anchor
+            // No billboard needed when head-locked
+            if let attachmentEntity = attachments.entity(for: navBarAttachmentTag) {
+                // Keep it comfortably in view
+                attachmentEntity.position = SIMD3<Float>(0.1, -0.30, -0.75)
+
+                // Parent to the head anchor (so it follows the head)
+                if headAnchor.parent == nil { content.add(headAnchor) }
+                if attachmentEntity.parent !== headAnchor {
+                    headAnchor.addChild(attachmentEntity)
+                }
+            }
+
+        } update: { _, attachments in
+            // Keep the button in view even if pose changes rapidly
+            if let attachmentEntity = attachments.entity(for: navBarAttachmentTag) {
+                attachmentEntity.position = SIMD3<Float>(0.1, -0.30, -0.75)
+            }
+        } attachments: {
+            Attachment(id: navBarAttachmentTag) { navBarReopenButton }
         }
         .ignoresSafeArea()
-        .allowsHitTesting(true) // Changed to true to allow interaction with foot button
+        .allowsHitTesting(true)
     }
+
     
-    private func handleFootButtonTap() {
-        print("🦶 Foot button tapped - checking nav bar status")
-        
-        // Check if nav bar is already open to prevent duplicates
-        guard !windowManager.isWindowOpen(.spaceNavBar) else {
-            print("⚠️ Nav bar already open, ignoring tap")
-            return
+    private var navBarReopenButton: some View {
+        let isOpen = windowManager.isWindowOpen(.spaceNavBar)
+        return Button(action: { handleReopenNavBar() }) {
+            Image(systemName: "menubar.arrow.up.rectangle")
+                .resizable().scaledToFit().frame(width: 40, height: 40)
+                .padding()
         }
-        
-        print("✅ Opening nav bar")
-        windowManager.openWindow(.spaceNavBar, openWindow: openWindow)
+        .glassBackgroundEffect()
+        .buttonStyle(.borderless)
+        // Instead of fully hiding, fade + disable taps when NavBar is open
+        .opacity(isOpen ? 0.0 : 1.0)
+        .allowsHitTesting(!isOpen)
+        .animation(.easeInOut(duration: 0.2), value: isOpen)
+        .accessibilityLabel("Reopen Navigation Bar")
+    }
+
+    
+    private func handleReopenNavBar() {
+        print("👆 Attachment button tapped - requesting NavBar open")
+        // WindowManager handles the check for duplicates internally.
+        // Use the renamed openWindowAction.
+        windowManager.openWindow(.spaceNavBar, openAction: openWindowAction)
     }
     
-    
-    // MARK: - Foot Button Creation
-    // MARK: - Foot Button Creation
-    private func createFootButton(content: RealityViewContent) {
-        // Create a subtle button entity positioned at user's feet
-        let buttonMesh = MeshResource.generateBox(width: 0.1, height: 0.02, depth: 0.1)
-        var buttonMaterial = SimpleMaterial()
-        buttonMaterial.baseColor = .color(UIColor.gray.withAlphaComponent(0.3))
-        buttonMaterial.roughness = .float(0.8)
-        buttonMaterial.metallic = .float(0.1)
-        
-        let buttonEntity = ModelEntity(mesh: buttonMesh, materials: [buttonMaterial])
-        buttonEntity.name = "nav_reopen_button"
-        
-        // Position it at the user's feet (slightly below ground level and forward)
-        buttonEntity.position = SIMD3<Float>(0, -1.5, 0.3)
-        
-        // Add collision component for tap detection
-        let buttonShape = ShapeResource.generateBox(width: 0.1, height: 0.02, depth: 0.1)
-        buttonEntity.components.set(CollisionComponent(shapes: [buttonShape]))
-        
-        // Add input target component to make it tappable
-        buttonEntity.components.set(InputTargetComponent())
-        
-        // Add it to the userRotationEntity so it rotates with the user view
-        userRotationEntity.addChild(buttonEntity)
-        self.footButtonEntity = buttonEntity
-        
-        // Subscribe to tap gestures
-        content.subscribe(to: CollisionEvents.Began.self, on: buttonEntity) { _ in
-            Task { @MainActor in
-                self.handleFootButtonTap()
-            }
-        }
-    }
 
     private var overlayViews: some View {
         Group {
@@ -268,144 +286,145 @@ struct SpacesView: View {
     
     // Add these helpers inside SpacesView
     @MainActor
-    private func handleScenePhaseChange(_ phase: ScenePhase) {
-        switch phase {
-        case .active:
-            // Resume lightweight things; do NOT rebuild entities here
-            RenderGuard.shared.setActive(true)
-            if wasPlayingBeforeOverlay, let root = rootEntity {
-                AmbientAudioManager.shared.play(entity: root)
-                isPlaying = true
-                
-                // Notify about state change
-                NotificationCenter.default.post(
-                    name: .ambientAudioStateChanged,
-                    object: nil,
-                    userInfo: ["isPlaying": true]
-                )
-            }
+     private func handleScenePhaseChange(_ phase: ScenePhase) {
+         switch phase {
+         case .active:
+             RenderGuard.shared.setActive(true)
+             if wasPlayingBeforeOverlay, let root = rootEntity {
+                 AmbientAudioManager.shared.play(entity: root)
+                 isPlaying = true
+                 NotificationCenter.default.post(
+                     name: .ambientAudioStateChanged,
+                     object: nil,
+                     userInfo: ["isPlaying": true]
+                 )
+             }
 
-        case .inactive:
-            // Pause only; do not dismiss immersive space or remove anchors
-            RenderGuard.shared.setActive(false)
-            if let root = rootEntity {
-                wasPlayingBeforeOverlay = isPlaying
-                AmbientAudioManager.shared.pause(entity: root)   // don't stop()
-                isPlaying = false
-                
-                // Notify about state change
-                NotificationCenter.default.post(
-                    name: .ambientAudioStateChanged,
-                    object: nil,
-                    userInfo: ["isPlaying": false]
-                )
-            }
+         case .inactive:
+             RenderGuard.shared.setActive(false)
+             if let root = rootEntity {
+                 wasPlayingBeforeOverlay = isPlaying
+                 AmbientAudioManager.shared.pause(entity: root)
+                 isPlaying = false
+                 NotificationCenter.default.post(
+                     name: .ambientAudioStateChanged,
+                     object: nil,
+                     userInfo: ["isPlaying": false]
+                 )
+             }
 
-        case .background:
-            // Real cleanup is okay here
-            Task { await cleanupView() }
+         case .background:
+             print("🌍 [SpacesView] Moving to background - checking if immersive space dismissed")
+             // Only cleanup if we haven't already
+             if !hasCleanedUp {
+                 cleanupView()
+             }
 
-        @unknown default:
-            break
-        }
-    }
+         @unknown default:
+             break
+         }
+     }
 
     
     // MARK: - Complete initializeSpace Function
+    // MARK: - Complete initializeSpace Function
     @MainActor
-       private func initializeSpace() async {
-           print("📱 SpacesView initializeSpace called")
-           
-           // ALWAYS open the nav bar when SpacesView appears - this should happen every time
-           windowManager.openSpaceEntryWindows(
-               openWindow: openWindow,
-               dismissWindow: dismissWindow
-           )
-           print("✅ [SpacesView] Nav bar opening requested")
-           
-           // Check if we're already initialized for this specific space
-           if let activeSpace = appModel.currentActiveSpace,
-              let selectedSpaceId = appModel.selectedSpace?.id,
-              activeSpace == selectedSpaceId {
-               print("✅ [SpacesView] Already initialized for space: \(activeSpace)")
-               // Even though we're already initialized, we might need to rejoin or refresh
-               // But we can skip the full initialization
-               return
-           }
-           
-           // If we get here, we need to do full initialization
-           print("🚀 [SpacesView] Performing full initialization")
-           
-           // Initial State Reset
-           notificationSentForEntityID = nil
-           notificationPostTask?.cancel()
-           isLoading = true
-           errorMessage = nil
-           rootEntity = nil
-           
-           // IMPORTANT: Reset rotations to prevent head orientation affecting particles
-           anchorEntity.orientation = simd_quatf()
-           userRotationEntity.orientation = simd_quatf()
-           userRotation = 0  // Reset user rotation
+    private func initializeSpace() async {
+        print("📱 SpacesView initializeSpace called")
 
-           // Join the space
-           guard let spaceId = appModel.selectedSpace?.id else {
-               print("❌ Cannot initialize space, no space ID found.")
-               await dismissImmersiveSpace()
-               // Open tab bar again since we're exiting
-               windowManager.openMainWindow(openWindow: openWindow)
-               return
-           }
+        // 1) Open space entry windows (NavBar) and close TabBar.
+        windowManager.openSpaceEntryWindows(
+            openAction: openWindowAction,
+            dismissAction: dismissWindowAction
+        )
+        print("✅ [SpacesView] Nav bar opening requested")
 
-           // Load rotation preference AFTER resetting
-           loadRotationPreference()
+        // 2) If we already initialized for this specific space, avoid any reload.
+        if let activeSpace = appModel.currentActiveSpace,
+           let selectedSpaceId = appModel.selectedSpace?.id,
+           activeSpace == selectedSpaceId
+        {
+            print("✅ [SpacesView] Already initialized for space: \(activeSpace).")
+            // Still ensure parenting (idempotent) in case RealityView re-updated.
+            if let e = entityWrapper.getSpaceEntity() {
+                ensureEntityIsParented(e)
+            }
+            return
+        }
 
-           let success = await spaceService.joinSpace(spaceId)
-           guard success else {
-               print("❌ Failed to join space backend.")
-               await dismissImmersiveSpace()
-               appModel.currentActiveSpace = nil  // Clear active space
-               windowManager.openMainWindow(openWindow: openWindow)
-               return
-           }
-           print("✅ Successfully joined space backend: \(spaceId)")
-           
-           // Make sure a seat is selected
-           if let cs = appModel.selectedSpace,
-              (cs.currentSeat ?? "").isEmpty {
-               appModel.updateSelectedSpaceSeat(to: "seat_1")
-           }
+        // 3) Initial state reset
+        print("🚀 [SpacesView] Performing full initialization")
+        notificationSentForEntityID = nil
+        notificationPostTask?.cancel()
+        isLoading = true
+        errorMessage = nil
+        rootEntity = nil
 
-           // PRIME the map *before* we show it
-           if let space = appModel.selectedSpace {
-               Task.detached(priority: .userInitiated) {
-                   await SpaceMapResources.prime(for: space)
-               }
-           }
+        // 4) Reset anchors and local rotation state
+        anchorEntity.orientation = simd_quatf()
+        userRotationEntity.orientation = simd_quatf()
+        userRotation = 0
 
-           // If the entity is already cached, attach & go
-           if let currentSpace = appModel.selectedSpace,
-              let entity = entityWrapper.getSpaceEntity(),
-              entity.name == currentSpace.spaceName {
+        // 5) Validate selected space id + join backend
+        guard let spaceId = appModel.selectedSpace?.id else {
+            print("❌ Cannot initialize space, no space ID found.")
+            await windowManager.performEmergencyExit(
+                dismissAction: dismissWindowAction,
+                openAction: openWindowAction,
+                dismissImmersiveSpace: { await self.dismissImmersiveSpace() }
+            )
+            return
+        }
 
-               self.selectedSpace = currentSpace
-               self.isLoading = false
-               
-               // Ensure entity is in the scene
-               ensureEntityIsParented(entity)
-               
-               // Always setup ambient audio, even from cache
-               // The AmbientAudioManager will check if it's already setup
-               await setupAmbientAudioFromFirebase(entity: entity, space: currentSpace)
-               
-               // Move to the current seat with proper rotation
-               let seat = currentSpace.currentSeat ?? "seat_1"
-               moveUserToSeat(named: seat, in: entity, from: nil, animated: false)
-           } else {
-               // Otherwise load from scratch
-               loadSpace()
-           }
-       }
+        // Load per-space rotation AFTER resetting transforms
+        loadRotationPreference()
+
+        let joined = await spaceService.joinSpace(spaceId)
+        guard joined else {
+            print("❌ Failed to join space backend.")
+            appModel.currentActiveSpace = nil
+            await windowManager.performEmergencyExit(
+                dismissAction: dismissWindowAction,
+                openAction: openWindowAction,
+                dismissImmersiveSpace: { await self.dismissImmersiveSpace() }
+            )
+            return
+        }
+        print("✅ Successfully joined space backend: \(spaceId)")
+
+        // 6) Ensure a default seat exists
+        if let cs = appModel.selectedSpace,
+           (cs.currentSeat ?? "").isEmpty {
+            appModel.updateSelectedSpaceSeat(to: "seat_1")
+        }
+
+        // 7) Prime map resources (if used)
+        if let space = appModel.selectedSpace {
+            Task.detached(priority: .userInitiated) {
+                await SpaceMapResources.prime(for: space)
+            }
+        }
+
+        // 8) EARLY-RETURN on cached entity path (prevents duplicate loads)
+        if let currentSpace = appModel.selectedSpace,
+           let cached = entityWrapper.getSpaceEntity(),
+           cached.name == currentSpace.spaceName
+        {
+            self.selectedSpace = currentSpace
+            self.isLoading = false
+
+            ensureEntityIsParented(cached)
+            await setupAmbientAudioFromFirebase(entity: cached, space: currentSpace)
+            
+            let seat = currentSpace.currentSeat ?? "seat_1"
+            moveUserToSeat(named: seat, in: cached, animated: false)
+            return  // <-- critical: do not drop into load path
+        }
+
+        // 9) Otherwise, proceed to load (single-source path)
+        loadSpace()
+    }
+
     
     private func loadSpace() {
         resetViewState()
@@ -421,6 +440,20 @@ struct SpacesView: View {
             fetchSpacesAndLoadFirst()
         }
     }
+    
+    @MainActor
+    private func ensureRootEntity(using fallbackSpaceEntity: Entity?) -> Entity? {
+        if let root = self.rootEntity, isEntityInScene(root) {
+            return root
+        }
+        if let spaceEntity = fallbackSpaceEntity,
+           let foundRoot = findEntityDeep(named: "Root", in: spaceEntity) {
+            self.rootEntity = foundRoot
+            return foundRoot
+        }
+        return nil
+    }
+
     
     private func resetViewState() {
         notificationSentForEntityID = nil
@@ -535,12 +568,32 @@ struct SpacesView: View {
     /// Adds entity to userRotationEntity instead of anchorEntity
     @MainActor
     private func ensureEntityIsParented(_ entity: Entity) {
-        // Check if the entity is already a child of the anchor
-        let hasEntity = userRotationEntity.children.contains(where: { $0.id == entity.id })
-        guard !hasEntity else { return }
+        // 1) If we’ve already parented this exact entity, bail.
+        if let last = lastSpaceID, last == entity.id {
+            return
+        }
 
+        // 2) Remove any previous space children (defensive).
+        //    We’ll treat any child whose name matches the current spaceName as a prior instance.
+        if let spaceName = selectedSpace?.spaceName {
+            userRotationEntity.children
+                .filter { $0.name == spaceName }
+                .forEach { $0.removeFromParent() }
+        }
+
+        // 3) Also remove by prior tracked ID (if we have it).
+        if let last = lastSpaceID,
+           let oldChild = userRotationEntity.children.first(where: { $0.id == last }) {
+            oldChild.removeFromParent()
+        }
+
+        // 4) Parent exactly one instance.
         userRotationEntity.addChild(entity)
+
+        // 5) Remember which one we parented.
+        lastSpaceID = entity.id
     }
+
 
     private func debugPrintAllTransforms(of entity: Entity, level: Int = 0) {
         let indent = String(repeating: "  ", count: level)
@@ -590,6 +643,39 @@ struct SpacesView: View {
             }
         }
     }
+    
+    // MARK: - System Dismissal Handler
+    @MainActor
+    private func ensureWindowsClosedAfterSystemDismissal() async {
+        // Check if any space windows are still open after system dismissal
+        let spaceWindowsOpen = windowManager.spaceWindowTypes.contains { windowType in
+            windowManager.isWindowOpen(windowType)
+        }
+        
+        if spaceWindowsOpen {
+            print("🚨 [SpacesView] Space windows still open after system dismissal - force closing")
+            
+            // Force close all space windows
+            for windowType in windowManager.spaceWindowTypes {
+                if windowManager.isWindowOpen(windowType) {
+                    dismissWindowAction(id: windowType.rawValue)
+                    windowManager.untrackWindow(windowType)
+                }
+            }
+            
+            // Close browser windows too
+            windowManager.closeAllWebBrowsers(dismissAction: dismissWindowAction)
+            
+            // Wait a moment then open main window
+            try? await Task.sleep(for: .milliseconds(300))
+            
+            // Only open main window if it's not already open
+            if !windowManager.isWindowOpen(.mainContent) {
+                windowManager.openMainWindow(openAction: openWindowAction)
+            }
+        }
+    }
+    
     
     private func findRootEntity(in entity: Entity) -> Entity? {
         // First check for direct child named "Root"
@@ -796,89 +882,60 @@ struct SpacesView: View {
         previousSeatID = seatID
     }
 
+    // MARK: - Cleanup View
+    // MARK: - Cleanup View
     @MainActor
-        private func cleanupView() {
-            guard !isCleaningUp else {
-                print("⚠️ [SpacesView] Already cleaning up, skipping duplicate cleanup")
-                return
-            }
-            isCleaningUp = true
-            
-            print("🧹 [SpacesView] Starting cleanup sequence")
-            
-            // Stop ambient audio using the manager
-            if let rootEntity = self.rootEntity {
-                AmbientAudioManager.shared.stop(entity: rootEntity)
-            }
-            
-            // Reset audio state
-            isPlaying = false
-            self.rootEntity = nil
-
-            // Close all space-related windows
-            windowManager.closeAllSpaceWindows(dismissWindow: dismissWindow)
-            
-            footButtonEntity?.removeFromParent()
-            footButtonEntity = nil
-            
-            // Leave the space if one was selected
-            if let spaceId = selectedSpace?.id {
-                Task {
-                    await spaceService.leaveSpace(spaceId)
-                    print("✅ Successfully left space: \(spaceId)")
-                    
-                    // Only dismiss if we're actually in the Spaces immersive space
-                    if appModel.currentActiveSpace == appModel.spacesID {
-                        await dismissImmersiveSpace()
-                        print("✅ Immersive space dismissed")
-                    }
-                }
-            } else {
-                // Only dismiss if we're actually in an immersive space
-                Task {
-                    if appModel.currentActiveSpace == appModel.spacesID {
-                        await dismissImmersiveSpace()
-                        print("✅ Immersive space dismissed (no space selected)")
-                    }
-                }
-            }
-            
-            // Save preferences
-            saveRotationPreference()
-            
-            // Cancel all subscriptions and tasks
-            cancellables.forEach { $0.cancel() }
-            cancellables.removeAll()
-            notificationPostTask?.cancel()
-            notificationPostTask = nil
-            
-            // Clean up entity wrapper
-            Task {
-                await entityWrapper.cleanup()
-            }
-            
-            // Reset state
-            navBarOpened = false
-            mapOpened = false
-            notificationSentForEntityID = nil
-            selectedSpace = nil
-            
-            // Clear the scene
-            anchorEntity.children.removeAll()
-            userRotationEntity.children.removeAll()
-            
-            // Reset AppModel state - this will clear currentActiveSpace
-            appModel.selectedSpace = nil
-            appModel.currentActiveSpace = nil
-            
-            // Open main window after a short delay - WindowManager will check for duplicates
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(500))
-                windowManager.openMainWindow(openWindow: openWindow)
-                print("✅ [SpacesView] Cleanup complete")
-                isCleaningUp = false
-            }
+    private func cleanupView() {
+        // Local guard for the content cleanup part
+        guard !isCleaningUp else {
+            print("🧹 [SpacesView] Cleanup already in progress locally, skipping.")
+            return
         }
+        
+        // Set BOTH flags immediately
+        isCleaningUp = true
+        hasCleanedUp = true
+        
+        print("cleaning up audio")
+        AudioService.shared.cleanup()
+
+        print("🧹 [SpacesView] Cleaning up immersive content and resetting currentActiveSpace.")
+        
+        // Post the dismissal notification
+        NotificationCenter.default.post(name: .immersiveSpaceWillDismiss, object: nil)
+        
+        // 1. Reset AppModel state
+        appModel.currentActiveSpace = nil
+        
+        // 2. Clean up RealityKit content (Stop audio, remove entities, reset trackers)
+        // (Keep the existing content cleanup logic here)
+        if let e = entityWrapper.getSpaceEntity() {
+            e.removeFromParent()
+        }
+        entityWrapper.setSpaceEntity(nil)
+        entityWrapper.setActiveSceneEntity(nil)
+        
+        // Clear scene graph roots
+        userRotationEntity.children.removeAll()
+        anchorEntity.children.removeAll()
+        
+        // Reset trackers
+        lastSpaceID = nil
+        rootEntity = nil
+        selectedSpace = nil
+        notificationSentForEntityID = nil
+        notificationPostTask?.cancel()
+        notificationPostTask = nil
+        cancellables.forEach { $0.cancel() }
+        cancellables.removeAll()
+        
+        // 3. Trigger the robust window management logic in WindowManager
+        print("🧹 [SpacesView] Triggering WindowManager.handleImmersiveSpaceExit.")
+        windowManager.handleImmersiveSpaceExit(
+            openAction: openWindowAction,
+            dismissAction: dismissWindowAction
+        )
+    }
     
     // MARK: - Helper Methods
     private func getSpaceForScene(for entityID: Entity.ID) -> SpaceData? {
@@ -941,7 +998,7 @@ struct SpacesView: View {
                 
                 // Create a material with the Metal API
                 var material = SimpleMaterial()
-                material.baseColor = MaterialColorParameter.color(.red)
+                material.color = .init(tint: .red, texture: nil)
                 material.roughness = MaterialScalarParameter(1.0)
                 material.metallic = MaterialScalarParameter(0.0)
                 
@@ -1147,3 +1204,4 @@ final class RenderGuard {
     private(set) var isActive = true
     func setActive(_ active: Bool) { isActive = active }
 }
+

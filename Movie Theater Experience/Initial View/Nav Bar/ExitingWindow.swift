@@ -140,7 +140,7 @@ struct ExitingWindow: View {
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(100))
             // Show the schedule
-            //openWindow(id: WindowType.tabBar.rawValue)
+            openWindow(id: WindowType.mainContent.rawValue)
         }
     }
     

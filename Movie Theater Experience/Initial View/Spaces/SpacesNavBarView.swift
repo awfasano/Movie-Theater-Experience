@@ -1,53 +1,51 @@
-// SpacesNavBarView.swift
 import SwiftUI
 import Combine
+import RealityKit
+import RealityKitContent
 
 // MARK: - Notification Definitions
 extension Notification.Name {
-    /// Posted when the user's rotation changes.
-    /// UserInfo: ["rotation": Float, "seat": String]
     static let userRotationChanged = Notification.Name("UserRotationChanged")
-
-    /// Posted when the user's vertical offset changes.
-    /// UserInfo: ["verticalOffset": Float, "seat": String]
     static let userVerticalOffsetChanged = Notification.Name("UserVerticalOffsetChanged")
-
-    /// Used to trigger song fetching for a space.
     static let FetchSongsForSpace = Notification.Name("FetchSongsForSpace")
-    
-    /// Portal notifications
     static let setupPortal = Notification.Name("SetupPortal")
     static let removePortal = Notification.Name("RemovePortal")
     static let updatePortalTransparency = Notification.Name("UpdatePortalTransparency")
     static let startAmbientAudio = Notification.Name("StartAmbientAudio")
     static let stopAmbientAudio = Notification.Name("StopAmbientAudio")
     static let updateAmbientVolume = Notification.Name("UpdateAmbientVolume")
-    
-    /// Audio state change notifications
     static let ambientAudioStateChanged = Notification.Name("AmbientAudioStateChanged")
+    
+    // NEW: Add notification for when immersive space is being dismissed
+    static let immersiveSpaceWillDismiss = Notification.Name("ImmersiveSpaceWillDismiss")
 }
 
 struct SpacesNavBarView: View {
     // MARK: - Environment
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
-    @Environment(\.openWindow) private var openWindow
-    @Environment(\.dismissWindow) private var dismissWindow
+    @Environment(\.openWindow) private var openWindowAction
+    @Environment(\.dismissWindow) private var dismissWindowAction
     @Environment(AppModel.self) private var appModel
     @EnvironmentObject private var spacesEntityWrapper: SpacesEntityWrapper
     @EnvironmentObject private var windowManager: WindowManager
+    @Environment(\.scenePhase) private var scenePhase
+
 
     // MARK: - State Properties
     @State private var isContentHidden: Bool = false
     @State private var ambientVolume: Float = 75.0
+    
+    // Movement State
     @State private var currentRotation: Float = 0.0
     private let rotationIncrement: Float = 5.0
     @State private var verticalOffset: Float = 0.0
     private let verticalIncrement: Float = 0.1
+    
+    // Audio State
     @State private var ambientAudioEnabled: Bool = true
-    @State private var isAudioPlaying: Bool = false  // Track actual playback state
+    @State private var isAudioPlaying: Bool = false
     @State private var showVolumeSlider = false
     @State private var showInfoPopover = false
-    
     
     // Button Animation State
     @State private var isExiting = false
@@ -60,7 +58,8 @@ struct SpacesNavBarView: View {
     @State private var isOpeningBrowser = false
     @State private var isOpeningSettings = false
     
-    @StateObject private var audioService = AudioService.shared
+    // Services and Combine
+    @ObservedObject private var audioService = AudioService.shared
     @State private var cancellables = Set<AnyCancellable>()
 
     var body: some View {
@@ -82,12 +81,14 @@ struct SpacesNavBarView: View {
             .disabled(isExiting)
             .help("Exit immersive space")
             
+            // Emoji Visibility Toggle
             Toggle(isOn: $spacesEntityWrapper.showEmojis) {
                 Image(systemName: spacesEntityWrapper.showEmojis ? "eye.fill" : "eye.slash.fill")
             }
             .toggleStyle(.button)
             .help(spacesEntityWrapper.showEmojis ? "Hide Emojis" : "Show Emojis")
             
+            // Info Popover
             Button(action: {
                 showInfoPopover.toggle()
             }) {
@@ -100,7 +101,6 @@ struct SpacesNavBarView: View {
                      arrowEdge: .top) {
                 controlsOverviewPopover
             }
-            
             
             Divider().frame(height: 20)
             
@@ -147,21 +147,20 @@ struct SpacesNavBarView: View {
             
             Divider().frame(height: 20)
             
-            // Rest of your buttons...
-            windowOpeningButton(id: "spaceMap", state: $isOpeningMap, systemImage: "chair.lounge", helpText: "Change seat")
-            windowOpeningButton(id: "storytellerWindow", state: $isOpeningStoryteller, systemImage: "waveform", helpText: "Open stories")
-            windowOpeningButton(id: "spaceEmojiWindow", state: $isOpeningEmoji, systemImage: "face.smiling", helpText: "Send emoji reactions")
-            windowOpeningButton(id: "spaceChatWindow", state: $isOpeningChat, systemImage: "message.fill", helpText: "Open chat messages")
+            // --- WINDOW OPENING BUTTONS ---
+            windowOpeningButton(type: .spaceMap, state: $isOpeningMap, systemImage: "chair.lounge", helpText: "Change seat")
+            windowOpeningButton(type: .storytellerWindow, state: $isOpeningStoryteller, systemImage: "waveform", helpText: "Open stories")
+            windowOpeningButton(type: .spaceEmojiWindow, state: $isOpeningEmoji, systemImage: "face.smiling", helpText: "Send emoji reactions")
+            windowOpeningButton(type: .spaceChatWindow, state: $isOpeningChat, systemImage: "message.fill", helpText: "Open chat messages")
             
-            // Audio controls...
+            // --- AUDIO CONTROLS ---
             HStack(spacing: 10) {
+                // Ambient Audio Toggle
                 Button(action: {
                     if isAudioPlaying {
-                        // Audio is playing, so stop it
                         stopAmbientAudio()
                         ambientAudioEnabled = false
                     } else {
-                        // Audio is not playing, so start it
                         ambientAudioEnabled = true
                         startAmbientAudio()
                         updateAmbientVolume(ambientVolume)
@@ -173,6 +172,7 @@ struct SpacesNavBarView: View {
                 .buttonStyle(.bordered)
                 .help(isAudioPlaying ? "Stop ambient audio" : "Start ambient audio")
                 
+                // Volume Slider Popover Button
                 Button(action: {
                     showVolumeSlider.toggle()
                 }) {
@@ -181,7 +181,7 @@ struct SpacesNavBarView: View {
                 }
                 .buttonStyle(.bordered)
                 .help("Adjust volume")
-                .disabled(!isAudioPlaying)  // Disable when not playing
+                .disabled(!isAudioPlaying)
                 .popover(isPresented: $showVolumeSlider,
                          attachmentAnchor: .point(.top),
                          arrowEdge: .bottom) {
@@ -190,25 +190,49 @@ struct SpacesNavBarView: View {
             }
             
             // Music Controls
-            Button(action: {
-                openWindow(id: "audioControls")
+            windowOpeningButton(type: .audioControls, state: $isOpeningAudioControls, systemImage: "music.note", helpText: "Music Controls") {
+                print("🎵 [NavBar] Audio controls custom action triggered")
+                
                 Task {
                     try? await Task.sleep(for: .milliseconds(50))
-                    if let space = appModel.selectedSpace, let entity = spacesEntityWrapper.getSpaceEntity() {
+                    
+                    guard let space = appModel.selectedSpace,
+                          let entity = spacesEntityWrapper.getSpaceEntity() else {
+                        print("⚠️ Cannot load music - missing space or entity")
+                        return
+                    }
+                    
+                    // For cached entities, ensure we have a valid root entity
+                    if let rootEntity = entity.findEntity(named: "Root") {
+                        print("🎵 Loading songs for cached entity with root: \(rootEntity.name)")
+                        await audioService.loadSongsAndPreparePlayer(for: space.spaceName, rootEntity: rootEntity)
+                    } else {
+                        print("⚠️ Cannot find Root entity for music playback")
+                        // Try with the main entity if Root is not found
                         await audioService.loadSongsAndPreparePlayer(for: space.spaceName, rootEntity: entity)
                     }
                 }
-            }) {
-                Image(systemName: "music.note")
             }
-            .buttonStyle(.bordered)
-            .help("Music Controls")
             
             // Web Browser
-            windowOpeningButton(id: "webBrowserWindow", state: $isOpeningBrowser, systemImage: "safari.fill", helpText: "Open Web Browser")
+            Button(action: {
+                isOpeningBrowser = true
+                Task {
+                    try? await Task.sleep(for: .milliseconds(20))
+                    let instanceId = windowManager.openWebBrowserInstance(openAction: openWindowAction)
+                    print("🌐 Opened new browser instance: \(instanceId)")
+                    isOpeningBrowser = false
+                }
+            }) {
+                Image(systemName: "safari.fill")
+            }
+            .buttonStyle(.bordered)
+            .help("Open New Web Browser (\(windowManager.browserWindowCount) open)")
+            .scaleEffect(isOpeningBrowser ? 1.2 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isOpeningBrowser)
             
             // Settings
-            windowOpeningButton(id: "chatSettings", state: $isOpeningSettings, systemImage: "gear", helpText: "Open Settings")
+            windowOpeningButton(type: .chatSettings, state: $isOpeningSettings, systemImage: "gear", helpText: "Open Settings")
         }
         .padding()
         .background {
@@ -224,10 +248,52 @@ struct SpacesNavBarView: View {
         .opacity(isContentHidden ? 0.0 : 1.0)
         .onAppear {
             setupAudioStateListeners()
+            setupImmersiveSpaceListeners() // NEW: Listen for immersive space dismissal
         }
         .onDisappear {
             cancellables.removeAll()
         }
+        .onChange(of: scenePhase) { _, newPhase in
+            // When scene goes to background during Digital Crown dismissal
+            if newPhase == .background {
+                print("🚪 [NavBar] Scene going to background - self-dismissing")
+                Task { @MainActor in
+                    // Force close ourselves
+                    dismissWindowAction(id: WindowType.spaceNavBar.rawValue)
+                    windowManager.untrackWindow(.spaceNavBar)
+                }
+            }
+        }
+        .task {
+            // Monitor if the immersive space gets dismissed externally
+            // This runs continuously while the NavBar is open
+            while !Task.isCancelled {
+                // Check if we're still in an immersive space
+                if appModel.currentActiveSpace == nil {
+                    print("🚪 [NavBar] Detected space closed - self-dismissing")
+                    dismissWindowAction(id: WindowType.spaceNavBar.rawValue)
+                    windowManager.untrackWindow(.spaceNavBar)
+                    break
+                }
+                
+                // Check every 500ms
+                try? await Task.sleep(for: .milliseconds(500))
+            }
+        }
+    }
+    
+    // MARK: - NEW: Immersive Space Listeners
+    private func setupImmersiveSpaceListeners() {
+        // Listen for when the immersive space is being dismissed
+        NotificationCenter.default.publisher(for: .immersiveSpaceWillDismiss)
+            .sink { _ in
+                print("🚪 [SpacesNavBar] Received immersive space dismissal notification - closing nav bar")
+                Task { @MainActor in
+                    // Force close this nav bar window
+                    windowManager.closeWindow(.spaceNavBar, dismissAction: dismissWindowAction)
+                }
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Audio State Monitoring
@@ -247,7 +313,6 @@ struct SpacesNavBarView: View {
                     Task { @MainActor in
                         self.isAudioPlaying = isPlaying
                         
-                        // If audio stopped unexpectedly, update our enabled state
                         if !isPlaying {
                             self.ambientAudioEnabled = false
                         }
@@ -256,7 +321,7 @@ struct SpacesNavBarView: View {
             }
             .store(in: &cancellables)
         
-        // Monitor audio playing state every few seconds
+        // Monitor audio playing state periodically
         Timer.publish(every: 2.0, on: .main, in: .common)
             .autoconnect()
             .sink { _ in
@@ -289,27 +354,63 @@ struct SpacesNavBarView: View {
         
         print("🚪 [SpacesNavBar] Initiating smart exit sequence")
         
+        // NEW: Post notification that immersive space is being dismissed
+        NotificationCenter.default.post(name: .immersiveSpaceWillDismiss, object: nil)
+        
         // Check if we have an active entity in the space
         let hasActiveEntity = spacesEntityWrapper.getSpaceEntity() != nil
         let hasRootEntity = spacesEntityWrapper.getSpaceEntity()?.findEntity(named: "Root") != nil
         
         if !hasActiveEntity || !hasRootEntity {
             print("⚠️ [SpacesNavBar] No active entity/root detected - performing emergency exit")
-            // Use the WindowManager's emergency exit method
             await windowManager.performEmergencyExit(
-                dismissWindow: dismissWindow,
-                openWindow: openWindow,
+                dismissAction: dismissWindowAction,
+                openAction: openWindowAction,
                 dismissImmersiveSpace: { await dismissImmersiveSpace() }
             )
             
-            // Clean up app state
             await appModel.cleanupImmersiveSpace()
         } else {
             print("✅ [SpacesNavBar] Active entity found - normal exit")
-            // Normal dismissal - SpacesView will handle cleanup
+            // Close all space windows first, then dismiss immersive space
+            windowManager.closeAllSpaceWindows(dismissAction: dismissWindowAction)
+            
+            // Small delay to let windows close
+            try? await Task.sleep(for: .milliseconds(100))
+            
             await dismissImmersiveSpace()
         }
     }
+    
+    // MARK: - Helper Methods
+    private func windowOpeningButton(type: WindowType, state: Binding<Bool>, systemImage: String, helpText: String, customAction: (() -> Void)? = nil) -> some View {
+        Button(action: {
+            state.wrappedValue = true
+            Task {
+                try? await Task.sleep(for: .milliseconds(20))
+                
+                await MainActor.run {
+                    windowManager.openWindow(type, openAction: openWindowAction)
+                }
+                
+                if let customAction = customAction {
+                    customAction()
+                }
+                
+                state.wrappedValue = false
+            }
+        }) {
+            Image(systemName: systemImage)
+        }
+        .buttonStyle(.bordered)
+        .help(helpText)
+        .scaleEffect(state.wrappedValue ? 1.2 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: state.wrappedValue)
+    }
+}
+
+// MARK: - Extensions (User Controls, Audio Controls, etc.)
+extension SpacesNavBarView {
     
     // MARK: - Volume Slider Popover
     private var volumeSliderPopover: some View {
@@ -363,21 +464,16 @@ struct SpacesNavBarView: View {
     // MARK: - Audio Controls
     private func startAmbientAudio() {
         NotificationCenter.default.post(name: .startAmbientAudio, object: nil)
-        
-        // Update state optimistically, but will be confirmed by state listener
         ambientAudioEnabled = true
     }
     
     private func stopAmbientAudio() {
         NotificationCenter.default.post(name: .stopAmbientAudio, object: nil)
-        
-        // Update state optimistically
         ambientAudioEnabled = false
         isAudioPlaying = false
     }
     
     private func updateAmbientVolume(_ volume: Float) {
-        // Only update volume if audio is actually playing
         guard isAudioPlaying else {
             print("📝 Volume change ignored - audio not playing")
             return
@@ -424,8 +520,8 @@ struct SpacesNavBarView: View {
                         .font(.subheadline)
                         .fontWeight(.semibold)
                     
-                    controlDescription(icon: "speaker.wave.2.fill", title: "Ambient Audio", description: "Start/stop ambient background audio.  If the ambient audio stops at any point, just toggle it off and back on, and it should work again")
-                    controlDescription(icon: "slider.vertical.3", title: "Volume Control", description: "Adjust ambient audio volume.  If you are having issues with the volume.  You make need to go to the control panel and increase volume for applications")
+                    controlDescription(icon: "speaker.wave.2.fill", title: "Ambient Audio", description: "Start/stop ambient background audio. If the ambient audio stops at any point, just toggle it off and back on, and it should work again")
+                    controlDescription(icon: "slider.vertical.3", title: "Volume Control", description: "Adjust ambient audio volume. If you are having issues with the volume. You make need to go to the control panel and increase volume for applications")
                     controlDescription(icon: "music.note", title: "Music Player", description: "Control spatial music playback")
                     
                     Divider()
@@ -463,34 +559,11 @@ struct SpacesNavBarView: View {
         }
     }
     
-    
-    
-    // MARK: - Helper Methods
-    private func windowOpeningButton(id: String, state: Binding<Bool>, systemImage: String, helpText: String, customAction: (() -> Void)? = nil) -> some View {
-        Button(action: {
-            state.wrappedValue = true
-            Task {
-                try? await Task.sleep(for: .milliseconds(20))
-                if let customAction = customAction {
-                    customAction()
-                } else {
-                    await MainActor.run { openWindow(id: id) }
-                }
-                state.wrappedValue = false
-            }
-        }) {
-            Image(systemName: systemImage)
-        }
-        .buttonStyle(.bordered)
-        .help(helpText)
-        .scaleEffect(state.wrappedValue ? 1.2 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: state.wrappedValue)
-    }
-    
+    // MARK: - Volume Components
     private var volumeDisplay: some View {
         VStack(spacing: 4) {
             Text("\(Int(ambientVolume))%")
-                .font(.title3)
+                .font(.subheadline)
                 .fontWeight(.semibold)
                 .monospacedDigit()
                 .foregroundColor(isAudioPlaying ? .primary : .secondary)
@@ -534,7 +607,7 @@ struct SpacesNavBarView: View {
                         .frame(width: 8, height: 8)
                 }
                 .position(x: geometry.size.width / 2,
-                         y: CGFloat(1 - (ambientVolume / 100.0)) * geometry.size.height)
+                          y: CGFloat(1 - (ambientVolume / 100.0)) * geometry.size.height)
             }
             .frame(width: 60)
             .gesture(volumeDragGesture(in: geometry.size.height))
@@ -545,7 +618,6 @@ struct SpacesNavBarView: View {
     private func volumeDragGesture(in height: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
-                // Only allow volume changes if audio is playing
                 guard isAudioPlaying else { return }
                 
                 let clampedY = max(0, min(value.location.y, height))

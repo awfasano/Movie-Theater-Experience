@@ -1,7 +1,7 @@
 import Foundation
 
 struct Bookmark: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     let name: String
     let url: URL
 }

@@ -26,6 +26,11 @@ struct SpaceBrowserIntegration: View {
 
     // MARK: - Child Views
 
+    
+    init() {
+        print("🚨 SpaceBrowserIntegration init() started")
+    }
+    
     // MARK: - Card View
     private func cardView(for space: SpaceData, index: Int) -> some View {
         let isHighlighted: Bool = {
@@ -154,17 +159,13 @@ struct SpaceBrowserIntegration: View {
     
     private var headerSection: some View {
         VStack(spacing: 16) {
-            Text("Welcome to Immersive Spaces")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .multilineTextAlignment(.center)
             
-            Text("Please select a space below to begin your experience")
+            Text("Welcome! Please select a space below to begin your experience")
                 .font(.title2)
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
             
-            Text("These are immersive virtual environments where you can listen to music, message with others, and explore unique 3D worlds. Each space offers a different atmosphere and experience.")
+            Text("These are immersive virtual environments where you can listen to music, message with others, and explore unique 3D worlds. Each space offers a different atmosphere and experience. Please go to the settings and add a username before you enter a space!")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -264,6 +265,9 @@ struct SpaceBrowserIntegration: View {
         }
         .overlay {
             if isLoadingSpace { loadingOverlay }
+        }
+        .onAppear {
+            print("✅ SpaceBrowserIntegration appeared")
         }
     }
     // MARK: - Functions
@@ -367,7 +371,7 @@ struct SpaceBrowserIntegration: View {
             await updateProgress(0.8, message: "Entering space...")
             
             // NEW: Dismiss tab bar before opening immersive space
-            dismissWindow(id: "tabBar")
+            dismissWindow(id: "mainContent")
             print("🚪 Dismissed tab bar window")
             
             // Wait a moment to ensure tab bar is dismissed

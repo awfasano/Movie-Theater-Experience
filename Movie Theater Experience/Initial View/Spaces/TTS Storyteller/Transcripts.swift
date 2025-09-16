@@ -34,9 +34,12 @@ struct TranscriptView: View {
                 }
                 .padding()
             }
-            .onChange(of: transcripts.count) { _ in
-                withAnimation {
-                    proxy.scrollTo(bottomID, anchor: .bottom)
+            .onChange(of: transcripts.count) { oldValue, newValue in
+                // Auto-scroll only when new items are appended
+                if newValue > oldValue {
+                    withAnimation {
+                        proxy.scrollTo(bottomID, anchor: .bottom)
+                    }
                 }
             }
         }

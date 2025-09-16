@@ -9,6 +9,7 @@ import Foundation
 import AVFoundation
 import Combine
 import QuartzCore
+import SwiftUI
 
 // MARK: - Transcript Model (No changes)
 struct TranscriptMessage: Identifiable {
@@ -41,6 +42,7 @@ class InteractiveStoryViewModel: ObservableObject {
     @Published var volume: Double = 1.0
     @Published var audioCurrentTime: Double = 0
     @Published private(set) var audioDuration: Double = 1.0
+    @Published var showInfoPopover = false
     
     // MARK: - Interaction State
     @Published var isMicMuted = true
@@ -76,6 +78,47 @@ class InteractiveStoryViewModel: ObservableObject {
     private var timeObserverToken: Any?
     private var isScrubbing = false
     private var wasPlayingBeforeScrub = false
+    
+    var instructionsPopover: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Interactive Stories - Beta")
+                    .font(.headline)
+                    .padding(.bottom, 8)
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Hi Everyone! I hope you enjoy the stories. I'm not the most creative person in the world, so if you have any stories you'd like to see or want to contribute, please let me know and we can get those up!")
+                        .fixedSize(horizontal: false, vertical: true)
+                    
+                    Text("All the kinks are not worked out of this feature yet, but I'm working to improve it. I'm keeping the AI storyteller chat free for now, but if it gets too expensive I might have to add a paywall. I want to make these shareable so you can watch them or interact with them in a group in the future with video and image creation as you go.")
+                        .fixedSize(horizontal: false, vertical: true)
+                    
+                    Divider()
+                    
+                    Text("Known Issues:")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("• If the thinking button doesn't appear, try muting and unmuting the mic or return to the previous page")
+                        Text("• There may be feedback when clicking the text field while mic is on - we're working on this")
+                        Text("• The Gemini API sometimes gets overloaded during peak hours")
+                        Text("• Text transcripts may not always appear correctly")
+                    }
+                    .font(.callout)
+                    .foregroundColor(.secondary)
+                    
+                    Divider()
+                    
+                    Text("This feature is still in beta, so there might be some issues. Thank you for your patience as we continue to improve the experience!")
+                        .font(.callout)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding()
+        }
+        .frame(width: 400, height: 500)
+    }
     
     // MARK: - Init
     init(story: Story) {

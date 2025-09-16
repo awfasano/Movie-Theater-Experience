@@ -1,7 +1,7 @@
-//  SpatialAudioLoader.swift  (slim spatial-only version)
+//  SpatialAudioLoader.swift  (Fixed version with persistent cache)
 //  Plays every track through RealityKit speakers and exposes
-//  simple playback state.  Updated for Swift 6 strict concurrency
-//  by hopping back to MainActor inside the Timer closure.
+//  simple playback state. Updated for Swift 6 strict concurrency
+//  and fixed caching issues with temporary file cleanup.
 
 import Foundation
 import FirebaseStorage
@@ -20,13 +20,13 @@ final class SpatialAudioLoader: ObservableObject {
     @Published private(set) var isLoadingTrack: Bool = false // For UI loading indicator
 
     private var resourceCache: [String: AudioFileResource] = [:]
-
+    // NEW: Track persistent file paths to avoid cleanup issues
+    private var persistentFilePaths: [String: URL] = [:]
 
     // ────────── Injected once at startup
     private weak var appModel: AppModel?            // to fetch current space name
     func attach(appModel: AppModel) { self.appModel = appModel }
     func getVolume() -> Float { masterVolume }
-
 
     // ────────── Private stored state
     private let storage = Storage.storage()
@@ -45,11 +45,18 @@ final class SpatialAudioLoader: ObservableObject {
     // Used to prevent infinite loops if all songs are broken
     private var failedTrackIndices = Set<Int>()
 
+    // NEW: Persistent cache directory
+    private lazy var persistentCacheDirectory: URL = {
+        let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        let audioCache = cacheDir.appendingPathComponent("AudioCache", isDirectory: true)
+        
+        // Create the directory if it doesn't exist
+        try? FileManager.default.createDirectory(at: audioCache, withIntermediateDirectories: true)
+        
+        return audioCache
+    }()
 
     // MARK: ––––– Public API –––––––––––––––––––––––––––––––––––––––––––––––
-
-    /// Loads speakers in the space (only once) then plays first track.
-    // In SpatialAudioLoader.swift
 
     /// Loads speakers in the space (only once) then plays first track.
     func loadAudioForSpace(rootEntity: Entity,
@@ -79,6 +86,27 @@ final class SpatialAudioLoader: ObservableObject {
     }
 
     func togglePlayPause() { isPlaying ? pause() : resume() }
+    
+    private func startControllers(with res: AudioFileResource, at offset: Double) {
+        controllers = speakerEntities.map { speaker in
+            
+            // ✅ FIX B: Refresh the component for cached/cloned entities.
+            // 1. Remove the potentially stale component.
+            speaker.components.remove(SpatialAudioComponent.self)
+            
+            // 2. Create a fresh component and configure it.
+            var comp = SpatialAudioComponent()
+            comp.gain = Audio.Decibel(linearToDB(masterVolume))
+            
+            // 3. Add the fresh component back to the speaker using .set().
+            speaker.components.set(comp)
+
+            let ctrl = speaker.prepareAudio(res)
+            ctrl.play()
+            if offset > 0 { ctrl.seek(to: .seconds(offset)) }
+            return ctrl
+        }
+    }
 
     func nextTrack(userInitiated: Bool = true) {
         guard !songs.isEmpty else { return }
@@ -152,7 +180,7 @@ final class SpatialAudioLoader: ObservableObject {
     func setSongs(_ newSongs: [Song]) {
         songs = newSongs
         // Clear cache and failure tracking when songs change
-        resourceCache.removeAll()
+        clearCache()
         failedTrackIndices.removeAll()
     }
 
@@ -242,6 +270,7 @@ final class SpatialAudioLoader: ObservableObject {
 
         // 1. Check if it's already in the cache (this is fast, fine for MainActor)
         if let cachedResource = resourceCache[audioURL] {
+            print("✅ Using cached resource for '\(song.song)'")
             return cachedResource
         }
         
@@ -273,61 +302,49 @@ final class SpatialAudioLoader: ObservableObject {
         let audioURL = song.audioURL
         let ref = Storage.storage().reference(forURL: audioURL)
         
-        // This download and subsequent file write will now happen in the background.
-        let localURL = try await self.downloadTempFile(from: ref, preferredName: song.song)
+        // Check if we already have a persistent cached file
+        let fileName = sanitiseAlias(URL(string: audioURL)?.lastPathComponent ?? "audio.wav")
+        let persistentURL = await persistentCacheDirectory.appendingPathComponent(fileName)
+        
+        let localURL: URL
+        
+        if FileManager.default.fileExists(atPath: persistentURL.path) {
+            print("✅ Found cached audio file at: \(persistentURL.path)")
+            localURL = persistentURL
+        } else {
+            // Download to persistent cache instead of temp directory
+            print("⏳ Downloading audio file to persistent cache...")
+            let data = try await ref.data(maxSize: 50 * 1024 * 1024)   // 50 MB cap
+            try data.write(to: persistentURL, options: .atomic)
+            localURL = persistentURL
+            print("✅ Downloaded and cached audio file at: \(persistentURL.path)")
+        }
         
         let alias = self.sanitiseAlias(URL(string: audioURL)?.lastPathComponent ?? "audio.wav")
         
-        // This is often the most intensive part. By running it here, we don't block the UI.
+        // Create the AudioFileResource from the persistent file
         let resource = try await AudioFileResource(
             contentsOf: localURL,
             withName: alias,
             configuration: .init(shouldLoop: false)
         )
         
-        // Clean up the temporary file after we've loaded it into memory.
-        try? FileManager.default.removeItem(at: localURL)
+        // Store the persistent file path for cleanup later
+        await MainActor.run {
+            self.persistentFilePaths[audioURL] = localURL
+        }
         
         return resource
     }
 
     // ✅ SOLUTION: Mark helper functions used by our new function as 'nonisolated' as well.
     // They don't access any MainActor-protected state, so this is safe.
-    nonisolated private func downloadTempFile(from ref: StorageReference,
-                                           preferredName: String) async throws -> URL {
-
-        // preserve extension; default to "wav" if none
-        let ext = (preferredName as NSString).pathExtension
-        let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension(ext.isEmpty ? "wav" : ext)
-
-        let data = try await ref.data(maxSize: 50 * 1024 * 1024)   // 50 MB cap
-        try data.write(to: tmp, options: .atomic) // This synchronous write no longer blocks the main thread
-        return tmp
-    }
-    
-    // ✅ SOLUTION: Also mark this as nonisolated.
     nonisolated private func sanitiseAlias(_ fileName: String) -> String {
         let ext  = (fileName as NSString).pathExtension
         let base = ((fileName as NSString).deletingPathExtension)
             .replacingOccurrences(of: "[^A-Za-z0-9_\\-]", with: "_",
                                   options: .regularExpression)
         return "\(base).\(ext)"
-    }
-
-
-    private func startControllers(with res: AudioFileResource, at offset: Double) {
-        controllers = speakerEntities.map { speaker in
-            var comp = speaker.components[SpatialAudioComponent.self] ?? .init()
-            comp.gain = Audio.Decibel(linearToDB(masterVolume))
-            speaker.components[SpatialAudioComponent.self] = comp
-
-            let ctrl = speaker.prepareAudio(res)
-            ctrl.play()
-            if offset > 0 { ctrl.seek(to: .seconds(offset)) }
-            return ctrl
-        }
     }
 
     private func pause() {
@@ -380,10 +397,27 @@ final class SpatialAudioLoader: ObservableObject {
     private func updateSpeakerGains() {
         let db = linearToDB(masterVolume)
         for speaker in speakerEntities {
-            var comp = speaker.components[SpatialAudioComponent.self] ?? .init()
-            comp.gain = Audio.Decibel(db)
-            speaker.components[SpatialAudioComponent.self] = comp
+            // ✅ Use .set() instead of subscript assignment for best practice
+            if var comp = speaker.components[SpatialAudioComponent.self] {
+                comp.gain = Audio.Decibel(db)
+                speaker.components.set(comp)
+            }
         }
+    }
+    
+    // MARK: - Cache Management
+    
+    /// Clears the resource cache and optionally deletes persistent files
+    private func clearCache(deletePersistentFiles: Bool = false) {
+        resourceCache.removeAll()
+        
+        if deletePersistentFiles {
+            for (_, fileURL) in persistentFilePaths {
+                try? FileManager.default.removeItem(at: fileURL)
+            }
+        }
+        
+        persistentFilePaths.removeAll()
     }
     
     // MARK: - Stop everything
@@ -393,10 +427,9 @@ final class SpatialAudioLoader: ObservableObject {
         stopClock()
         isPlaying = false
         isLoadingTrack = false
-        resourceCache.removeAll()   // ← optional, if you want a full flush
+        clearCache()   // Clear cache but keep persistent files for next time
         failedTrackIndices.removeAll()
     }
-
 
     // In SpatialAudioLoader
     nonisolated private func findSpeakers(in root: Entity) -> [Entity] {
@@ -409,4 +442,14 @@ final class SpatialAudioLoader: ObservableObject {
     }
     
     func linearToDB(_ v: Float) -> Float { v <= 0 ? -80 : 20 * log10(v) }
+    
+    // MARK: - Cleanup for App Termination
+    
+    /// Call this when the app is terminating to clean up persistent cache if needed
+    func cleanupPersistentCache() {
+        clearCache(deletePersistentFiles: true)
+        
+        // Remove the entire cache directory
+        try? FileManager.default.removeItem(at: persistentCacheDirectory)
+    }
 }

@@ -31,10 +31,10 @@ struct ChatScrollView: View {
                         await updateOpacities()
                     }
                 }
-                .onChange(of: messages.count) {
+                .onChange(of: messages.count) { _, _ in
                     shouldScrollToBottom = true
                 }
-                .onChange(of: shouldScrollToBottom) { newValue in
+                .onChange(of: shouldScrollToBottom) { oldValue, newValue in
                     if newValue {
                         scrollToLatest(proxy)
                         shouldScrollToBottom = false

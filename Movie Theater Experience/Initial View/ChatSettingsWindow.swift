@@ -6,6 +6,7 @@ struct ChatSettingsWindow: View {
 
     // Persist the username using AppStorage.
     @AppStorage("username") private var username: String = ""
+    @EnvironmentObject private var windowManager: WindowManager  // ✅ Add this
     
     // Persist colors as hex strings.
     @AppStorage("sentMessageColorHex") private var sentMessageColorHex: String = "#0000FF"  // Default blue.
