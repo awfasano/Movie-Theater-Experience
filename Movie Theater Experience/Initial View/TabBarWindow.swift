@@ -7,7 +7,7 @@ struct TabBarWindow: View {
     @State private var selectedTab: Int = 0
     
     // A local state object for this window's specific needs.
-    @StateObject private var calendarService = CalendarService()
+    //@StateObject private var calendarService = CalendarService()
     
     // MARK: - Environment Objects
     // These objects are inherited from the parent view (now the App struct).

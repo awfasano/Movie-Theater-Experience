@@ -42,6 +42,9 @@ struct Participant: Identifiable, Hashable {
     }
 }
 
+// Create a typealias to distinguish from GroupActivities.Participant
+typealias SharePlayParticipant = Participant
+
 // MARK: - SharePlayManager
 @MainActor
 class SharePlayManager: ObservableObject {
@@ -49,11 +52,11 @@ class SharePlayManager: ObservableObject {
     
     // MARK: - Published Properties
     @Published var isSessionActive: Bool = false
-    @Published var participants: Set<Participant> = []
+    @Published var participants: Set<SharePlayParticipant> = []
     @Published var localParticipantID: UUID?
     
     // MARK: - Private Properties
-    private var groupSession: GroupSession<PublicSpaceActivity>?
+    private var publicSpaceSession: GroupSession<PublicSpaceActivity>?
     private var directCallSession: GroupSession<DirectCallActivity>?
     private var cancellables = Set<AnyCancellable>()
     private var sessionCancellables = Set<AnyCancellable>()
@@ -107,7 +110,7 @@ class SharePlayManager: ObservableObject {
     }
     
     func leaveSession() {
-        groupSession?.leave()
+        publicSpaceSession?.leave()
         directCallSession?.leave()
         cleanupSession()
     }
@@ -124,102 +127,140 @@ class SharePlayManager: ObservableObject {
     }
     
     private func setupSessionObservers() {
-        // Observe public space sessions
-        PublicSpaceActivity.sessions()
-            .sink { [weak self] sessions in
-                guard let self = self else { return }
-                
-                if let session = sessions.first {
-                    self.configureGroupSession(session)
-                } else {
-                    self.cleanupSession()
-                }
+        // Observe public space sessions using Task
+        Task {
+            for await session in PublicSpaceActivity.sessions() {
+                configurePublicSpaceSession(session)
             }
-            .store(in: &cancellables)
+        }
         
-        // Observe direct call sessions
-        DirectCallActivity.sessions()
-            .sink { [weak self] sessions in
-                guard let self = self else { return }
-                
-                if let session = sessions.first {
-                    self.configureDirectCallSession(session)
-                } else {
-                    self.cleanupSession()
-                }
+        // Observe direct call sessions using Task
+        Task {
+            for await session in DirectCallActivity.sessions() {
+                configureDirectCallSession(session)
             }
-            .store(in: &cancellables)
+        }
     }
     
-    private func configureGroupSession<ActivityType: GroupActivity>(_ session: GroupSession<ActivityType>) {
+    private func configurePublicSpaceSession(_ session: GroupSession<PublicSpaceActivity>) {
+        // Clean up any existing session
+        publicSpaceSession?.leave()
         sessionCancellables.removeAll()
         
-        if let publicSpaceSession = session as? GroupSession<PublicSpaceActivity> {
-            self.groupSession = publicSpaceSession
-        } else if let directCallSession = session as? GroupSession<DirectCallActivity> {
-            self.directCallSession = directCallSession
-        }
+        publicSpaceSession = session
         
         // Update session state
         session.$state
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
-                self?.handleSessionStateChange(state)
+                self?.handlePublicSpaceSessionStateChange(state)
             }
             .store(in: &sessionCancellables)
         
         // Update participants
         session.$activeParticipants
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] participants in
-                self?.updateParticipants(participants)
+                self?.updatePublicSpaceParticipants(participants)
             }
             .store(in: &sessionCancellables)
         
         // Join the session
         session.join()
         
-        print("SharePlay: Configured group session with \(session.activeParticipants.count) participants")
+        print("SharePlay: Configured public space session with \(session.activeParticipants.count) participants")
     }
     
     private func configureDirectCallSession(_ session: GroupSession<DirectCallActivity>) {
-        configureGroupSession(session)
+        // Clean up any existing session
+        directCallSession?.leave()
+        sessionCancellables.removeAll()
+        
+        directCallSession = session
+        
+        // Update session state
+        session.$state
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                self?.handleDirectCallSessionStateChange(state)
+            }
+            .store(in: &sessionCancellables)
+        
+        // Update participants
+        session.$activeParticipants
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] participants in
+                self?.updateDirectCallParticipants(participants)
+            }
+            .store(in: &sessionCancellables)
+        
+        // Join the session
+        session.join()
+        
+        print("SharePlay: Configured direct call session with \(session.activeParticipants.count) participants")
     }
     
-    private func handleSessionStateChange(_ state: GroupSession<PublicSpaceActivity>.State) {
+    private func handlePublicSpaceSessionStateChange(_ state: GroupSession<PublicSpaceActivity>.State) {
         switch state {
         case .waiting:
-            print("SharePlay: Session is waiting")
+            print("SharePlay: Public space session is waiting")
             isSessionActive = false
         case .joined:
-            print("SharePlay: Session joined successfully")
+            print("SharePlay: Public space session joined successfully")
             isSessionActive = true
         case .invalidated(let reason):
-            print("SharePlay: Session invalidated: \(reason)")
+            print("SharePlay: Public space session invalidated: \(reason)")
             isSessionActive = false
             cleanupSession()
         @unknown default:
-            print("SharePlay: Unknown session state")
+            print("SharePlay: Unknown public space session state")
         }
     }
     
-    private func updateParticipants<ActivityType: GroupActivity>(_ groupParticipants: Set<GroupSession<ActivityType>.Participant>) {
-        // Convert GroupSession participants to our Participant model
-        let newParticipants = Set(groupParticipants.map { groupParticipant in
-            Participant(id: groupParticipant.id, name: nil) // Name might not be available
+    private func handleDirectCallSessionStateChange(_ state: GroupSession<DirectCallActivity>.State) {
+        switch state {
+        case .waiting:
+            print("SharePlay: Direct call session is waiting")
+            isSessionActive = false
+        case .joined:
+            print("SharePlay: Direct call session joined successfully")
+            isSessionActive = true
+        case .invalidated(let reason):
+            print("SharePlay: Direct call session invalidated: \(reason)")
+            isSessionActive = false
+            cleanupSession()
+        @unknown default:
+            print("SharePlay: Unknown direct call session state")
+        }
+    }
+    
+    private func updatePublicSpaceParticipants(_ groupParticipants: Set<GroupActivities.Participant>) {
+        updateParticipants(groupParticipants)
+    }
+    
+    private func updateDirectCallParticipants(_ groupParticipants: Set<GroupActivities.Participant>) {
+        updateParticipants(groupParticipants)
+    }
+    
+    private func updateParticipants(_ groupParticipants: Set<GroupActivities.Participant>) {
+        // Convert GroupActivities.Participant to our custom Participant type
+        let convertedParticipants = Set(groupParticipants.map { groupParticipant in
+            SharePlayParticipant(id: groupParticipant.id, name: nil) // GroupActivities.Participant doesn't expose name
         })
         
-        self.participants = newParticipants
+        self.participants = convertedParticipants
         
-        // Set local participant ID (assuming the first participant is local for now)
-        if localParticipantID == nil, let firstParticipant = newParticipants.first {
+        // Set local participant ID if not already set
+        if localParticipantID == nil, let firstParticipant = convertedParticipants.first {
             localParticipantID = firstParticipant.id
         }
         
-        print("SharePlay: Updated participants count: \(newParticipants.count)")
+        print("SharePlay: Updated participants count: \(convertedParticipants.count)")
     }
     
     private func cleanupSession() {
         sessionCancellables.removeAll()
-        groupSession = nil
+        publicSpaceSession = nil
         directCallSession = nil
         isSessionActive = false
         participants.removeAll()
@@ -230,6 +271,7 @@ class SharePlayManager: ObservableObject {
 }
 
 // MARK: - SystemCoordinator (Placeholder for spatial tracking)
+@MainActor
 class SystemCoordinator: ObservableObject {
     struct ParticipantState {
         let isSpatial: Bool
@@ -250,3 +292,4 @@ class SystemCoordinator: ObservableObject {
         localParticipantState = ParticipantState(isSpatial: isSpatial, position: position, orientation: orientation)
     }
 }
+

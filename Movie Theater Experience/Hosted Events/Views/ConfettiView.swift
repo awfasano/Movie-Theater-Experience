@@ -11,7 +11,7 @@ struct ConfettiView: View {
     var spread: CGFloat = .pi / 6     // side-to-side drift amplitude
 
     var body: some View {
-        TimelineView(.animation) { timeline in
+        SwiftUI.TimelineView(.periodic(from: Date.now, by: 1.0/60.0)) { timeline in
             Canvas { context, size in
                 let t = timeline.date.timeIntervalSinceReferenceDate
                 let rng = RandomNumberGeneratorWithSeed(seed: seed)
@@ -29,8 +29,10 @@ struct ConfettiView: View {
                     context.withCGContext { cg in
                         cg.concatenate(transform)
                         let rect = CGRect(x: -p.size.width / 2, y: -p.size.height / 2, width: p.size.width, height: p.size.height)
-                        cg.setFillColor(p.color(in: colors).cgColor!)
-                        cg.fill(rect, blendMode: .normal)
+                        if let cgColor = p.color(in: colors).cgColor {
+                            cg.setFillColor(cgColor)
+                            cg.fill(rect)
+                        }
                     }
                 }
             }

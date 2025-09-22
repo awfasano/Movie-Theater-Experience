@@ -46,8 +46,11 @@ class TriviaSharePlayManager: ObservableObject {
         
         // Track participants
         session.$activeParticipants
-            .sink { [weak self] (participants: Set<Participant>) in
-                self?.participants = participants
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] participants in
+                if let participantSet = participants as? Set<Participant> {
+                    self?.participants = participantSet
+                }
             }
             .store(in: &subscriptions)
         

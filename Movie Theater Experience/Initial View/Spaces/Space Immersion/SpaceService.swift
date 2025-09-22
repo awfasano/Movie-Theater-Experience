@@ -8,7 +8,7 @@ class SpaceService: ObservableObject {
     @Published var spaces: [SpaceData] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
-    @Published var usersInCurrentSpace: [SharePlayUser] = []
+    //@Published var usersInCurrentSpace: [SharePlayUser] = []
 
     
     static let shared = SpaceService()
@@ -101,18 +101,10 @@ class SpaceService: ObservableObject {
             // MODIFIED: Get the local user's ID from the AppModel to correctly filter them out.
             let localUserId = await appModel.currentUserId
 
-            let users = snapshot.documents.compactMap { doc -> SharePlayUser? in
-                let data = doc.data()
-                guard let userId = data["userId"] as? String,
-                      let userName = data["userName"] as? String else { // This part is correct
-                    return nil
-                }
-                // Correctly exclude the local user from the list.
-                return userId != localUserId ? SharePlayUser(id: userId, name: userName) : nil
-            }
+
             await MainActor.run {
-                self.usersInCurrentSpace = users
-                print("Fetched \(users.count) other users in space \(spaceId)")
+                //self.usersInCurrentSpace = users
+                //print("Fetched \(users.count) other users in space \(spaceId)")
             }
         } catch {
             print("Error fetching users in space: \(error)")

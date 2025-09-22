@@ -39,18 +39,50 @@ public struct FinalLeaderboardView: View {
 }
 
 #if DEBUG
+import simd
+
 struct FinalLeaderboardView_Previews: PreviewProvider {
-    struct EventTable: Identifiable {
-        let id: UUID
-        let tableNumber: Int
-        let teamName: String?
-    }
-    
     static let sampleScores: [(table: EventTable, score: Int)] = [
-        (table: .init(id: UUID(), tableNumber: 1, teamName: "Alpha Team"), score: 120),
-        (table: .init(id: UUID(), tableNumber: 2, teamName: nil), score: 110),
-        (table: .init(id: UUID(), tableNumber: 3, teamName: "Bravo"), score: 100),
-        (table: .init(id: UUID(), tableNumber: 4, teamName: nil), score: 90)
+        (table: EventTable(
+            tableNumber: 1,
+            tableName: nil,
+            participants: [],
+            maxSeats: 6,
+            currentScore: 0,
+            teamName: "Alpha Team",
+            tablePosition: SIMD3<Float>(0, 0, 0),
+            seatPositions: []
+        ), score: 120),
+        (table: EventTable(
+            tableNumber: 2,
+            tableName: nil,
+            participants: [],
+            maxSeats: 6,
+            currentScore: 0,
+            teamName: nil,
+            tablePosition: SIMD3<Float>(1, 0, 0),
+            seatPositions: []
+        ), score: 110),
+        (table: EventTable(
+            tableNumber: 3,
+            tableName: nil,
+            participants: [],
+            maxSeats: 6,
+            currentScore: 0,
+            teamName: "Bravo",
+            tablePosition: SIMD3<Float>(2, 0, 0),
+            seatPositions: []
+        ), score: 100),
+        (table: EventTable(
+            tableNumber: 4,
+            tableName: nil,
+            participants: [],
+            maxSeats: 6,
+            currentScore: 0,
+            teamName: nil,
+            tablePosition: SIMD3<Float>(3, 0, 0),
+            seatPositions: []
+        ), score: 90)
     ]
     
     static var previews: some View {

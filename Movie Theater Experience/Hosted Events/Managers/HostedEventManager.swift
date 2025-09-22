@@ -21,15 +21,22 @@ class HostedEventManager: ObservableObject {
     @Published private(set) var isHost: Bool = false
 
     private let db = Firestore.firestore(database: "uploads")
-    private let personaManager = PersonaTableManager.shared
+    private var personaManager: PersonaTableManager?
     
     private var participantsListener: ListenerRegistration?
     private var tablesListener: ListenerRegistration?
     private var gameStateListener: ListenerRegistration?
     
+    // Dependency injection for PersonaTableManager
+    func setPersonaManager(_ manager: PersonaTableManager) {
+        self.personaManager = manager
+    }
+    
     func joinHostedEvent(_ event: CalendarEvent) async -> Result<EventParticipant, HostedEventError> {
-        let currentUserId = AppModel.shared.userID.isEmpty ? "currentUserIdPlaceholder" : AppModel.shared.userID
-        let currentUserName = AppModel.shared.username.isEmpty ? "Current User" : AppModel.shared.username
+        let currentUserIdRaw = AppModel.shared.currentUserId
+        let currentUserId = currentUserIdRaw.isEmpty ? "currentUserIdPlaceholder" : currentUserIdRaw
+        let currentUserNameRaw = AppModel.shared.username
+        let currentUserName = currentUserNameRaw.isEmpty ? "Current User" : currentUserNameRaw
         guard let eventId = event.id else {
             return .failure(.eventNotFound)
         }
@@ -41,7 +48,8 @@ class HostedEventManager: ObservableObject {
             return .success(existing)
         }
 
-        let participant = EventParticipant(userId: currentUserId, userName: currentUserName, joinedAt: Date(), role: .participant, tableNumber: nil, seatIndex: nil)
+        let participant = EventParticipant(userId: currentUserId, userName: currentUserName, role: .participant)
+        
         do {
             try await participantDoc.setData(from: participant)
             participants.append(participant)
@@ -100,8 +108,8 @@ class HostedEventManager: ObservableObject {
 
         tables[tableIndex] = table
 
-        if userId == AppModel.shared.userID {
-            await PersonaTableManager.shared.updatePersonaForUser(participants[participantIndex], tables: tables)
+        if userId == AppModel.shared.currentUserId {
+            await (personaManager as? PersonaTableUpdatable)?.updatePersonaForUser(participants[participantIndex], tables: tables)
         }
 
         do {
@@ -223,7 +231,7 @@ class HostedEventManager: ObservableObject {
         guard let event = currentEvent, let eventId = event.id else { return .failure(.eventNotFound) }
         let dbEventRef = db.collection("Events").document(eventId)
         guard var state = gameState else { return .failure(.unknown) }
-        state.currentQuestion += 1
+        state.currentQuestion = (state.currentQuestion ?? 0) + 1
         state.status = .question_active
         state.trigger = nil
         do {
@@ -246,6 +254,81 @@ class HostedEventManager: ObservableObject {
         state.trigger = name
         try? await dbEventRef.collection("gameState").document("current").setData(from: state)
     }
+    
+    func endGame() async -> Result<Void, HostedEventError> {
+        guard let event = currentEvent, let eventId = event.id else {
+            return .failure(.eventNotFound)
+        }
+        
+        // Update game state to finished
+        var finalState = gameState ?? GameState(
+            currentRound: 0,
+            status: .finished,
+            scores: [:],
+            currentQuestion: nil,
+            trigger: nil
+        )
+        finalState.status = .finished
+        
+        // Save final state
+        do {
+            try await db.collection("Events")
+                .document(eventId)
+                .collection("gameState")
+                .document("current")
+                .setData(from: finalState)
+            
+            // Generate and save game statistics
+            await saveGameStatistics(eventId: eventId)
+            
+            // Notify all participants
+            await notifyGameEnd()
+            
+            return .success(())
+        } catch {
+            return .failure(.unknown)
+        }
+    }
+    
+    private func saveGameStatistics(eventId: String) async {
+        // Calculate MVP, participation rates, average scores, etc.
+        let stats = GameStatistics(
+            eventId: eventId,
+            endTime: Date(),
+            totalParticipants: participants.count,
+            winningTable: getWinningTable(),
+            averageScore: calculateAverageScore(),
+            questionsAnswered: getQuestionsAnsweredCount()
+        )
+        
+        // Save to Firebase for historical tracking
+        // TODO: Implement saving of stats
+    }
+    
+    // MARK: - Helpers used by statistics and notifications
+    private func getWinningTable() -> Int? {
+        guard let state = gameState else { return nil }
+        return state.scores.max(by: { $0.value < $1.value }).flatMap { Int($0.key) }
+    }
+
+    private func calculateAverageScore() -> Double {
+        guard let state = gameState, !state.scores.isEmpty else { return 0 }
+        let total = state.scores.values.reduce(0, +)
+        return Double(total) / Double(state.scores.count)
+    }
+
+    private func getQuestionsAnsweredCount() -> Int {
+        // If currentQuestion represents the number asked so far, use that, else 0
+        return gameState?.currentQuestion ?? 0
+    }
+
+    private func notifyGameEnd() async {
+        // TODO: Implement real notification fanout. For now, no-op placeholder.
+    }
+}
+
+protocol PersonaTableUpdatable {
+    func updatePersonaForUser(_ participant: EventParticipant, tables: [EventTable]) async
 }
 
 enum HostedEventError: Error {
@@ -271,3 +354,13 @@ enum GameStatus: String, Codable {
     case question_active
     case finished
 }
+
+struct GameStatistics: Codable {
+    var eventId: String
+    var endTime: Date
+    var totalParticipants: Int
+    var winningTable: Int?
+    var averageScore: Double
+    var questionsAnswered: Int
+}
+

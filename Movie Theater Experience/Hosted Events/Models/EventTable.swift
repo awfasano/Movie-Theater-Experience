@@ -8,11 +8,10 @@
 import Foundation
 import Foundation
 import FirebaseFirestore
-import _FirebaseFirestore_Swift
 import simd
 
-struct EventTable: Identifiable, Codable {
-    @DocumentID var id: String?
+public struct EventTable: Identifiable, Codable {
+    @DocumentID public var id: String?
     let tableNumber: Int
     var tableName: String?
     var participants: [String] = []

@@ -16,9 +16,9 @@ struct TriviaSpaceView: View {
 
     var body: some View {
         RealityView { content in
-            await setupTriviaSpace(content)
+            setupTriviaSpace(content)
         } update: { content in
-            await updatePersonaPositions(content)
+            updatePersonaPositions(content)
         }
         .overlay(alignment: .topTrailing) {
             hostControlsButton
@@ -28,12 +28,14 @@ struct TriviaSpaceView: View {
         }
     }
     
-    private func setupTriviaSpace(_ content: RealityViewContent) async {
+    private func setupTriviaSpace(_ content: RealityViewContent) {
         // Load base space geometry, add table markers, initialize persona positions, setup host position
+        // If you need async operations, use Task { } to wrap them
     }
     
-    private func updatePersonaPositions(_ content: RealityViewContent) async {
+    private func updatePersonaPositions(_ content: RealityViewContent) {
         // Update persona positions based on personaManager.personaPositions, animate persona movements, update indicators
+        // If you need async operations, use Task { } to wrap them
     }
     
     private var hostControlsButton: some View {

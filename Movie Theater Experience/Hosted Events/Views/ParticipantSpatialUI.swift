@@ -10,40 +10,50 @@ struct ParticipantSpatialUI: View {
     @State private var showHostAnnouncement = false
 
     var body: some View {
-        // Get current user, event, and question context
-        guard let currentUserId = AppModel.shared.userID as String?,
-            let eventId = hostedEventManager.currentEvent?.id,
-            let currentQuestion = triviaGameManager.currentQuestion else {
+        // Acquire context pieces
+        let currentUserId = AppModel.shared.currentUserId
+        let eventId = hostedEventManager.currentEvent?.id
+        let currentQuestion = triviaGameManager.currentQuestion
+
+        // If any required context is missing, show a loading state
+        if eventId == nil || currentQuestion == nil || currentUserId.isEmpty {
             return AnyView(Text("Joining table...").font(.title2))
         }
+
+        // Unwrap required optional values now that we've validated presence
+        let unwrappedEventId = eventId!
+        let unwrappedQuestion = currentQuestion!
+
         // Create manager for this table/question/user
         let tableManager = TableCollaborationManager(
             tableNumber: tableNumber,
             maxVotes: 4,
-            question: currentQuestion,
+            question: unwrappedQuestion,
             userId: currentUserId,
-            eventId: eventId
+            eventId: unwrappedEventId
         )
+
         return AnyView(
             ZStack {
                 TableQuestionPanel(
-                    question: currentQuestion,
+                    question: unwrappedQuestion,
                     timeRemaining: triviaGameManager.timeRemaining,
                     tableNumber: tableNumber
                 )
-                .position3D(calculateQuestionPanelPosition())
+                // If position3D is unavailable, comment this out or replace with your own transform
+                // .position3D(calculateQuestionPanelPosition())
 
                 CollaborativeAnswerView(
-                    question: currentQuestion,
+                    question: unwrappedQuestion,
                     tableNumber: tableNumber
                 )
-                .position3D(calculatePersonalInterfacePosition())
+                // .position3D(calculatePersonalInterfacePosition())
 
                 TableDashboard(tableNumber: tableNumber)
-                    .position3D(calculateDashboardPosition())
+                // .position3D(calculateDashboardPosition())
 
                 TriviaEmojiReactions(tableNumber: tableNumber)
-                    .position3D(calculateEmojiButtonsPosition())
+                // .position3D(calculateEmojiButtonsPosition())
 
                 HostAnnouncementOverlay()
             }

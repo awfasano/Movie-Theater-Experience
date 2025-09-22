@@ -1,8 +1,6 @@
 import SwiftUI
 import FirebaseCore // Required for AppDelegate
-import Hosted_Events_Managers
-import Hosted_Events_Views
-import Hosted_Events_Activities
+import GroupActivities // Required for SharePlay functionality
 
 // AppDelegate for Firebase initialization
 class AppDelegate: NSObject, UIApplicationDelegate {
@@ -40,7 +38,7 @@ struct Movie_Theater_ExperienceApp: App {
 
     // Added Hosted Events managers
     @StateObject private var hostedEventManager = HostedEventManager.shared
-    @StateObject private var personaManager = PersonaTableManager.shared
+    @StateObject private var personaManager = PersonaTableManager()
     @StateObject private var triviaGameManager = TriviaGameManager.shared
     
     // Activity Identifiers (Ensure these match your Info.plist if using GroupActivities)
@@ -71,6 +69,9 @@ struct Movie_Theater_ExperienceApp: App {
                 .environmentObject(hostedEventManager)
                 .environmentObject(personaManager)
                 .environmentObject(triviaGameManager)
+                .onAppear {
+                    HostedEventManager.shared.setPersonaManager(personaManager)
+                }
         }
         .defaultSize(width: 1000, height: 600)
         

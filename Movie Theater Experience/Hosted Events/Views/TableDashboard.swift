@@ -70,11 +70,3 @@ struct TableDashboard: View {
         }
     }
 }
-
-
-// Stub team member type for dashboard
-struct TeamMember: Identifiable {
-    let id: String
-    let userName: String
-    let hasVoted: Bool
-}
