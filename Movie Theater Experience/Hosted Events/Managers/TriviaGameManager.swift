@@ -1,11 +1,10 @@
 //
-//  TriviaGameManager.swift
+//  Fixed TriviaGameManager.swift
 //  Movie Theater Experience
 //
-//  Created by Anthony Fasano on 9/16/25.
+//  Fixed SharePlay message sending
 //
 
-import Foundation
 import Foundation
 import FirebaseFirestore
 import SwiftUI
@@ -136,12 +135,127 @@ class TriviaGameManager: ObservableObject {
         }
     }
     
+    // FIXED: Use the correct SharePlay method
     private func notifyQuestionStart(_ question: TriviaQuestion) async {
-        // Send notification through SharePlay or Firebase
-        await TriviaSharePlayManager.shared.sendMessage(question)
+        guard let eventId = HostedEventManager.shared.currentEvent?.id else {
+            print("⚠️ No current event ID for question start notification")
+            return
+        }
+        
+        // Send question start notification via SharePlay
+        await TriviaSharePlayManager.shared.sendQuestionStart(
+            question.id,
+            timeLimit: question.timeLimit,
+            eventId: eventId
+        )
+        
+        print("📤 [TriviaGame] Sent question start notification: \(question.questionText)")
     }
-
     
-    func nextQuestion() async { }
-    func nextRound() async { }
+    // MARK: - Enhanced methods with SharePlay integration
+    
+    func nextQuestion() async {
+        guard let game = currentGame else {
+            print("⚠️ No current game loaded")
+            return
+        }
+        
+        // Find next question
+        let currentIndex = game.currentQuestionIndex
+        var nextQuestionId: String?
+        
+        for round in game.rounds {
+            for question in round.questions {
+                // This is a simplified approach - you might want more sophisticated logic
+                if question.id.contains("\(currentIndex + 1)") {
+                    nextQuestionId = question.id
+                    break
+                }
+            }
+            if nextQuestionId != nil { break }
+        }
+        
+        if let questionId = nextQuestionId {
+            await startQuestion(questionId)
+        } else {
+            print("⚠️ No next question found")
+        }
+    }
+    
+    func nextRound() async {
+        guard let game = currentGame else {
+            print("⚠️ No current game loaded")
+            return
+        }
+        
+        // Move to next round logic
+        var updatedGame = game
+        let currentRoundNumber = game.rounds.first?.roundNumber ?? 0
+        
+        if let nextRound = game.rounds.first(where: { $0.roundNumber == currentRoundNumber + 1 }) {
+            updatedGame.currentQuestionIndex = 0
+            currentGame = updatedGame
+            
+            // Start first question of next round
+            if let firstQuestion = nextRound.questions.first {
+                await startQuestion(firstQuestion.id)
+            }
+            
+            print("✅ [TriviaGame] Advanced to round \(nextRound.roundNumber)")
+        } else {
+            print("⚠️ No next round available")
+        }
+    }
+    
+    // MARK: - Timer sync with SharePlay
+    
+    private func syncTimerWithSharePlay() async {
+        await TriviaSharePlayManager.shared.sendTimerSync(
+            timeRemaining: timeRemaining,
+            isActive: timeRemaining > 0
+        )
+    }
+    
+    // Enhanced timer that syncs across devices
+    private func startTimerWithSync() {
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            Task { @MainActor in
+                guard let self = self else {
+                    timer.invalidate()
+                    return
+                }
+                
+                self.timeRemaining -= 1
+                
+                // Sync timer every 5 seconds
+                if self.timeRemaining % 5 == 0 {
+                    await self.syncTimerWithSharePlay()
+                }
+                
+                if self.timeRemaining <= 0 {
+                    timer.invalidate()
+                    await self.endQuestion()
+                }
+            }
+        }
+    }
+    
+    // MARK: - Helper methods for host controls
+    
+    func getCurrentQuestionForDisplay() -> TriviaQuestion? {
+        return currentQuestion
+    }
+    
+    func isGameActive() -> Bool {
+        return currentGame != nil && timeRemaining > 0
+    }
+    
+    func getGameProgress() -> (currentQuestion: Int, totalQuestions: Int) {
+        guard let game = currentGame else {
+            return (0, 0)
+        }
+        
+        let totalQuestions = game.rounds.reduce(0) { $0 + $1.questions.count }
+        return (game.currentQuestionIndex, totalQuestions)
+    }
 }

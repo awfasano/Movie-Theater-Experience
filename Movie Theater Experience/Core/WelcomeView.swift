@@ -13,6 +13,8 @@ struct WelcomeView: View {
     @State private var animateCircle1 = false
     @State private var animateCircle2 = false
     @State private var animateCircle3 = false
+    @Environment(\.openWindow) private var openWindow
+
     
     // New state for light pulsing animation
     @State private var lightPulse = false
@@ -156,6 +158,11 @@ struct WelcomeView: View {
                 .offset(y: showContent ? 0 : 20)
                 // NEW: Add button glow effect
                 .shadow(color: .accentColor.opacity(0.5), radius: 10, x: 0, y: 5)
+                
+                #if DEBUG
+                FirebaseDebugButton()
+                #endif
+                                
             }
             .padding(40)
         }

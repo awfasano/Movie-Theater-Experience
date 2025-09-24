@@ -41,6 +41,9 @@ struct Movie_Theater_ExperienceApp: App {
     @StateObject private var personaManager = PersonaTableManager()
     @StateObject private var triviaGameManager = TriviaGameManager.shared
     
+    // ADDED: SharePlay manager for trivia
+    @StateObject private var triviaSharePlayManager = TriviaSharePlayManager.shared
+    
     // Activity Identifiers (Ensure these match your Info.plist if using GroupActivities)
     // Assuming PublicSpaceActivity and DirectCallActivity might be defined elsewhere, otherwise use the strings.
     let publicSpaceActivityIdentifier = "com.yourcompany.yourapp.PublicSpaceActivity"
@@ -69,12 +72,20 @@ struct Movie_Theater_ExperienceApp: App {
                 .environmentObject(hostedEventManager)
                 .environmentObject(personaManager)
                 .environmentObject(triviaGameManager)
+                .environmentObject(triviaSharePlayManager) // ADDED
                 .onAppear {
                     HostedEventManager.shared.setPersonaManager(personaManager)
                 }
         }
         .defaultSize(width: 1000, height: 600)
         
+        
+        WindowGroup("Firebase Debug", id: "firebaseDebug") {
+            FirebaseDebugView()
+                .environmentObject(hostedEventManager)
+                .environmentObject(triviaGameManager)
+        }
+        .defaultSize(width: 600, height: 800)
         
         // Volumetric preview window
         WindowGroup("Volume", id: "volume") {
@@ -132,12 +143,19 @@ struct Movie_Theater_ExperienceApp: App {
         )
         .immersionStyle(selection: .constant(.full), in: .full)
 
-        // ImmersiveSpace for Trivia
+        // UPDATED: ImmersiveSpace for Trivia with SharePlay
         ImmersiveSpace(id: "TriviaSpace") {
             TriviaSpaceView()
                 .environmentObject(hostedEventManager)
                 .environmentObject(personaManager)
                 .environmentObject(triviaGameManager)
+                .environmentObject(triviaSharePlayManager) // ADDED
+                .task {
+                    // ADDED: Listen for SharePlay sessions
+                    for await session in TriviaEventActivity.sessions() {
+                        await triviaSharePlayManager.configureGroupSession(session)
+                    }
+                }
         }
         
         // Audio Controls window.
@@ -207,7 +225,7 @@ struct Movie_Theater_ExperienceApp: App {
         }
         .defaultSize(width: 350, height: 225)
         
-        // Chat window for Movie Theatre.
+        // UPDATED: Chat window for Movie Theatre with SharePlay
         WindowGroup(id: WindowType.chat.rawValue) {
             // FIX: Use Group for conditional content
             Group {
@@ -218,6 +236,7 @@ struct Movie_Theater_ExperienceApp: App {
                         eventManager: firebaseEventManager
                     ))
                     .environment(appModel)
+                    .environmentObject(triviaSharePlayManager) // ADDED
                 } else {
                     // Provide a fallback view or EmptyView
                     EmptyView()
@@ -327,13 +346,23 @@ struct Movie_Theater_ExperienceApp: App {
         .defaultSize(width: 1200, height: 800)
         .windowStyle(.plain)
         
-        // Host Controls Window
+        // UPDATED: Host Controls Window with SharePlay
         WindowGroup("Host Controls", id: "hostControls") {
             TriviaHostControlsView()
                 .environmentObject(hostedEventManager)
                 .environmentObject(triviaGameManager)
+                .environmentObject(triviaSharePlayManager) // ADDED
         }
         .defaultSize(width: 1000, height: 800)
+        
+        // ADDED: SharePlay Test Window (for development/debugging)
+        WindowGroup("SharePlay Debug", id: "sharePlayDebug") {
+            SharePlayTestView()
+                .environmentObject(triviaSharePlayManager)
+                .environmentObject(hostedEventManager)
+        }
+        .defaultSize(width: 600, height: 400)
+        .windowStyle(.plain)
         
         // Exiting window.
         WindowGroup(id: WindowType.exitingWindow.rawValue, for: WatchStats.self) { stats in

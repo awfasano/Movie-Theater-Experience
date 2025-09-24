@@ -24,6 +24,9 @@
 		C406C25D2E80A7D800F985DF /* SharePlayUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406C25C2E80A7D700F985DF /* SharePlayUser.swift */; };
 		C406C25F2E80A9C900F985DF /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406C25E2E80A9C900F985DF /* CalendarService.swift */; };
 		C406C2612E80AC9F00F985DF /* SharePlayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406C2602E80AC9F00F985DF /* SharePlayManager.swift */; };
+		C406C2632E8326A800F985DF /* ShareplayTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406C2622E8326A800F985DF /* ShareplayTestView.swift */; };
+		C406C2652E832BFE00F985DF /* FirebaseTestDataSetup.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406C2642E832BFE00F985DF /* FirebaseTestDataSetup.swift */; };
+		C406C2672E832C4900F985DF /* FirebaseDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406C2662E832C4900F985DF /* FirebaseDebugView.swift */; };
 		C40AE3D42D5164020075914F /* WindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40AE3D32D5164020075914F /* WindowManager.swift */; };
 		C40AE3D62D516C070075914F /* ChatSettingsNavBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40AE3D52D516C070075914F /* ChatSettingsNavBar.swift */; };
 		C40BD7942E00AF340062623E /* StoryTellerAudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40BD7932E00AF340062623E /* StoryTellerAudioService.swift */; };
@@ -234,6 +237,9 @@
 		C406C25C2E80A7D700F985DF /* SharePlayUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharePlayUser.swift; sourceTree = "<group>"; };
 		C406C25E2E80A9C900F985DF /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
 		C406C2602E80AC9F00F985DF /* SharePlayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharePlayManager.swift; sourceTree = "<group>"; };
+		C406C2622E8326A800F985DF /* ShareplayTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareplayTestView.swift; sourceTree = "<group>"; };
+		C406C2642E832BFE00F985DF /* FirebaseTestDataSetup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseTestDataSetup.swift; sourceTree = "<group>"; };
+		C406C2662E832C4900F985DF /* FirebaseDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseDebugView.swift; sourceTree = "<group>"; };
 		C40AE3D32D5164020075914F /* WindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManager.swift; sourceTree = "<group>"; };
 		C40AE3D52D516C070075914F /* ChatSettingsNavBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSettingsNavBar.swift; sourceTree = "<group>"; };
 		C40BD7932E00AF340062623E /* StoryTellerAudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryTellerAudioService.swift; sourceTree = "<group>"; };
@@ -714,6 +720,8 @@
 			isa = PBXGroup;
 			children = (
 				C4712E632E79F4B20017738E /* EnhancedEventView.swift */,
+				C406C2622E8326A800F985DF /* ShareplayTestView.swift */,
+				C406C2642E832BFE00F985DF /* FirebaseTestDataSetup.swift */,
 				C4712E772E7A1A1A0017738E /* HostAnnouncementOverlay.swift */,
 				C44AB5C32E7B664600378969 /* TriviaGameCreatorView.swift */,
 				C4712E752E7A1A070017738E /* TableDashboard.swift */,
@@ -729,6 +737,7 @@
 				C4712E672E79F4FC0017738E /* TriviaSpaceView.swift */,
 				C44AB5C72E7B66BF00378969 /* WinnerAnnouncementView.swift */,
 				C4712E692E79F51E0017738E /* TriviaHostControlsView.swift */,
+				C406C2662E832C4900F985DF /* FirebaseDebugView.swift */,
 				C44AB5CD2E7B687000378969 /* FinalLeaderboardView.swift */,
 				C44AB5CF2E7B689F00378969 /* ConfettiView.swift */,
 				C44AB5D12E7B68BA00378969 /* TrophyView.swift */,
@@ -1071,6 +1080,7 @@
 				C4D88CAA2D752B87004F226E /* SpacesNavBarView.swift in Sources */,
 				C40BD7982E00B3E40062623E /* Story.swift in Sources */,
 				C40BD7942E00AF340062623E /* StoryTellerAudioService.swift in Sources */,
+				C406C2652E832BFE00F985DF /* FirebaseTestDataSetup.swift in Sources */,
 				C4FA39F22E218939004BB564 /* VolumetricView.swift in Sources */,
 				C4FE99BD2D7F9DEE008AE0D6 /* SpacesEmojiViewModel.swift in Sources */,
 				C4413F5B2DC028EE008A7BD8 /* SongService.swift in Sources */,
@@ -1102,6 +1112,7 @@
 				C44919272E109B9300C4B087 /* ShareplayManager.swift in Sources */,
 				C444C9232D53FDA10046F92D /* SpaceService.swift in Sources */,
 				C459498D2E700E59004ADDF6 /* ImmersiveSpaceManager.swift in Sources */,
+				C406C2672E832C4900F985DF /* FirebaseDebugView.swift in Sources */,
 				C4413F622DC40644008A7BD8 /* OrbMaterials.swift in Sources */,
 				C4413F592DC028D7008A7BD8 /* Song.swift in Sources */,
 				C4D88C992D74E457004F226E /* VolumetricSpaceModel.swift in Sources */,
@@ -1162,6 +1173,7 @@
 				C4712E6C2E79F5380017738E /* ParticipantTableManager.swift in Sources */,
 				C4712E532E79F2C70017738E /* PersonaTablePosition.swift in Sources */,
 				C416BA482E09DDA7006399D8 /* WaveformViewModel.swift in Sources */,
+				C406C2632E8326A800F985DF /* ShareplayTestView.swift in Sources */,
 				C44AB5C42E7B664600378969 /* TriviaGameCreatorView.swift in Sources */,
 				C406C25D2E80A7D800F985DF /* SharePlayUser.swift in Sources */,
 				C4F478BF2CEC29E900965502 /* ScrollOffsets.swift in Sources */,
