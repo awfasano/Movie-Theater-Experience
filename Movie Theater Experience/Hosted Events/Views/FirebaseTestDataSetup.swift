@@ -1,9 +1,8 @@
 //
-//  FirebaseTestDataSetup.swift
+//  Fixed FirebaseTestDataSetup.swift
 //  Movie Theater Experience
 //
-//  Created by Anthony Fasano on 9/23/25.
-//
+//  Updated to use fixed EventTable structure without nested arrays
 
 import Foundation
 import FirebaseFirestore
@@ -21,7 +20,7 @@ class FirebaseTestDataSetup {
             // 2. Create test participants
             await createTestParticipants()
             
-            // 3. Create test tables
+            // 3. Create test tables (FIXED to avoid nested arrays)
             await createTestTables()
             
             // 4. Create initial game state
@@ -71,6 +70,7 @@ class FirebaseTestDataSetup {
         }
     }
     
+    // FIXED: Updated to use the new EventTable structure
     private func createTestTables() async {
         print("Creating test tables...")
         

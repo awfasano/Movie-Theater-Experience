@@ -245,7 +245,7 @@ struct TriviaSpaceView: View {
         let modelComponent = ModelComponent(mesh: mesh, materials: [material])
         
         entity.components.set(modelComponent)
-        entity.position = table.tablePosition
+        entity.position = table.tablePosition.simd3
         
         // Add table number text
         // Note: In a real implementation, you'd use TextMeshGenerator or similar
