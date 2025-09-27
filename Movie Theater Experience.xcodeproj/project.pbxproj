@@ -27,6 +27,7 @@
 		C406C2632E8326A800F985DF /* ShareplayTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406C2622E8326A800F985DF /* ShareplayTestView.swift */; };
 		C406C2652E832BFE00F985DF /* FirebaseTestDataSetup.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406C2642E832BFE00F985DF /* FirebaseTestDataSetup.swift */; };
 		C406C2672E832C4900F985DF /* FirebaseDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406C2662E832C4900F985DF /* FirebaseDebugView.swift */; };
+		C406C2692E87910C00F985DF /* HostAudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406C2682E87910C00F985DF /* HostAudioManager.swift */; };
 		C40AE3D42D5164020075914F /* WindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40AE3D32D5164020075914F /* WindowManager.swift */; };
 		C40AE3D62D516C070075914F /* ChatSettingsNavBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40AE3D52D516C070075914F /* ChatSettingsNavBar.swift */; };
 		C40BD7942E00AF340062623E /* StoryTellerAudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40BD7932E00AF340062623E /* StoryTellerAudioService.swift */; };
@@ -240,6 +241,7 @@
 		C406C2622E8326A800F985DF /* ShareplayTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareplayTestView.swift; sourceTree = "<group>"; };
 		C406C2642E832BFE00F985DF /* FirebaseTestDataSetup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseTestDataSetup.swift; sourceTree = "<group>"; };
 		C406C2662E832C4900F985DF /* FirebaseDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseDebugView.swift; sourceTree = "<group>"; };
+		C406C2682E87910C00F985DF /* HostAudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostAudioManager.swift; sourceTree = "<group>"; };
 		C40AE3D32D5164020075914F /* WindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManager.swift; sourceTree = "<group>"; };
 		C40AE3D52D516C070075914F /* ChatSettingsNavBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSettingsNavBar.swift; sourceTree = "<group>"; };
 		C40BD7932E00AF340062623E /* StoryTellerAudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryTellerAudioService.swift; sourceTree = "<group>"; };
@@ -703,6 +705,7 @@
 				C4712E5B2E79F3710017738E /* TriviaGameManager.swift */,
 				C44AB5BF2E7B651900378969 /* TriviaSharePlayManager.swift */,
 				C4712E792E7A215B0017738E /* TableCollaborationManager.swift */,
+				C406C2682E87910C00F985DF /* HostAudioManager.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -1169,6 +1172,7 @@
 				C44919242E10811000C4B087 /* EventManagerProtocol 2.swift in Sources */,
 				C405E58B2D4CACE900681E60 /* PositionedEvents.swift in Sources */,
 				C405E5852D4CABA800681E60 /* TimelineView.swift in Sources */,
+				C406C2692E87910C00F985DF /* HostAudioManager.swift in Sources */,
 				C44B306E2D4D6F59004CC38A /* ChatSettingsWindow.swift in Sources */,
 				C4712E6C2E79F5380017738E /* ParticipantTableManager.swift in Sources */,
 				C4712E532E79F2C70017738E /* PersonaTablePosition.swift in Sources */,
