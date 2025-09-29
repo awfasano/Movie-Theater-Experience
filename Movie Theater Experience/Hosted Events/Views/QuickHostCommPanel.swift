@@ -441,10 +441,6 @@ struct QuickHostCommPanel: View {
         
         // Also trigger audio broadcast
         hostAudioManager.broadcastToAllRooms()
-        
-        // Haptic feedback
-        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-        impactFeedback.impactOccurred()
     }
     
     private func startRecording() {

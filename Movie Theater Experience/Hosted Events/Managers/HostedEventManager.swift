@@ -141,6 +141,13 @@ class HostedEventManager: ObservableObject {
                 }
             }
             
+            // NEW: Setup audio rooms when joining as host or first participant
+            if participants.isEmpty || isHost {
+                Task {
+                    await setupAudioRoomsForEvent()
+                }
+            }
+            
             return .success(existing)
         }
 
@@ -155,6 +162,13 @@ class HostedEventManager: ObservableObject {
             // Auto-start SharePlay for new participants
             Task {
                 _ = await startSharePlaySession()
+            }
+            
+            // NEW: Setup audio rooms when joining as host or first participant
+            if participants.isEmpty || isHost {
+                Task {
+                    await setupAudioRoomsForEvent()
+                }
             }
             
             return .success(participant)
@@ -259,6 +273,11 @@ class HostedEventManager: ObservableObject {
         do {
             try await participantDoc.setData(from: participants[participantIndex])
             try await tableDoc.setData(from: table)
+            
+            // NEW: Register audio room for this table if it doesn't exist
+            Task {
+                await registerAudioRoomForTable(table)
+            }
             
             print("✅ [HostedEvent] User \(userId) assigned to table \(tableNumber)")
             return .success(())
@@ -471,11 +490,227 @@ class HostedEventManager: ObservableObject {
                 )
             }
             
+            // NEW: Cleanup audio rooms
+            await cleanupAudioRooms()
+            
             print("✅ [HostedEvent] Game ended successfully")
             return .success(())
         } catch {
             print("❌ [HostedEvent] End game error: \(error)")
             return .failure(.unknown)
+        }
+    }
+    
+    // MARK: - Audio Room Integration
+    
+    /// Setup audio rooms when event starts
+    func setupAudioRoomsForEvent() async {
+        guard let event = currentEvent,
+              let eventId = event.id else {
+            print("⚠️ [HostedEvent] Cannot setup audio rooms - no current event")
+            return
+        }
+        
+        print("🎤 [HostedEvent] Setting up audio rooms for event: \(event.title)")
+        
+        // Create the activity for room code generation
+        let activity = TriviaEventActivity(
+            eventId: eventId,
+            eventTitle: event.title,
+            spaceId: eventId
+        )
+        
+        // Register all table rooms with HostAudioManager
+        for table in tables {
+            let tableRoomCode = TriviaEventActivity.generateTableRoomCode(
+                sessionCode: activity.sessionCode,
+                tableNumber: table.tableNumber
+            )
+            
+            // Register the room with the host audio manager
+            HostAudioManager.shared.registerRoom(
+                roomCode: tableRoomCode,
+                tableNumber: table.tableNumber,
+                teamName: table.teamName
+            )
+            
+            // Store room information in Firebase for participants to find
+            await createTableVoiceRoom(
+                roomCode: tableRoomCode,
+                table: table,
+                sessionCode: activity.sessionCode
+            )
+        }
+        
+        // Register host broadcast room
+        let hostRoomCode = TriviaEventActivity.generateHostRoomCode(sessionCode: activity.sessionCode)
+        await createHostBroadcastRoom(
+            roomCode: hostRoomCode,
+            sessionCode: activity.sessionCode
+        )
+        
+        print("✅ [HostedEvent] Audio rooms setup complete")
+    }
+    
+    /// Automatically register room when a new table is created
+    func registerAudioRoomForTable(_ table: EventTable) async {
+        guard let event = currentEvent,
+              let eventId = event.id else { return }
+        
+        let activity = TriviaEventActivity(
+            eventId: eventId,
+            eventTitle: event.title,
+            spaceId: eventId
+        )
+        
+        let tableRoomCode = TriviaEventActivity.generateTableRoomCode(
+            sessionCode: activity.sessionCode,
+            tableNumber: table.tableNumber
+        )
+        
+        // Register with host audio manager
+        HostAudioManager.shared.registerRoom(
+            roomCode: tableRoomCode,
+            tableNumber: table.tableNumber,
+            teamName: table.teamName
+        )
+        
+        // Store in Firebase
+        await createTableVoiceRoom(
+            roomCode: tableRoomCode,
+            table: table,
+            sessionCode: activity.sessionCode
+        )
+        
+        print("✅ [HostedEvent] Registered audio room for Table \(table.tableNumber): \(tableRoomCode)")
+    }
+    
+    /// Create table voice room in Firebase
+    private func createTableVoiceRoom(roomCode: String, table: EventTable, sessionCode: String) async {
+        guard let eventId = currentEvent?.id else { return }
+        
+        let roomData: [String: Any] = [
+            "roomCode": roomCode,
+            "tableNumber": table.tableNumber,
+            "eventId": eventId,
+            "sessionCode": sessionCode,
+            "teamName": table.teamName ?? "Table \(table.tableNumber)",
+            "hostId": AppModel.shared.currentUserId,
+            "isActive": true,
+            "createdAt": Date(),
+            "participantCount": table.participants.count,
+            "maxParticipants": table.maxSeats,
+            "faceTimeURL": "facetime://room/\(roomCode)"
+        ]
+        
+        do {
+            try await db.collection("TableVoiceRooms")
+                .document(roomCode)
+                .setData(roomData)
+            
+            print("✅ [HostedEvent] Created voice room document for \(roomCode)")
+        } catch {
+            print("❌ [HostedEvent] Failed to create voice room: \(error)")
+        }
+    }
+    
+    /// Create host broadcast room in Firebase
+    private func createHostBroadcastRoom(roomCode: String, sessionCode: String) async {
+        guard let eventId = currentEvent?.id else { return }
+        
+        let roomData: [String: Any] = [
+            "roomCode": roomCode,
+            "roomType": "host_broadcast",
+            "eventId": eventId,
+            "sessionCode": sessionCode,
+            "hostId": AppModel.shared.currentUserId,
+            "isActive": true,
+            "createdAt": Date(),
+            "faceTimeURL": "facetime://room/\(roomCode)"
+        ]
+        
+        do {
+            try await db.collection("HostBroadcastRooms")
+                .document(roomCode)
+                .setData(roomData)
+            
+            print("✅ [HostedEvent] Created host broadcast room: \(roomCode)")
+        } catch {
+            print("❌ [HostedEvent] Failed to create host room: \(error)")
+        }
+    }
+    
+    /// Get room codes for participant display
+    func getRoomCodesForParticipant(_ userId: String) async -> [String: String]? {
+        guard let event = currentEvent,
+              let eventId = event.id,
+              let participant = participants.first(where: { $0.userId == userId }),
+              let tableNumber = participant.tableNumber else { return nil }
+        
+        let activity = TriviaEventActivity(
+            eventId: eventId,
+            eventTitle: event.title,
+            spaceId: eventId
+        )
+        
+        let tableRoomCode = TriviaEventActivity.generateTableRoomCode(
+            sessionCode: activity.sessionCode,
+            tableNumber: tableNumber
+        )
+        
+        return [
+            "session": activity.sessionCode,
+            "table": tableRoomCode,
+            "table_number": "\(tableNumber)"
+        ]
+    }
+    
+    /// Cleanup audio rooms when event ends
+    func cleanupAudioRooms() async {
+        guard let event = currentEvent,
+              let eventId = event.id else { return }
+        
+        print("🧹 [HostedEvent] Cleaning up audio rooms for event")
+        
+        let activity = TriviaEventActivity(
+            eventId: eventId,
+            eventTitle: event.title,
+            spaceId: eventId
+        )
+        
+        // Unregister all rooms from HostAudioManager
+        for table in tables {
+            let tableRoomCode = TriviaEventActivity.generateTableRoomCode(
+                sessionCode: activity.sessionCode,
+                tableNumber: table.tableNumber
+            )
+            HostAudioManager.shared.unregisterRoom(tableRoomCode)
+        }
+        
+        // Mark rooms as inactive in Firebase
+        do {
+            let batch = db.batch()
+            
+            // Deactivate table rooms
+            for table in tables {
+                let tableRoomCode = TriviaEventActivity.generateTableRoomCode(
+                    sessionCode: activity.sessionCode,
+                    tableNumber: table.tableNumber
+                )
+                let roomRef = db.collection("TableVoiceRooms").document(tableRoomCode)
+                batch.updateData(["isActive": false, "endedAt": Date()], forDocument: roomRef)
+            }
+            
+            // Deactivate host room
+            let hostRoomCode = TriviaEventActivity.generateHostRoomCode(sessionCode: activity.sessionCode)
+            let hostRoomRef = db.collection("HostBroadcastRooms").document(hostRoomCode)
+            batch.updateData(["isActive": false, "endedAt": Date()], forDocument: hostRoomRef)
+            
+            try await batch.commit()
+            print("✅ [HostedEvent] Audio rooms cleanup complete")
+            
+        } catch {
+            print("❌ [HostedEvent] Failed to cleanup audio rooms: \(error)")
         }
     }
     

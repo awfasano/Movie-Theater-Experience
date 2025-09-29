@@ -14,6 +14,7 @@ import Foundation
 //  Individual table voice chat control card for the host
 
 import SwiftUI
+import Firebase
 
 struct TableRoomControlCard: View {
     let table: EventTable

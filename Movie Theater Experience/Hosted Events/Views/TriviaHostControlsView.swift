@@ -2,7 +2,7 @@
 //  Enhanced TriviaHostControlsView.swift
 //  Movie Theater Experience
 //
-//  Host controls with SharePlay integration
+//  Host controls with SharePlay integration and Audio Control tab
 //
 
 import SwiftUI
@@ -40,6 +40,12 @@ struct TriviaHostControlsView: View {
                     Label("Broadcast", systemImage: "megaphone")
                 }
                 .tag(3)
+            
+            audioControlsTab
+                .tabItem {
+                    Label("Audio Control", systemImage: "speaker.wave.3")
+                }
+                .tag(4)
         }
         .frame(minWidth: 800, minHeight: 600)
         
@@ -63,7 +69,14 @@ struct TriviaHostControlsView: View {
                 Label("Debug", systemImage: "hammer")
             }
             #endif
-                }
+    }
+    
+    // MARK: - Audio Controls Tab
+    
+    private var audioControlsTab: some View {
+        HostMasterControlView()
+            .environmentObject(hostedEventManager)
+    }
     
     // MARK: - SharePlay Controls Tab
     

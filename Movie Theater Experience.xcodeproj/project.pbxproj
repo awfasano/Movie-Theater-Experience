@@ -1410,7 +1410,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "$(TARGET_NAME)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Spiera;
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "To allow you to speak with the interactive storyteller.";
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Spiera uses your camera for persona representation and video communication during trivia events.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "To allow you to speak with the interactive storyteller and voice communication during trivia events and spatial audio interactions.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1444,7 +1446,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "$(TARGET_NAME)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Spiera;
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "To allow you to speak with the interactive storyteller.";
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Spiera uses your camera for persona representation and video communication during trivia events.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "To allow you to speak with the interactive storyteller and voice communication during trivia events and spatial audio interactions.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

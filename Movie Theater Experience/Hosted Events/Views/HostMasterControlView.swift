@@ -2,15 +2,6 @@
 //  HostMasterControlView.swift
 //  Movie Theater Experience
 //
-//  Created by Anthony Fasano on 9/27/25.
-//
-
-import Foundation
-
-//
-//  HostMasterControlView.swift
-//  Movie Theater Experience
-//
 //  Main host dashboard for audio control and room management
 
 import SwiftUI
@@ -338,32 +329,32 @@ struct HostMasterControlView: View {
             }
             
             HStack(spacing: 16) {
-                StatCard(
+                HostStatCard(
                     title: "Active Rooms",
                     value: "\(hostAudioManager.activeRooms.count)",
                     icon: "waveform",
-                    color: .blue
+                    color: Color.blue
                 )
                 
-                StatCard(
+                HostStatCard(
                     title: "Connected",
                     value: "\(hostAudioManager.roomStatuses.values.filter(\.isConnected).count)",
                     icon: "checkmark.circle.fill",
-                    color: .green
+                    color: Color.green
                 )
                 
-                StatCard(
+                HostStatCard(
                     title: "Total Players",
                     value: "\(hostedEventManager.participants.count)",
                     icon: "person.3.fill",
-                    color: .purple
+                    color: Color.purple
                 )
                 
-                StatCard(
+                HostStatCard(
                     title: "Broadcast Time",
                     value: "2m 15s", // Could track actual broadcast time
                     icon: "timer",
-                    color: .orange
+                    color: Color.orange
                 )
             }
         }
@@ -417,8 +408,8 @@ struct HostMasterControlView: View {
     }
 }
 
-// MARK: - Stat Card Component
-struct StatCard: View {
+// MARK: - Host Stat Card Component (renamed to avoid conflicts)
+private struct HostStatCard: View {
     let title: String
     let value: String
     let icon: String
