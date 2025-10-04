@@ -1,8 +1,8 @@
 //
-//  Fixed TriviaGameManager.swift
+//  TriviaGameManager.swift
 //  Movie Theater Experience
 //
-//  Fixed SharePlay message sending
+//  Manages trivia game flow and state
 //
 
 import Foundation
@@ -19,6 +19,8 @@ class TriviaGameManager: ObservableObject {
     @Published private(set) var timeRemaining: Int = 0
 
     private let db = Firestore.firestore(database: "uploads")
+    
+    private init() {}
 
     @MainActor
     func loadTriviaGame(_ gameId: String) async {
@@ -46,8 +48,7 @@ class TriviaGameManager: ObservableObject {
                 timeRemaining = question.timeLimit
                 startTimer()
                 
-                // Notify all participants
-                await notifyQuestionStart(question)
+                print("✅ Started question: \(question.questionText)")
                 break
             }
         }
@@ -123,7 +124,7 @@ class TriviaGameManager: ObservableObject {
                 if let tableNumber = doc.data()["tableNumber"] as? Int,
                    let points = doc.data()["points"] as? Int {
                     
-                    // Update scores in game state
+                    // Update scores in game state via HostedEventManager
                     await HostedEventManager.shared.awardPoints(
                         to: tableNumber,
                         points: points
@@ -134,25 +135,6 @@ class TriviaGameManager: ObservableObject {
             print("❌ Error calculating scores: \(error)")
         }
     }
-    
-    // FIXED: Use the correct SharePlay method
-    private func notifyQuestionStart(_ question: TriviaQuestion) async {
-        guard let eventId = HostedEventManager.shared.currentEvent?.id else {
-            print("⚠️ No current event ID for question start notification")
-            return
-        }
-        
-        // Send question start notification via SharePlay
-        await TriviaSharePlayManager.shared.sendQuestionStart(
-            question.id,
-            timeLimit: question.timeLimit,
-            eventId: eventId
-        )
-        
-        print("📤 [TriviaGame] Sent question start notification: \(question.questionText)")
-    }
-    
-    // MARK: - Enhanced methods with SharePlay integration
     
     func nextQuestion() async {
         guard let game = currentGame else {
@@ -166,7 +148,6 @@ class TriviaGameManager: ObservableObject {
         
         for round in game.rounds {
             for question in round.questions {
-                // This is a simplified approach - you might want more sophisticated logic
                 if question.id.contains("\(currentIndex + 1)") {
                     nextQuestionId = question.id
                     break
@@ -188,7 +169,6 @@ class TriviaGameManager: ObservableObject {
             return
         }
         
-        // Move to next round logic
         var updatedGame = game
         let currentRoundNumber = game.rounds.first?.roundNumber ?? 0
         
@@ -207,40 +187,7 @@ class TriviaGameManager: ObservableObject {
         }
     }
     
-    // MARK: - Timer sync with SharePlay
-    
-    private func syncTimerWithSharePlay() async {
-        await TriviaSharePlayManager.shared.sendTimerSync(
-            timeRemaining: timeRemaining,
-            isActive: timeRemaining > 0
-        )
-    }
-    
-    // Enhanced timer that syncs across devices
-    private func startTimerWithSync() {
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
-            Task { @MainActor in
-                guard let self = self else {
-                    timer.invalidate()
-                    return
-                }
-                
-                self.timeRemaining -= 1
-                
-                // Sync timer every 5 seconds
-                if self.timeRemaining % 5 == 0 {
-                    await self.syncTimerWithSharePlay()
-                }
-                
-                if self.timeRemaining <= 0 {
-                    timer.invalidate()
-                    await self.endQuestion()
-                }
-            }
-        }
-    }
-    
-    // MARK: - Helper methods for host controls
+    // MARK: - Helper methods
     
     func getCurrentQuestionForDisplay() -> TriviaQuestion? {
         return currentQuestion

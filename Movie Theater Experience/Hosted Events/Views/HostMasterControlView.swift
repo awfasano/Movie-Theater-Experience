@@ -408,31 +408,4 @@ struct HostMasterControlView: View {
     }
 }
 
-// MARK: - Host Stat Card Component (renamed to avoid conflicts)
-private struct HostStatCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundColor(color)
-            
-            Text(value)
-                .font(.title3.bold())
-                .foregroundColor(.primary)
-            
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(.gray.opacity(0.05))
-        .cornerRadius(12)
-    }
-}
+// MARK: - HostStatCard is defined in HostExperienceView.swift and shared across views

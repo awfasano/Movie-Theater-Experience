@@ -81,30 +81,32 @@ struct EnhancedEventView: View {
     
     private var sharePlayStatusIndicator: some View {
         HStack(spacing: 6) {
-            if hostedEventManager.sharePlayActive {
+            let isActive = hostedEventManager.currentEvent?.id == event.id
+
+            if isActive {
                 Circle()
                     .fill(Color.green)
                     .frame(width: 6, height: 6)
-                
-                Text("SharePlay Active")
+
+                Text("Event Active")
                     .font(.caption)
                     .foregroundColor(.green)
                     .fontWeight(.medium)
-                
-                Text("• \(TriviaSharePlayManager.shared.participants.count) connected")
+
+                Text("• \(hostedEventManager.participants.count) connected")
                     .font(.caption2)
                     .foregroundColor(.secondary)
-                
+
             } else {
                 Circle()
-                    .fill(Color.orange)
+                    .fill(Color.blue)
                     .frame(width: 6, height: 6)
-                
-                Text("SharePlay will start when you join")
+
+                Text("Join to connect with participants")
                     .font(.caption)
-                    .foregroundColor(.orange)
+                    .foregroundColor(.blue)
             }
-            
+
             Spacer()
         }
         .padding(.vertical, 4)
@@ -117,9 +119,10 @@ struct EnhancedEventView: View {
             HStack(spacing: 8) {
                 Text("Join Event")
                     .font(.body.bold())
-                
-                if hostedEventManager.sharePlayActive {
-                    Image(systemName: "shareplay")
+
+                let isActive = hostedEventManager.currentEvent?.id == event.id
+                if isActive {
+                    Image(systemName: "person.2.fill")
                         .font(.caption)
                 }
             }
@@ -135,24 +138,11 @@ struct EnhancedEventView: View {
     private var buttonBackgroundColor: Color {
         if !event.canJoin {
             return .gray
-        } else if hostedEventManager.sharePlayActive {
-            return LinearGradient(
-                colors: [.green, .blue],
-                startPoint: .leading,
-                endPoint: .trailing
-            ).toColor()
+        } else if hostedEventManager.currentEvent?.id == event.id {
+            return .blue  // Event is active
         } else {
-            return .green
+            return .green  // Ready to join
         }
-    }
-}
-
-// MARK: - Helper Extension
-
-extension LinearGradient {
-    func toColor() -> Color {
-        // This is a simplified approach - in practice you might want a different solution
-        return .green
     }
 }
 

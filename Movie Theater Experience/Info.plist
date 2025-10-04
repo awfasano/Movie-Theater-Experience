@@ -27,6 +27,12 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSSupportsGroupActivities</key>
+	<true/>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>com.waitedco.spiera.triviaEvent</string>
+	</array>
 	<key>Supports Group Activities</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

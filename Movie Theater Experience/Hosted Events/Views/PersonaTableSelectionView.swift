@@ -56,18 +56,18 @@ struct PersonaTableSelectionView: View {
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
             
-            if hostedEventManager.sharePlayActive {
+            if hostedEventManager.currentEvent != nil {
                 HStack(spacing: 8) {
-                    Image(systemName: "shareplay")
+                    Image(systemName: "person.2.fill")
                         .foregroundColor(.green)
-                    
+
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("SharePlay Active")
+                        Text("Event Active")
                             .font(.caption)
                             .fontWeight(.medium)
                             .foregroundColor(.green)
-                        
-                        Text("Real-time sync with \(TriviaSharePlayManager.shared.participants.count) participants")
+
+                        Text("Real-time sync with \(hostedEventManager.participants.count) participants")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }

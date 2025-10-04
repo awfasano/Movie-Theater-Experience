@@ -34,11 +34,11 @@ struct CollaborativeAnswerView: View {
                 Text("Table \(tableNumber)")
                     .font(.headline)
                     .foregroundColor(.primary)
-                
-                // FIXED: Check if live votes exist instead of sharePlayActive
-                if !tableManager.liveVotes.isEmpty {
+
+                // Show live indicator if people are voting
+                if tableManager.totalVotes > 0 {
                     HStack(spacing: 4) {
-                        Image(systemName: "shareplay")
+                        Image(systemName: "person.2.fill")
                             .foregroundColor(.green)
                             .font(.caption)
                         Text("Live")
@@ -47,16 +47,16 @@ struct CollaborativeAnswerView: View {
                     }
                 }
             }
-            
+
             Spacer()
-            
+
             // Live voting indicator
-            if !tableManager.liveVotes.isEmpty {
+            if tableManager.totalVotes > 0 {
                 VStack(alignment: .trailing) {
-                    Text("Live Votes")
+                    Text("Team Votes")
                         .font(.caption)
                         .foregroundColor(.blue)
-                    Text("\(tableManager.liveVotes.count)/\(tableManager.maxVotes)")
+                    Text("\(tableManager.totalVotes)/\(tableManager.maxVotes)")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -119,17 +119,14 @@ struct CollaborativeAnswerView: View {
                 .stroke(borderColor(for: index), lineWidth: 2)
         )
         .scaleEffect(scaleEffect(for: index))
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: tableManager.showVoteAnimation)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: tableManager.userVote)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: pulseAnimations[index] ?? false)
     }
     
     private func voteCount(for index: Int) -> Int {
-        // Combine Firebase votes and live SharePlay votes
-        let firebaseCount = tableManager.votes[index] ?? 0
-        let liveCount = tableManager.liveVotes.values.filter { $0 == index }.count
-        
-        // Use the higher count (live votes should be more recent)
-        return max(firebaseCount, liveCount)
+        // Count votes for this answer from userVotes
+        let count = tableManager.userVotes.values.filter { $0 == index }.count
+        return count
     }
     
     private func backgroundColor(for index: Int) -> Color {
@@ -137,25 +134,25 @@ struct CollaborativeAnswerView: View {
             return Color.blue.opacity(0.3)
         } else if tableManager.consensus == index {
             return Color.green.opacity(0.2)
-        } else if tableManager.liveVotes.values.contains(index) {
+        } else if tableManager.userVotes.values.contains(index) {
             return Color.orange.opacity(0.1)
         }
         return Color.gray.opacity(0.05)
     }
-    
+
     private func borderColor(for index: Int) -> Color {
         if tableManager.userVote == index {
             return Color.blue
         } else if tableManager.consensus == index {
             return Color.green
-        } else if tableManager.liveVotes.values.contains(index) {
+        } else if tableManager.userVotes.values.contains(index) {
             return Color.orange
         }
         return Color.clear
     }
     
     private func scaleEffect(for index: Int) -> CGFloat {
-        if tableManager.showVoteAnimation && tableManager.userVote == index {
+        if tableManager.userVote == index {
             return 1.05
         } else if pulseAnimations[index] == true {
             return 1.03
@@ -216,9 +213,9 @@ struct CollaborativeAnswerView: View {
             } else {
                 // Show voting progress
                 VStack(spacing: 8) {
-                    let totalVotes = max(tableManager.totalVotes, tableManager.liveVotes.count)
+                    let totalVotes = tableManager.totalVotes
                     let votesNeeded = tableManager.maxVotes - totalVotes
-                    
+
                     if votesNeeded > 0 {
                         Text("Votes needed: \(votesNeeded)")
                             .font(.body)
@@ -228,18 +225,18 @@ struct CollaborativeAnswerView: View {
                             .font(.body)
                             .foregroundColor(.blue)
                     }
-                    
+
                     // Progress bar
                     ProgressView(value: Float(totalVotes), total: Float(tableManager.maxVotes))
                         .progressViewStyle(LinearProgressViewStyle(tint: .blue))
-                    
+
                     // Live activity indicator
-                    if !tableManager.liveVotes.isEmpty {
+                    if tableManager.totalVotes > 0 {
                         HStack {
                             Circle()
                                 .fill(Color.green)
                                 .frame(width: 8, height: 8)
-                            Text("Live activity")
+                            Text("Team is voting")
                                 .font(.caption)
                                 .foregroundColor(.green)
                         }

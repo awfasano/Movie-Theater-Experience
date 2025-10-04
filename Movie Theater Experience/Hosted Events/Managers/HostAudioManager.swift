@@ -93,25 +93,48 @@ class HostAudioManager: ObservableObject {
     /// Join a specific room for direct communication
     func joinSpecificRoom(_ roomCode: String) {
         print("📞 [Host] Joining room \(roomCode) for direct communication")
-        
+
         // Leave current room if connected
         if let currentRoom = currentConnectedRoom {
             leaveRoom(currentRoom)
         }
-        
-        let faceTimeLink = "facetime://room/\(roomCode)"
-        if let url = URL(string: faceTimeLink) {
-            UIApplication.shared.open(url) { success in
-                Task { @MainActor in
-                    if success {
-                        self.currentConnectedRoom = roomCode
-                        self.updateRoomConnection(roomCode, connected: true)
-                        print("✅ [Host] Connected to room \(roomCode)")
-                    } else {
-                        print("❌ [Host] Failed to connect to room \(roomCode)")
+
+        // Fetch the real FaceTime URL from Firebase
+        Task {
+            await joinRoomWithFetchedURL(roomCode)
+        }
+    }
+
+    /// Fetch FaceTime URL from Firebase and join
+    private func joinRoomWithFetchedURL(_ roomCode: String) async {
+        do {
+            let snapshot = try await db.collection("TableVoiceRooms")
+                .document(roomCode)
+                .getDocument()
+
+            guard let data = snapshot.data(),
+                  let faceTimeURL = data["faceTimeURL"] as? String,
+                  let url = URL(string: faceTimeURL) else {
+                print("❌ [Host] No FaceTime link found for room \(roomCode)")
+                print("⚠️ [Host] Please set up FaceTime links for tables first")
+                return
+            }
+
+            await MainActor.run {
+                UIApplication.shared.open(url) { success in
+                    Task { @MainActor in
+                        if success {
+                            self.currentConnectedRoom = roomCode
+                            self.updateRoomConnection(roomCode, connected: true)
+                            print("✅ [Host] Connected to room \(roomCode)")
+                        } else {
+                            print("❌ [Host] Failed to open FaceTime link")
+                        }
                     }
                 }
             }
+        } catch {
+            print("❌ [Host] Error fetching FaceTime link: \(error)")
         }
     }
     

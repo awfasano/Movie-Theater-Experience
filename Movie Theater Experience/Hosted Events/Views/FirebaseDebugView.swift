@@ -17,6 +17,7 @@ import Foundation
 import SwiftUI
 
 struct FirebaseDebugView: View {
+    @Environment(\.openWindow) private var openWindow
     @EnvironmentObject private var hostedEventManager: HostedEventManager
     @EnvironmentObject private var triviaGameManager: TriviaGameManager
     @State private var isSettingUp = false
@@ -66,6 +67,20 @@ struct FirebaseDebugView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(isSettingUp)
+                
+                Button {
+                    openWindow(id: "sharePlayDiagnostics")
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "stethoscope")
+                        Text("Run SharePlay Diagnostics")
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(.blue.opacity(0.1))
+                    .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
                 
                 Button("Add Sample Votes") {
                     Task {
@@ -121,9 +136,9 @@ struct FirebaseDebugView: View {
                 
                 dataRow(title: "Current Round",
                         value: "\(hostedEventManager.gameState?.currentRound ?? 0)")
-                
-                dataRow(title: "SharePlay Active",
-                        value: hostedEventManager.sharePlayActive ? "Yes" : "No")
+
+                dataRow(title: "Event Active",
+                        value: hostedEventManager.currentEvent != nil ? "Yes" : "No")
             }
         }
         .padding()
@@ -167,14 +182,14 @@ struct FirebaseDebugView: View {
                         updateStatus("Notification sent")
                     }
                 }
-                
-                testButton("Start SharePlay") {
+
+                testButton("Setup Audio Rooms") {
                     Task {
-                        let success = await hostedEventManager.startSharePlaySession()
-                        updateStatus("SharePlay: \(success ? "Started" : "Failed")")
+                        await hostedEventManager.setupAudioRoomsForEvent()
+                        updateStatus("Audio rooms initialized")
                     }
                 }
-                
+
                 testButton("Clear Data") {
                     Task {
                         await clearTestData()
@@ -329,6 +344,7 @@ struct FloatingDebugButton: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.small)
+                        
                         
                         Button("SharePlay") {
                             openWindow(id: "sharePlayDebug")

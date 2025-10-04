@@ -33,7 +33,7 @@ struct TabBarWindow: View {
             .tag(0)
             .padding(.horizontal, 20)
             .padding(.top, 20)
-            
+
             // --- Spaces Tab ---
             Group {
                 SpaceBrowserIntegration()
@@ -41,13 +41,21 @@ struct TabBarWindow: View {
             }
             .tabItem { Label("Spaces", systemImage: "cube.fill") }
             .tag(1)
-            
+
+            // --- Events Tab ---
+            Group {
+                EventsCalendarView()
+                    .environmentObject(HostedEventManager.shared)
+            }
+            .tabItem { Label("Events", systemImage: "calendar") }
+            .tag(2)
+
             // --- Settings Tab ---
             Group {
                 ChatSettingsWindow()
             }
             .tabItem { Label("Chat Settings", systemImage: "gear") }
-            .tag(2)
+            .tag(3)
         }
         .onAppear {
             // When TabBar appears, ensure all space windows are closed

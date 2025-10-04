@@ -16,10 +16,10 @@ struct TriviaHostControlsView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            
+
             sharePlayControlsTab
                 .tabItem {
-                    Label("SharePlay", systemImage: "shareplay")
+                    Label("Overview", systemImage: "chart.bar.fill")
                 }
                 .tag(0)
             
@@ -78,12 +78,12 @@ struct TriviaHostControlsView: View {
             .environmentObject(hostedEventManager)
     }
     
-    // MARK: - SharePlay Controls Tab
-    
+    // MARK: - Overview Tab
+
     private var sharePlayControlsTab: some View {
         ScrollView {
             VStack(spacing: 24) {
-                Text("SharePlay Controls")
+                Text("Event Overview")
                     .font(.largeTitle.bold())
                     .padding(.top)
                 
@@ -109,34 +109,35 @@ struct TriviaHostControlsView: View {
         VStack(spacing: 16) {
             HStack {
                 Circle()
-                    .fill(hostedEventManager.sharePlayActive ? .green : .red)
+                    .fill(hostedEventManager.currentEvent != nil ? .green : .red)
                     .frame(width: 16, height: 16)
-                
-                Text(hostedEventManager.sharePlayActive ? "SharePlay Active" : "SharePlay Inactive")
+
+                Text(hostedEventManager.currentEvent != nil ? "Event Active" : "No Event")
                     .font(.title2.bold())
-                    .foregroundColor(hostedEventManager.sharePlayActive ? .green : .red)
-                
+                    .foregroundColor(hostedEventManager.currentEvent != nil ? .green : .red)
+
                 Spacer()
             }
-            
+
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Participants")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text("\(TriviaSharePlayManager.shared.participants.count)")
+                    Text("\(hostedEventManager.participants.count)")
                         .font(.title3.bold())
                 }
-                
+
                 Spacer()
-                
+
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("Session ID")
+                    Text("Event ID")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text(hostedEventManager.sharePlayActive ? "Connected" : "None")
+                    Text(hostedEventManager.currentEvent?.id ?? "None")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
             }
         }
@@ -147,47 +148,50 @@ struct TriviaHostControlsView: View {
     
     private var sessionControlsCard: some View {
         VStack(spacing: 16) {
-            Text("Session Management")
+            Text("Event Management")
                 .font(.headline)
-            
-            if !hostedEventManager.sharePlayActive {
-                Button(action: {
-                    Task {
-                        let success = await hostedEventManager.startSharePlaySession()
-                        print(success ? "✅ SharePlay started" : "❌ SharePlay failed")
-                    }
-                }) {
-                    HStack {
-                        Image(systemName: "play.circle.fill")
-                        Text("Start SharePlay Session")
-                    }
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
+
+            if hostedEventManager.currentEvent == nil {
+                Text("No active event")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .padding()
-                    .background(.green)
-                    .cornerRadius(10)
-                }
-                
-                Text("Start a SharePlay session to enable real-time synchronization with participants")
+
+                Text("Start an event from the Events tab to begin")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
-                
+
             } else {
-                Button(action: {
-                    hostedEventManager.endSharePlaySession()
-                }) {
+                VStack(spacing: 12) {
                     HStack {
-                        Image(systemName: "stop.circle.fill")
-                        Text("End SharePlay Session")
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Event Name")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(hostedEventManager.currentEvent?.title ?? "Unknown")
+                                .font(.body.bold())
+                        }
+                        Spacer()
                     }
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(.red)
-                    .cornerRadius(10)
+
+                    Button(action: {
+                        Task {
+                            await hostedEventManager.setupAudioRoomsForEvent()
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "speaker.wave.2.fill")
+                            Text("Initialize Audio Rooms")
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(.blue)
+                        .cornerRadius(10)
+                    }
                 }
             }
         }
@@ -198,30 +202,37 @@ struct TriviaHostControlsView: View {
     
     private var participantsCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("SharePlay Participants")
+            Text("Event Participants")
                 .font(.headline)
-            
-            if TriviaSharePlayManager.shared.participants.isEmpty {
+
+            if hostedEventManager.participants.isEmpty {
                 Text("No participants connected")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding()
-                
+
             } else {
                 LazyVGrid(columns: [
                     GridItem(.flexible()),
                     GridItem(.flexible())
                 ], spacing: 12) {
-                    ForEach(Array(TriviaSharePlayManager.shared.participants), id: \.id) { participant in
+                    ForEach(hostedEventManager.participants) { participant in
                         HStack {
                             Circle()
                                 .fill(.green)
                                 .frame(width: 8, height: 8)
-                            
-                            Text("Participant \(participant.id.uuidString.prefix(8))")
-                                .font(.caption)
-                                .lineLimit(1)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(participant.userName)
+                                    .font(.caption)
+                                    .lineLimit(1)
+                                if let tableNum = participant.tableNumber {
+                                    Text("Table \(tableNum)")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
                         }
                         .padding(8)
                         .background(.gray.opacity(0.1))
@@ -237,43 +248,41 @@ struct TriviaHostControlsView: View {
     
     private var liveNotificationsCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Live Notifications")
+            Text("Recent Broadcasts")
                 .font(.headline)
-            
-            if hostedEventManager.liveNotifications.isEmpty {
-                Text("No active notifications")
+
+            if let lastTrigger = hostedEventManager.gameState?.trigger, !lastTrigger.isEmpty {
+                HStack {
+                    Image(systemName: "megaphone.fill")
+                        .foregroundColor(.blue)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(lastTrigger)
+                            .font(.body)
+                            .fontWeight(.medium)
+
+                        Text("Latest Notification")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+                }
+                .padding()
+                .background(.blue.opacity(0.1))
+                .cornerRadius(8)
+            } else {
+                Text("No notifications sent yet")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding()
-                
-            } else {
-                ForEach(hostedEventManager.liveNotifications, id: \.message) { notification in
-                    HStack {
-                        Image(systemName: "megaphone.fill")
-                            .foregroundColor(.blue)
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(notification.message)
-                                .font(.body)
-                                .fontWeight(.medium)
-                            
-                            Text(notification.type.capitalized)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        Spacer()
-                        
-                        Text(notification.timestamp, style: .time)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding()
-                    .background(.blue.opacity(0.1))
-                    .cornerRadius(8)
-                }
             }
+
+            Text("Use the Broadcast tab to send messages to all participants")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
         }
         .padding()
         .background(.regularMaterial)

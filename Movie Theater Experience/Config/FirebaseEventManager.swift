@@ -12,9 +12,21 @@ final class FirebaseEventManager: ObservableObject, EventManagerProtocol {
     @MainActor private(set) var messageOpacities: [String: Double] = [:]
     private var listenerStartTime: Date?
     private let emojiAgeThreshold: TimeInterval = 45.0
-    
+
     private var db = Firestore.firestore(database: "movieexperiencedb")
     private var listener: ListenerRegistration?
+
+    // MARK: - Shared Firestore Instances
+
+    /// Shared Firestore instance for uploads database (used by trivia/hosted events)
+    static let uploadsDb: Firestore = {
+        print("📊 [Firestore] Initializing uploads database...")
+        let startTime = Date()
+        let firestore = Firestore.firestore(database: "uploads")
+        let duration = Date().timeIntervalSince(startTime)
+        print("✅ [Firestore] Uploads DB initialized in \(String(format: "%.3f", duration))s")
+        return firestore
+    }()
     
     // Default configuration for movie experience.
     var configuration = EventManagerConfiguration(rootCollection: "Public Rooms")

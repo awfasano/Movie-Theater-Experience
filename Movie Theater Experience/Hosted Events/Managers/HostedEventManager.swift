@@ -1,8 +1,8 @@
 //
-//  Enhanced HostedEventManager.swift
+//  HostedEventManager.swift
 //  Movie Theater Experience
 //
-//  Integrates SharePlay for real-time host notifications and game sync
+//  Firebase-based trivia event management
 //
 
 import Foundation
@@ -19,104 +19,22 @@ class HostedEventManager: ObservableObject {
     @Published private(set) var tables: [EventTable] = []
     @Published private(set) var gameState: GameState?
     @Published private(set) var isHost: Bool = false
-    
-    // SharePlay integration
-    @Published var sharePlayActive: Bool = false
-    @Published var liveNotifications: [HostNotification] = []
 
-    private let db = Firestore.firestore(database: "uploads")
+    private let db = FirebaseEventManager.uploadsDb
     private var personaManager: PersonaTableManager?
     
     private var participantsListener: ListenerRegistration?
     private var tablesListener: ListenerRegistration?
     private var gameStateListener: ListenerRegistration?
-    private var sharePlayCancellables = Set<AnyCancellable>()
     
-    private init() {
-        setupSharePlayListeners()
-    }
-    
-    // MARK: - SharePlay Integration
-    
-    private func setupSharePlayListeners() {
-        // Listen for SharePlay session status
-        TriviaSharePlayManager.shared.$isSessionActive
-            .receive(on: DispatchQueue.main)
-            .assign(to: \.sharePlayActive, on: self)
-            .store(in: &sharePlayCancellables)
-        
-        // Listen for host notifications
-        NotificationCenter.default.publisher(for: .sharePlayHostNotification)
-            .compactMap { $0.object as? HostNotification }
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] notification in
-                self?.handleSharePlayNotification(notification)
-            }
-            .store(in: &sharePlayCancellables)
-        
-        // Listen for question start events
-        NotificationCenter.default.publisher(for: .sharePlayQuestionStart)
-            .compactMap { $0.object as? QuestionStartMessage }
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] questionStart in
-                self?.handleSharePlayQuestionStart(questionStart)
-            }
-            .store(in: &sharePlayCancellables)
-    }
-    
-    private func handleSharePlayNotification(_ notification: HostNotification) {
-        print("📢 [HostedEvent] Received SharePlay notification: \(notification.message)")
-        
-        // Add to live notifications for immediate display
-        liveNotifications.append(notification)
-        
-        // Remove after 5 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-            self.liveNotifications.removeAll { $0.message == notification.message }
-        }
-        
-        // Update game state if it's a trigger
-        if var state = gameState {
-            state.trigger = notification.message
-            gameState = state
-        }
-    }
-    
-    private func handleSharePlayQuestionStart(_ questionStart: QuestionStartMessage) {
-        print("❓ [HostedEvent] SharePlay question started: \(questionStart.questionId)")
-        
-        // Sync local timer if needed
-        // This ensures all devices start timers at exactly the same time
-    }
-    
-    // MARK: - SharePlay Activity Management
-    
-    func startSharePlaySession() async -> Bool {
-        guard let event = currentEvent, let eventId = event.id else {
-            print("❌ [HostedEvent] Cannot start SharePlay - no current event")
-            return false
-        }
-        
-        let activity = TriviaEventActivity(
-            eventId: eventId,
-            eventTitle: event.title,
-            spaceId: event.id ?? ""
-        )
-        
-        await TriviaSharePlayManager.shared.startSession(for: activity)
-        return TriviaSharePlayManager.shared.isSessionActive
-    }
-    
-    func endSharePlaySession() {
-        TriviaSharePlayManager.shared.endSession()
-    }
+    private init() {}
     
     // Dependency injection for PersonaTableManager
     func setPersonaManager(_ manager: PersonaTableManager) {
         self.personaManager = manager
     }
     
-    // MARK: - Enhanced Event Management
+    // MARK: - Event Management
     
     func joinHostedEvent(_ event: CalendarEvent) async -> Result<EventParticipant, HostedEventError> {
         let currentUserIdRaw = AppModel.shared.currentUserId
@@ -134,14 +52,7 @@ class HostedEventManager: ObservableObject {
             currentEvent = event
             startListeners(for: eventId)
             
-            // Auto-start SharePlay if not already active
-            if !sharePlayActive {
-                Task {
-                    _ = await startSharePlaySession()
-                }
-            }
-            
-            // NEW: Setup audio rooms when joining as host or first participant
+            // Setup audio rooms when joining as host or first participant
             if participants.isEmpty || isHost {
                 Task {
                     await setupAudioRoomsForEvent()
@@ -159,12 +70,7 @@ class HostedEventManager: ObservableObject {
             currentEvent = event
             startListeners(for: eventId)
             
-            // Auto-start SharePlay for new participants
-            Task {
-                _ = await startSharePlaySession()
-            }
-            
-            // NEW: Setup audio rooms when joining as host or first participant
+            // Setup audio rooms when joining as host or first participant
             if participants.isEmpty || isHost {
                 Task {
                     await setupAudioRoomsForEvent()
@@ -178,7 +84,7 @@ class HostedEventManager: ObservableObject {
         }
     }
     
-    // MARK: - Enhanced Host Controls with SharePlay
+    // MARK: - Host Controls
     
     func triggerNotification(_ name: String) async {
         guard let event = currentEvent, let eventId = event.id else {
@@ -188,34 +94,27 @@ class HostedEventManager: ObservableObject {
         
         print("📢 [HostedEvent] Triggering notification: \(name)")
         
-        // 1. Immediate SharePlay notification for real-time feedback
-        if sharePlayActive {
-            await TriviaSharePlayManager.shared.sendHostNotification(
-                name,
-                type: "instruction",
-                eventId: eventId
-            )
-        }
-        
-        // 2. Update Firebase for persistence
-        let dbEventRef = db.collection("Events").document(eventId)
-        guard var state = gameState else {
-            print("⚠️ [HostedEvent] No game state for notification")
-            return
-        }
-        
-        state.trigger = name
+        // Send via Firebase
+        let messageData: [String: Any] = [
+            "message": name,
+            "type": "instruction",
+            "timestamp": Date(),
+            "hostId": AppModel.shared.currentUserId
+        ]
         
         do {
-            try await dbEventRef.collection("gameState").document("current").setData(from: state)
-            gameState = state
-            print("✅ [HostedEvent] Notification saved to Firebase")
+            try await db.collection("Events")
+                .document(eventId)
+                .collection("broadcasts")
+                .addDocument(data: messageData)
+            
+            print("✅ [HostedEvent] Notification sent to Firebase")
         } catch {
-            print("❌ [HostedEvent] Failed to save notification: \(error)")
+            print("❌ [HostedEvent] Failed to send notification: \(error)")
         }
     }
     
-    // MARK: - Table Assignment with SharePlay
+    // MARK: - Table Assignment
     
     func assignUserToTable(_ userId: String, tableNumber: Int) async -> Result<Void, HostedEventError> {
         guard let event = currentEvent, let eventId = event.id else {
@@ -274,7 +173,7 @@ class HostedEventManager: ObservableObject {
             try await participantDoc.setData(from: participants[participantIndex])
             try await tableDoc.setData(from: table)
             
-            // NEW: Register audio room for this table if it doesn't exist
+            // Register audio room for this table if it doesn't exist
             Task {
                 await registerAudioRoomForTable(table)
             }
@@ -304,7 +203,7 @@ class HostedEventManager: ObservableObject {
         return nil
     }
     
-    // MARK: - Game Management with SharePlay
+    // MARK: - Game Management
     
     func startGame() async -> Result<Void, HostedEventError> {
         guard let event = currentEvent, let eventId = event.id else {
@@ -323,15 +222,6 @@ class HostedEventManager: ObservableObject {
         do {
             try await dbEventRef.collection("gameState").document("current").setData(from: initialGameState)
             gameState = initialGameState
-            
-            // Notify via SharePlay
-            if sharePlayActive {
-                await TriviaSharePlayManager.shared.sendHostNotification(
-                    "Game Started! Get ready for Round 1",
-                    type: "announcement",
-                    eventId: eventId
-                )
-            }
             
             print("✅ [HostedEvent] Game started")
             return .success(())
@@ -360,15 +250,6 @@ class HostedEventManager: ObservableObject {
             try await dbEventRef.collection("gameState").document("current").setData(from: state)
             gameState = state
             
-            // Notify via SharePlay
-            if sharePlayActive {
-                await TriviaSharePlayManager.shared.sendHostNotification(
-                    "Round \(state.currentRound) Starting!",
-                    type: "announcement",
-                    eventId: eventId
-                )
-            }
-            
             print("✅ [HostedEvent] Advanced to round \(state.currentRound)")
             return .success(())
         } catch {
@@ -395,15 +276,6 @@ class HostedEventManager: ObservableObject {
             try await dbEventRef.collection("gameState").document("current").setData(from: state)
             gameState = state
             
-            // Notify via SharePlay with question sync
-            if sharePlayActive {
-                await TriviaSharePlayManager.shared.sendHostNotification(
-                    "Question \(state.currentQuestion) is now active",
-                    type: "instruction",
-                    eventId: eventId
-                )
-            }
-            
             print("✅ [HostedEvent] Advanced to question \(state.currentQuestion)")
             return .success(())
         } catch {
@@ -422,23 +294,11 @@ class HostedEventManager: ObservableObject {
             return .failure(.unknown)
         }
         
-        let oldScore = state.scores["\(tableNumber)", default: 0]
         state.scores["\(tableNumber)", default: 0] += points
-        let newScore = state.scores["\(tableNumber)"]!
         
         do {
             try await dbEventRef.collection("gameState").document("current").setData(from: state)
             gameState = state
-            
-            // Notify via SharePlay
-            if sharePlayActive {
-                let tableName = tables.first(where: { $0.tableNumber == tableNumber })?.teamName ?? "Table \(tableNumber)"
-                await TriviaSharePlayManager.shared.sendHostNotification(
-                    "\(tableName) awarded \(points) points! New score: \(newScore)",
-                    type: "scoring",
-                    eventId: eventId
-                )
-            }
             
             print("✅ [HostedEvent] Awarded \(points) points to table \(tableNumber)")
             return .success(())
@@ -453,7 +313,6 @@ class HostedEventManager: ObservableObject {
             return .failure(.eventNotFound)
         }
         
-        // Update game state to finished
         var finalState = gameState ?? GameState(
             currentRound: 0,
             status: .finished,
@@ -463,7 +322,6 @@ class HostedEventManager: ObservableObject {
         )
         finalState.status = .finished
         
-        // Save final state
         do {
             try await db.collection("Events")
                 .document(eventId)
@@ -473,24 +331,7 @@ class HostedEventManager: ObservableObject {
             
             gameState = finalState
             
-            // Generate and save game statistics
             await saveGameStatistics(eventId: eventId)
-            
-            // Notify all participants via SharePlay
-            if sharePlayActive {
-                let winningTable = getWinningTable()
-                let winnerName = winningTable.flatMap { tableNum in
-                    tables.first(where: { $0.tableNumber == tableNum })?.teamName ?? "Table \(tableNum)"
-                } ?? "No winner"
-                
-                await TriviaSharePlayManager.shared.sendHostNotification(
-                    "Game Over! Winner: \(winnerName)",
-                    type: "celebration",
-                    eventId: eventId
-                )
-            }
-            
-            // NEW: Cleanup audio rooms
             await cleanupAudioRooms()
             
             print("✅ [HostedEvent] Game ended successfully")
@@ -501,9 +342,59 @@ class HostedEventManager: ObservableObject {
         }
     }
     
+    // MARK: - FaceTime Link Management
+
+    /// Update the FaceTime link for a specific table
+    func updateTableFaceTimeLink(_ tableNumber: Int, faceTimeURL: String) async -> Result<Void, HostedEventError> {
+        guard let event = currentEvent, let eventId = event.id else {
+            return .failure(.eventNotFound)
+        }
+
+        guard let tableIndex = tables.firstIndex(where: { $0.tableNumber == tableNumber }) else {
+            return .failure(.tableAssignmentFailed)
+        }
+
+        var table = tables[tableIndex]
+        table.faceTimeLinkURL = faceTimeURL
+        tables[tableIndex] = table
+
+        let dbEventRef = db.collection("Events").document(eventId)
+
+        do {
+            // Update table document in Firebase
+            try await dbEventRef.collection("tables").document("\(tableNumber)").setData(from: table)
+
+            // Update the voice room document with the FaceTime URL
+            let activity = TriviaEventActivity(
+                eventId: eventId,
+                eventTitle: event.title,
+                spaceId: eventId
+            )
+
+            let tableRoomCode = TriviaEventActivity.generateTableRoomCode(
+                sessionCode: activity.sessionCode,
+                tableNumber: tableNumber
+            )
+
+            try await db.collection("TableVoiceRooms")
+                .document(tableRoomCode)
+                .updateData(["faceTimeURL": faceTimeURL])
+
+            print("✅ [HostedEvent] Updated FaceTime link for table \(tableNumber)")
+            return .success(())
+        } catch {
+            print("❌ [HostedEvent] Failed to update FaceTime link: \(error)")
+            return .failure(.unknown)
+        }
+    }
+
+    /// Get FaceTime link for a specific table
+    func getFaceTimeLinkForTable(_ tableNumber: Int) -> String? {
+        return tables.first(where: { $0.tableNumber == tableNumber })?.faceTimeLinkURL
+    }
+
     // MARK: - Audio Room Integration
-    
-    /// Setup audio rooms when event starts
+
     func setupAudioRoomsForEvent() async {
         guard let event = currentEvent,
               let eventId = event.id else {
@@ -513,28 +404,24 @@ class HostedEventManager: ObservableObject {
         
         print("🎤 [HostedEvent] Setting up audio rooms for event: \(event.title)")
         
-        // Create the activity for room code generation
         let activity = TriviaEventActivity(
             eventId: eventId,
             eventTitle: event.title,
             spaceId: eventId
         )
         
-        // Register all table rooms with HostAudioManager
         for table in tables {
             let tableRoomCode = TriviaEventActivity.generateTableRoomCode(
                 sessionCode: activity.sessionCode,
                 tableNumber: table.tableNumber
             )
             
-            // Register the room with the host audio manager
             HostAudioManager.shared.registerRoom(
                 roomCode: tableRoomCode,
                 tableNumber: table.tableNumber,
                 teamName: table.teamName
             )
             
-            // Store room information in Firebase for participants to find
             await createTableVoiceRoom(
                 roomCode: tableRoomCode,
                 table: table,
@@ -542,7 +429,6 @@ class HostedEventManager: ObservableObject {
             )
         }
         
-        // Register host broadcast room
         let hostRoomCode = TriviaEventActivity.generateHostRoomCode(sessionCode: activity.sessionCode)
         await createHostBroadcastRoom(
             roomCode: hostRoomCode,
@@ -552,7 +438,6 @@ class HostedEventManager: ObservableObject {
         print("✅ [HostedEvent] Audio rooms setup complete")
     }
     
-    /// Automatically register room when a new table is created
     func registerAudioRoomForTable(_ table: EventTable) async {
         guard let event = currentEvent,
               let eventId = event.id else { return }
@@ -568,14 +453,12 @@ class HostedEventManager: ObservableObject {
             tableNumber: table.tableNumber
         )
         
-        // Register with host audio manager
         HostAudioManager.shared.registerRoom(
             roomCode: tableRoomCode,
             tableNumber: table.tableNumber,
             teamName: table.teamName
         )
         
-        // Store in Firebase
         await createTableVoiceRoom(
             roomCode: tableRoomCode,
             table: table,
@@ -585,11 +468,10 @@ class HostedEventManager: ObservableObject {
         print("✅ [HostedEvent] Registered audio room for Table \(table.tableNumber): \(tableRoomCode)")
     }
     
-    /// Create table voice room in Firebase
     private func createTableVoiceRoom(roomCode: String, table: EventTable, sessionCode: String) async {
         guard let eventId = currentEvent?.id else { return }
-        
-        let roomData: [String: Any] = [
+
+        var roomData: [String: Any] = [
             "roomCode": roomCode,
             "tableNumber": table.tableNumber,
             "eventId": eventId,
@@ -599,25 +481,28 @@ class HostedEventManager: ObservableObject {
             "isActive": true,
             "createdAt": Date(),
             "participantCount": table.participants.count,
-            "maxParticipants": table.maxSeats,
-            "faceTimeURL": "facetime://room/\(roomCode)"
+            "maxParticipants": table.maxSeats
         ]
-        
+
+        // Only include faceTimeURL if a real FaceTime link exists
+        if let faceTimeURL = table.faceTimeLinkURL {
+            roomData["faceTimeURL"] = faceTimeURL
+        }
+
         do {
             try await db.collection("TableVoiceRooms")
                 .document(roomCode)
                 .setData(roomData)
-            
+
             print("✅ [HostedEvent] Created voice room document for \(roomCode)")
         } catch {
             print("❌ [HostedEvent] Failed to create voice room: \(error)")
         }
     }
     
-    /// Create host broadcast room in Firebase
     private func createHostBroadcastRoom(roomCode: String, sessionCode: String) async {
         guard let eventId = currentEvent?.id else { return }
-        
+
         let roomData: [String: Any] = [
             "roomCode": roomCode,
             "roomType": "host_broadcast",
@@ -625,22 +510,21 @@ class HostedEventManager: ObservableObject {
             "sessionCode": sessionCode,
             "hostId": AppModel.shared.currentUserId,
             "isActive": true,
-            "createdAt": Date(),
-            "faceTimeURL": "facetime://room/\(roomCode)"
+            "createdAt": Date()
+            // NOTE: Host broadcast FaceTime link should be set separately via UI
         ]
-        
+
         do {
             try await db.collection("HostBroadcastRooms")
                 .document(roomCode)
                 .setData(roomData)
-            
+
             print("✅ [HostedEvent] Created host broadcast room: \(roomCode)")
         } catch {
             print("❌ [HostedEvent] Failed to create host room: \(error)")
         }
     }
     
-    /// Get room codes for participant display
     func getRoomCodesForParticipant(_ userId: String) async -> [String: String]? {
         guard let event = currentEvent,
               let eventId = event.id,
@@ -665,7 +549,6 @@ class HostedEventManager: ObservableObject {
         ]
     }
     
-    /// Cleanup audio rooms when event ends
     func cleanupAudioRooms() async {
         guard let event = currentEvent,
               let eventId = event.id else { return }
@@ -678,7 +561,6 @@ class HostedEventManager: ObservableObject {
             spaceId: eventId
         )
         
-        // Unregister all rooms from HostAudioManager
         for table in tables {
             let tableRoomCode = TriviaEventActivity.generateTableRoomCode(
                 sessionCode: activity.sessionCode,
@@ -687,11 +569,9 @@ class HostedEventManager: ObservableObject {
             HostAudioManager.shared.unregisterRoom(tableRoomCode)
         }
         
-        // Mark rooms as inactive in Firebase
         do {
             let batch = db.batch()
             
-            // Deactivate table rooms
             for table in tables {
                 let tableRoomCode = TriviaEventActivity.generateTableRoomCode(
                     sessionCode: activity.sessionCode,
@@ -701,7 +581,6 @@ class HostedEventManager: ObservableObject {
                 batch.updateData(["isActive": false, "endedAt": Date()], forDocument: roomRef)
             }
             
-            // Deactivate host room
             let hostRoomCode = TriviaEventActivity.generateHostRoomCode(sessionCode: activity.sessionCode)
             let hostRoomRef = db.collection("HostBroadcastRooms").document(hostRoomCode)
             batch.updateData(["isActive": false, "endedAt": Date()], forDocument: hostRoomRef)
@@ -774,7 +653,7 @@ class HostedEventManager: ObservableObject {
         gameStateListener = nil
     }
     
-    // MARK: - Statistics and Cleanup
+    // MARK: - Statistics
     
     private func saveGameStatistics(eventId: String) async {
         let stats = GameStatistics(
@@ -786,7 +665,6 @@ class HostedEventManager: ObservableObject {
             questionsAnswered: getQuestionsAnsweredCount()
         )
         
-        // Save to Firebase for historical tracking
         do {
             try await db.collection("GameStatistics").document(eventId).setData(from: stats)
             print("✅ [HostedEvent] Game statistics saved")
@@ -826,11 +704,9 @@ class HostedEventManager: ObservableObject {
     // MARK: - Cleanup
     
     deinit {
-        // Use Task to call MainActor methods from deinit
         Task { @MainActor in
             stopListeners()
         }
-        sharePlayCancellables.removeAll()
     }
 }
 
@@ -864,6 +740,28 @@ enum GameStatus: String, Codable {
     case waiting
     case question_active
     case finished
+
+    var displayName: String {
+        switch self {
+        case .waiting:
+            return "Waiting to Start"
+        case .question_active:
+            return "Question Active"
+        case .finished:
+            return "Finished"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .waiting:
+            return .orange
+        case .question_active:
+            return .green
+        case .finished:
+            return .blue
+        }
+    }
 }
 
 struct GameStatistics: Codable {

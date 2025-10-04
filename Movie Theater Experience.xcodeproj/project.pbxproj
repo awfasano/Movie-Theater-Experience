@@ -24,7 +24,6 @@
 		C406C25D2E80A7D800F985DF /* SharePlayUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406C25C2E80A7D700F985DF /* SharePlayUser.swift */; };
 		C406C25F2E80A9C900F985DF /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406C25E2E80A9C900F985DF /* CalendarService.swift */; };
 		C406C2612E80AC9F00F985DF /* SharePlayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406C2602E80AC9F00F985DF /* SharePlayManager.swift */; };
-		C406C2632E8326A800F985DF /* ShareplayTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406C2622E8326A800F985DF /* ShareplayTestView.swift */; };
 		C406C2652E832BFE00F985DF /* FirebaseTestDataSetup.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406C2642E832BFE00F985DF /* FirebaseTestDataSetup.swift */; };
 		C406C2672E832C4900F985DF /* FirebaseDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406C2662E832C4900F985DF /* FirebaseDebugView.swift */; };
 		C406C2692E87910C00F985DF /* HostAudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C406C2682E87910C00F985DF /* HostAudioManager.swift */; };
@@ -79,7 +78,6 @@
 		C44919292E109BD800C4B087 /* SpaceActivities.swift in Sources */ = {isa = PBXBuildFile; fileRef = C44919282E109BD800C4B087 /* SpaceActivities.swift */; };
 		C449192C2E109D1B00C4B087 /* UsersListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C449192B2E109D1B00C4B087 /* UsersListView.swift */; };
 		C44AB5BE2E7A829F00378969 /* TriviaQuestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = C44AB5BD2E7A829F00378969 /* TriviaQuestion.swift */; };
-		C44AB5C02E7B651900378969 /* TriviaSharePlayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C44AB5BF2E7B651900378969 /* TriviaSharePlayManager.swift */; };
 		C44AB5C22E7B653800378969 /* TeamMember.swift in Sources */ = {isa = PBXBuildFile; fileRef = C44AB5C12E7B653800378969 /* TeamMember.swift */; };
 		C44AB5C42E7B664600378969 /* TriviaGameCreatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C44AB5C32E7B664600378969 /* TriviaGameCreatorView.swift */; };
 		C44AB5C62E7B666500378969 /* LiveLeaderBoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C44AB5C52E7B666500378969 /* LiveLeaderBoardView.swift */; };
@@ -187,6 +185,15 @@
 		C4E71ACE2DC69F490017914B /* SeatOrbEntities.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E71ACD2DC69F490017914B /* SeatOrbEntities.swift */; };
 		C4E815542D546DB6007FE604 /* VolumetricSpaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E815532D546DB6007FE604 /* VolumetricSpaceView.swift */; };
 		C4E815582D55C982007FE604 /* SpacesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E815572D55C982007FE604 /* SpacesView.swift */; };
+		C4F025962E8CD03D00F7E3CF /* SharePlayDiagnosticView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F025952E8CD03D00F7E3CF /* SharePlayDiagnosticView.swift */; };
+		C4F025992E8DD3D000F7E3CF /* TableFaceTimeJoinButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F025972E8DD3D000F7E3CF /* TableFaceTimeJoinButton.swift */; };
+		C4F0259A2E8DD3D000F7E3CF /* TableFaceTimeLinkSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F025982E8DD3D000F7E3CF /* TableFaceTimeLinkSetupView.swift */; };
+		C4F025A02E8DDB0800F7E3CF /* EventsCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F0259C2E8DDB0800F7E3CF /* EventsCalendarView.swift */; };
+		C4F025A12E8DDB0800F7E3CF /* HostExperienceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F0259D2E8DDB0800F7E3CF /* HostExperienceView.swift */; };
+		C4F025A22E8DDB0800F7E3CF /* EventJoinFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F0259B2E8DDB0800F7E3CF /* EventJoinFlowView.swift */; };
+		C4F025A32E8DDB0800F7E3CF /* TestDataGeneratorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F0259F2E8DDB0800F7E3CF /* TestDataGeneratorView.swift */; };
+		C4F025A42E8DDB0800F7E3CF /* ParticipantExperienceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F0259E2E8DDB0800F7E3CF /* ParticipantExperienceView.swift */; };
+		C4F025A72E8E121F00F7E3CF /* TriviaTestDataGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F025A52E8E121F00F7E3CF /* TriviaTestDataGenerator.swift */; };
 		C4F478BD2CEBD46300965502 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = C4F478BC2CEBD46300965502 /* GoogleService-Info.plist */; };
 		C4F478BF2CEC29E900965502 /* ScrollOffsets.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F478BE2CEC29E900965502 /* ScrollOffsets.swift */; };
 		C4FA39F02E218923004BB564 /* MovementControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA39EF2E218923004BB564 /* MovementControlView.swift */; };
@@ -241,7 +248,6 @@
 		C406C25C2E80A7D700F985DF /* SharePlayUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharePlayUser.swift; sourceTree = "<group>"; };
 		C406C25E2E80A9C900F985DF /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
 		C406C2602E80AC9F00F985DF /* SharePlayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharePlayManager.swift; sourceTree = "<group>"; };
-		C406C2622E8326A800F985DF /* ShareplayTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareplayTestView.swift; sourceTree = "<group>"; };
 		C406C2642E832BFE00F985DF /* FirebaseTestDataSetup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseTestDataSetup.swift; sourceTree = "<group>"; };
 		C406C2662E832C4900F985DF /* FirebaseDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseDebugView.swift; sourceTree = "<group>"; };
 		C406C2682E87910C00F985DF /* HostAudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostAudioManager.swift; sourceTree = "<group>"; };
@@ -301,7 +307,6 @@
 		C449192A2E109C3A00C4B087 /* Movie Theater Experience.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Movie Theater Experience.entitlements"; sourceTree = "<group>"; };
 		C449192B2E109D1B00C4B087 /* UsersListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsersListView.swift; sourceTree = "<group>"; };
 		C44AB5BD2E7A829F00378969 /* TriviaQuestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriviaQuestion.swift; sourceTree = "<group>"; };
-		C44AB5BF2E7B651900378969 /* TriviaSharePlayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriviaSharePlayManager.swift; sourceTree = "<group>"; };
 		C44AB5C12E7B653800378969 /* TeamMember.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamMember.swift; sourceTree = "<group>"; };
 		C44AB5C32E7B664600378969 /* TriviaGameCreatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriviaGameCreatorView.swift; sourceTree = "<group>"; };
 		C44AB5C52E7B666500378969 /* LiveLeaderBoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveLeaderBoardView.swift; sourceTree = "<group>"; };
@@ -384,6 +389,16 @@
 		C4E71ACD2DC69F490017914B /* SeatOrbEntities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeatOrbEntities.swift; sourceTree = "<group>"; };
 		C4E815532D546DB6007FE604 /* VolumetricSpaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumetricSpaceView.swift; sourceTree = "<group>"; };
 		C4E815572D55C982007FE604 /* SpacesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesView.swift; sourceTree = "<group>"; };
+		C4F025952E8CD03D00F7E3CF /* SharePlayDiagnosticView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharePlayDiagnosticView.swift; sourceTree = "<group>"; };
+		C4F025972E8DD3D000F7E3CF /* TableFaceTimeJoinButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableFaceTimeJoinButton.swift; sourceTree = "<group>"; };
+		C4F025982E8DD3D000F7E3CF /* TableFaceTimeLinkSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableFaceTimeLinkSetupView.swift; sourceTree = "<group>"; };
+		C4F0259B2E8DDB0800F7E3CF /* EventJoinFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventJoinFlowView.swift; sourceTree = "<group>"; };
+		C4F0259C2E8DDB0800F7E3CF /* EventsCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventsCalendarView.swift; sourceTree = "<group>"; };
+		C4F0259D2E8DDB0800F7E3CF /* HostExperienceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostExperienceView.swift; sourceTree = "<group>"; };
+		C4F0259E2E8DDB0800F7E3CF /* ParticipantExperienceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantExperienceView.swift; sourceTree = "<group>"; };
+		C4F0259F2E8DDB0800F7E3CF /* TestDataGeneratorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestDataGeneratorView.swift; sourceTree = "<group>"; };
+		C4F025A52E8E121F00F7E3CF /* TriviaTestDataGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriviaTestDataGenerator.swift; sourceTree = "<group>"; };
+		C4F025A82E8E298F00F7E3CF /* FirestoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirestoreManager.swift; sourceTree = "<group>"; };
 		C4F478BC2CEBD46300965502 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		C4F478BE2CEC29E900965502 /* ScrollOffsets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollOffsets.swift; sourceTree = "<group>"; };
 		C4FA39EF2E218923004BB564 /* MovementControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementControlView.swift; sourceTree = "<group>"; };
@@ -681,6 +696,7 @@
 		C4712E4C2E79F2500017738E /* Hosted Events */ = {
 			isa = PBXGroup;
 			children = (
+				C4F025A62E8E121F00F7E3CF /* TestData */,
 				C4712E622E79F4980017738E /* Views */,
 				C4712E5D2E79F40C0017738E /* Activities */,
 				C4712E562E79F32B0017738E /* Managers */,
@@ -709,7 +725,6 @@
 				C44AB5C92E7B66D400378969 /* ConnectionManager.swift */,
 				C4712E592E79F3510017738E /* PersonaTableManager.swift */,
 				C4712E5B2E79F3710017738E /* TriviaGameManager.swift */,
-				C44AB5BF2E7B651900378969 /* TriviaSharePlayManager.swift */,
 				C4712E792E7A215B0017738E /* TableCollaborationManager.swift */,
 				C406C2682E87910C00F985DF /* HostAudioManager.swift */,
 			);
@@ -728,9 +743,16 @@
 		C4712E622E79F4980017738E /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				C4F0259B2E8DDB0800F7E3CF /* EventJoinFlowView.swift */,
+				C4F0259C2E8DDB0800F7E3CF /* EventsCalendarView.swift */,
+				C4F0259D2E8DDB0800F7E3CF /* HostExperienceView.swift */,
+				C4F0259E2E8DDB0800F7E3CF /* ParticipantExperienceView.swift */,
+				C4F0259F2E8DDB0800F7E3CF /* TestDataGeneratorView.swift */,
+				C4F025972E8DD3D000F7E3CF /* TableFaceTimeJoinButton.swift */,
+				C4F025982E8DD3D000F7E3CF /* TableFaceTimeLinkSetupView.swift */,
 				C4712E632E79F4B20017738E /* EnhancedEventView.swift */,
-				C406C2622E8326A800F985DF /* ShareplayTestView.swift */,
 				C406C2642E832BFE00F985DF /* FirebaseTestDataSetup.swift */,
+				C4F025952E8CD03D00F7E3CF /* SharePlayDiagnosticView.swift */,
 				C4712E772E7A1A1A0017738E /* HostAnnouncementOverlay.swift */,
 				C44AB5C32E7B664600378969 /* TriviaGameCreatorView.swift */,
 				C4712E752E7A1A070017738E /* TableDashboard.swift */,
@@ -833,6 +855,7 @@
 		C4C439FF2CA3540D001AC733 /* Config */ = {
 			isa = PBXGroup;
 			children = (
+				C4F025A82E8E298F00F7E3CF /* FirestoreManager.swift */,
 				C44919222E10811000C4B087 /* EventManagerProtocol 2.swift */,
 				C40AE3D32D5164020075914F /* WindowManager.swift */,
 				C473DCAE2D308BC7008AA51D /* FirebaseEventManager.swift */,
@@ -924,6 +947,14 @@
 			children = (
 			);
 			path = Video;
+			sourceTree = "<group>";
+		};
+		C4F025A62E8E121F00F7E3CF /* TestData */ = {
+			isa = PBXGroup;
+			children = (
+				C4F025A52E8E121F00F7E3CF /* TriviaTestDataGenerator.swift */,
+			);
+			path = TestData;
 			sourceTree = "<group>";
 		};
 		C4FA39EE2E218911004BB564 /* Movement */ = {
@@ -1090,6 +1121,8 @@
 				C444C9292D5446710046F92D /* LazyView.swift in Sources */,
 				C49134412B9B072900A824DF /* ChatMessage.swift in Sources */,
 				C4D88CAA2D752B87004F226E /* SpacesNavBarView.swift in Sources */,
+				C4F025992E8DD3D000F7E3CF /* TableFaceTimeJoinButton.swift in Sources */,
+				C4F0259A2E8DD3D000F7E3CF /* TableFaceTimeLinkSetupView.swift in Sources */,
 				C40BD7982E00B3E40062623E /* Story.swift in Sources */,
 				C40BD7942E00AF340062623E /* StoryTellerAudioService.swift in Sources */,
 				C406C2652E832BFE00F985DF /* FirebaseTestDataSetup.swift in Sources */,
@@ -1145,6 +1178,7 @@
 				C4C43A042CA364BB001AC733 /* VideoPicker.swift in Sources */,
 				C40AE3D42D5164020075914F /* WindowManager.swift in Sources */,
 				C44AB5CE2E7B687000378969 /* FinalLeaderboardView.swift in Sources */,
+				C4F025A72E8E121F00F7E3CF /* TriviaTestDataGenerator.swift in Sources */,
 				C44AB5BE2E7A829F00378969 /* TriviaQuestion.swift in Sources */,
 				C4FE99BB2D7F9DA8008AE0D6 /* SpacesEmojiWindow.swift in Sources */,
 				C4BFD5BE2CA5F664007D20BE /* EventView.swift in Sources */,
@@ -1169,6 +1203,7 @@
 				C4FA39F82E274855004BB564 /* WelcomeView.swift in Sources */,
 				C4474F182D80BC2000DA08A1 /* SpacePresenceManager.swift in Sources */,
 				C4DAB7ED2B9FE98800852029 /* ExpandingTextView.swift in Sources */,
+				C4F025962E8CD03D00F7E3CF /* SharePlayDiagnosticView.swift in Sources */,
 				C404A8072D46B244000450D4 /* ChatScrollView.swift in Sources */,
 				C40AE3D62D516C070075914F /* ChatSettingsNavBar.swift in Sources */,
 				C4E815582D55C982007FE604 /* SpacesView.swift in Sources */,
@@ -1176,9 +1211,13 @@
 				C4712E682E79F4FC0017738E /* TriviaSpaceView.swift in Sources */,
 				C4712E4F2E79F2930017738E /* EventParticipant.swift in Sources */,
 				C405E58D2D4CAD2B00681E60 /* TimeLineline.swift in Sources */,
+				C4F025A02E8DDB0800F7E3CF /* EventsCalendarView.swift in Sources */,
+				C4F025A12E8DDB0800F7E3CF /* HostExperienceView.swift in Sources */,
+				C4F025A22E8DDB0800F7E3CF /* EventJoinFlowView.swift in Sources */,
+				C4F025A32E8DDB0800F7E3CF /* TestDataGeneratorView.swift in Sources */,
+				C4F025A42E8DDB0800F7E3CF /* ParticipantExperienceView.swift in Sources */,
 				C44AB5CA2E7B66D400378969 /* ConnectionManager.swift in Sources */,
 				C459498F2E700E8C004ADDF6 /* ImmersiveHelper.swift in Sources */,
-				C44AB5C02E7B651900378969 /* TriviaSharePlayManager.swift in Sources */,
 				C44919242E10811000C4B087 /* EventManagerProtocol 2.swift in Sources */,
 				C405E58B2D4CACE900681E60 /* PositionedEvents.swift in Sources */,
 				C405E5852D4CABA800681E60 /* TimelineView.swift in Sources */,
@@ -1187,7 +1226,6 @@
 				C4712E6C2E79F5380017738E /* ParticipantTableManager.swift in Sources */,
 				C4712E532E79F2C70017738E /* PersonaTablePosition.swift in Sources */,
 				C416BA482E09DDA7006399D8 /* WaveformViewModel.swift in Sources */,
-				C406C2632E8326A800F985DF /* ShareplayTestView.swift in Sources */,
 				C406C26D2E879AE100F985DF /* HostMasterControlView.swift in Sources */,
 				C44AB5C42E7B664600378969 /* TriviaGameCreatorView.swift in Sources */,
 				C406C25D2E80A7D800F985DF /* SharePlayUser.swift in Sources */,
@@ -1409,7 +1447,6 @@
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "$(TARGET_NAME)/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = Spiera;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Spiera uses your camera for persona representation and video communication during trivia events.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "To allow you to speak with the interactive storyteller and voice communication during trivia events and spatial audio interactions.";
@@ -1445,7 +1482,6 @@
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "$(TARGET_NAME)/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = Spiera;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Spiera uses your camera for persona representation and video communication during trivia events.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "To allow you to speak with the interactive storyteller and voice communication during trivia events and spatial audio interactions.";
