@@ -18,7 +18,28 @@ struct PersonaTableSelectionView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            // Custom navigation bar
+            HStack {
+                Text("Choose Your Table")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+
+                Spacer()
+
+                Button(action: {
+                    print("🔴 Cancel button tapped - dismissing sheet")
+                    dismiss()
+                }) {
+                    Text("Cancel")
+                        .font(.body)
+                        .foregroundColor(.blue)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding()
+            .background(.ultraThinMaterial)
+
             ScrollView {
                 VStack(spacing: 24) {
                     headerSection
@@ -27,35 +48,26 @@ struct PersonaTableSelectionView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Choose Your Table")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
-            .alert("Error Joining Table", isPresented: $showError) {
-                Button("OK") { }
-            } message: {
-                Text(errorMessage)
-            }
+        }
+        .alert("Error Joining Table", isPresented: $showError) {
+            Button("OK") { }
+        } message: {
+            Text(errorMessage)
         }
     }
-    
+
     private var headerSection: some View {
         VStack(spacing: 12) {
             Text("Select a table to join \(event.title)")
                 .font(.title3)
                 .fontWeight(.medium)
                 .multilineTextAlignment(.center)
-            
+
             Text("Choose wisely - you'll be collaborating with your tablemates!")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
-            
+
             if hostedEventManager.currentEvent != nil {
                 HStack(spacing: 8) {
                     Image(systemName: "person.2.fill")
@@ -79,7 +91,7 @@ struct PersonaTableSelectionView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "shareplay")
                         .foregroundColor(.orange)
-                    
+
                     Text("SharePlay will activate when you join")
                         .font(.caption)
                         .foregroundColor(.orange)
@@ -100,7 +112,7 @@ struct PersonaTableSelectionView: View {
             }
         }
     }
-    
+
     private func tableCard(for table: EventTable) -> some View {
         Button {
             withAnimation(.spring(response: 0.3)) {
@@ -113,14 +125,14 @@ struct PersonaTableSelectionView: View {
                     Image(systemName: "table.furniture")
                         .font(.title2)
                         .foregroundColor(iconColor(for: table))
-                    
+
                     Text(table.teamName ?? "Table \(table.tableNumber)")
                         .font(.headline)
                         .fontWeight(.semibold)
                         .multilineTextAlignment(.center)
                         .lineLimit(2)
                 }
-                
+
                 // Capacity information
                 VStack(spacing: 8) {
                     HStack {
@@ -132,13 +144,13 @@ struct PersonaTableSelectionView: View {
                             .font(.caption)
                             .fontWeight(.medium)
                     }
-                    
+
                     ProgressView(value: Float(table.participants.count), total: Float(table.maxSeats))
                         .progressViewStyle(LinearProgressViewStyle(tint: progressColor(for: table)))
                         .frame(height: 6)
                         .cornerRadius(3)
                 }
-                
+
                 // Status indicator
                 statusIndicator(for: table)
             }
@@ -157,7 +169,7 @@ struct PersonaTableSelectionView: View {
         .buttonStyle(PlainButtonStyle())
         .animation(.spring(response: 0.3), value: selectedTable)
     }
-    
+
     private func statusIndicator(for table: EventTable) -> some View {
         Group {
             if table.isFull {
@@ -169,7 +181,7 @@ struct PersonaTableSelectionView: View {
                         .foregroundColor(.red)
                 }
                 .font(.caption)
-                
+
             } else if selectedTable == table.tableNumber {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
@@ -179,7 +191,7 @@ struct PersonaTableSelectionView: View {
                         .foregroundColor(.blue)
                 }
                 .font(.caption)
-                
+
             } else {
                 HStack {
                     Image(systemName: "circle")
@@ -197,12 +209,12 @@ struct PersonaTableSelectionView: View {
         VStack(spacing: 12) {
             if let selectedTable = selectedTable {
                 let table = hostedEventManager.tables.first { $0.tableNumber == selectedTable }
-                
+
                 Text("Join \(table?.teamName ?? "Table \(selectedTable)")")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            
+
             Button {
                 guard let selectedTable = selectedTable else { return }
                 joinTable(selectedTable)
@@ -229,7 +241,7 @@ struct PersonaTableSelectionView: View {
             .animation(.spring(response: 0.3), value: selectedTable)
         }
     }
-    
+
     private var buttonBackground: Color {
         if selectedTable != nil && !isJoining {
             return .blue
@@ -237,24 +249,24 @@ struct PersonaTableSelectionView: View {
             return .gray
         }
     }
-    
+
     // MARK: - Actions
-    
+
     private func joinTable(_ tableNumber: Int) {
         isJoining = true
-        
+
         Task {
             let currentUserId = AppModel.shared.currentUserId
             let result = await hostedEventManager.assignUserToTable(currentUserId, tableNumber: tableNumber)
-            
+
             await MainActor.run {
                 isJoining = false
-                
+
                 switch result {
                 case .success:
                     print("✅ Successfully joined table \(tableNumber)")
                     dismiss()
-                    
+
                 case .failure(let error):
                     print("❌ Failed to join table: \(error)")
                     errorMessage = getErrorMessage(for: error)
@@ -263,7 +275,7 @@ struct PersonaTableSelectionView: View {
             }
         }
     }
-    
+
     private func getErrorMessage(for error: HostedEventError) -> String {
         switch error {
         case .eventNotFound:
@@ -276,11 +288,13 @@ struct PersonaTableSelectionView: View {
             return "You don't have permission to join this event."
         case .unknown:
             return "An unexpected error occurred. Please try again."
+        case .timeout:
+            return "Request timed out"
         }
     }
-    
+
     // MARK: - Helper Methods
-    
+
     private func backgroundColor(for table: EventTable) -> Color {
         if table.isFull {
             return .gray.opacity(0.1)
@@ -290,7 +304,7 @@ struct PersonaTableSelectionView: View {
             return .gray.opacity(0.05)
         }
     }
-    
+
     private func borderColor(for table: EventTable) -> Color {
         if table.isFull {
             return .gray.opacity(0.3)
@@ -300,7 +314,7 @@ struct PersonaTableSelectionView: View {
             return .gray.opacity(0.2)
         }
     }
-    
+
     private func strokeWidth(for table: EventTable) -> CGFloat {
         if selectedTable == table.tableNumber {
             return 2
@@ -308,7 +322,7 @@ struct PersonaTableSelectionView: View {
             return 1
         }
     }
-    
+
     private func iconColor(for table: EventTable) -> Color {
         if table.isFull {
             return .gray
@@ -318,7 +332,7 @@ struct PersonaTableSelectionView: View {
             return .green
         }
     }
-    
+
     private func progressColor(for table: EventTable) -> Color {
         if table.isFull {
             return .red
@@ -344,7 +358,7 @@ struct PersonaTableSelectionView_Previews: PreviewProvider {
             eventType: .hostedTrivia,
             status: .scheduled
         )
-        
+
         PersonaTableSelectionView(event: sampleEvent)
             .environmentObject(HostedEventManager.shared)
             .environmentObject(PersonaTableManager())

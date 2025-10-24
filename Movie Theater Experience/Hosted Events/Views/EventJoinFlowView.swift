@@ -18,13 +18,16 @@ struct EventJoinFlowView: View {
     @State private var isJoining = false
     @State private var joinError: String?
     @State private var hasJoinedSuccessfully = false
+    @State private var isLoading = true
 
     // Hard-coded host password for testing
     private let correctHostPassword = "trivia123"
 
-    enum JoinRole: String, CaseIterable {
+    enum JoinRole: String, CaseIterable, Identifiable {
         case host = "Host"
         case participant = "Participant"
+
+        var id: String { self.rawValue }
 
         var icon: String {
             switch self {
@@ -44,36 +47,12 @@ struct EventJoinFlowView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    eventHeaderSection
-                    roleSelectionSection
+        ZStack {
+            // Always show a background so we can see SOMETHING
+            Color(.systemBackground)
+                .ignoresSafeArea()
 
-                    if selectedRole == .host {
-                        hostPasswordSection
-                    }
-
-                    if let role = selectedRole {
-                        joinButtonSection(role: role)
-                    }
-
-                    if let error = joinError {
-                        errorSection(message: error)
-                    }
-                }
-                .padding()
-            }
-            .navigationTitle("Join Event")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
-            .fullScreenCover(isPresented: $hasJoinedSuccessfully) {
+            if hasJoinedSuccessfully {
                 if selectedRole == .host {
                     HostExperienceView(event: event)
                         .environmentObject(hostedEventManager)
@@ -81,7 +60,111 @@ struct EventJoinFlowView: View {
                     ParticipantExperienceView(event: event)
                         .environmentObject(hostedEventManager)
                 }
+            } else if isLoading {
+                // Show loading state while sheet is initializing
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                    Text("Loading event...")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                }
+            } else {
+                joinFlowContent
+                    .overlay {
+                        if isJoining {
+                            Color.black.opacity(0.4)
+                                .ignoresSafeArea()
+                                .overlay {
+                                    VStack(spacing: 16) {
+                                        ProgressView()
+                                            .scaleEffect(1.5)
+                                            .tint(.white)
+                                        Text("Joining event...")
+                                            .font(.headline)
+                                            .foregroundColor(.white)
+                                    }
+                                    .padding(32)
+                                    .background(.ultraThinMaterial)
+                                    .cornerRadius(16)
+                                }
+                        }
+                    }
             }
+        }
+        .onAppear {
+            print("🟢🟢🟢 [EventJoinFlowView] BODY onAppear called!")
+            print("   Event: \(event.title)")
+            print("   isLoading: \(isLoading)")
+        }
+        .task {
+            print("🟢🟢🟢 [EventJoinFlowView] TASK started")
+            // Give SwiftUI time to render the sheet properly
+            try? await Task.sleep(for: .milliseconds(300))
+
+            await MainActor.run {
+                print("🟢 Setting isLoading = false")
+                isLoading = false
+            }
+
+            print("🟢 [EventJoinFlowView] View loaded")
+            print("   Event: \(event.title)")
+            print("   Event ID: \(event.id ?? "nil")")
+            print("   Event Type: \(event.eventType.rawValue)")
+        }
+    }
+
+    private var joinFlowContent: some View {
+        ZStack {
+            Color(.systemBackground)
+                .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Custom header with close button
+                HStack {
+                    Text("Join Event")
+                        .font(.title2.bold())
+                        .foregroundColor(.primary)
+
+                    Spacer()
+
+                    Button(action: {
+                        print("🔴 [EventJoinFlow] Close button tapped - dismissing")
+                        dismiss()
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding()
+                .background(.ultraThinMaterial)
+
+                ScrollView {
+                    VStack(spacing: 24) {
+                        eventHeaderSection
+
+                        roleSelectionSection
+
+                        if selectedRole == .host {
+                            hostPasswordSection
+                        }
+
+                        if let role = selectedRole {
+                            joinButtonSection(role: role)
+                        }
+
+                        if let error = joinError {
+                            errorSection(message: error)
+                        }
+                    }
+                    .padding()
+                }
+            }
+        }
+        .onAppear {
+            print("🟢 [EventJoinFlow] joinFlowContent appeared for event: \(event.title)")
         }
     }
 
@@ -134,11 +217,9 @@ struct EventJoinFlowView: View {
                     role: role,
                     isSelected: selectedRole == role,
                     onTap: {
-                        withAnimation {
-                            selectedRole = role
-                            showPasswordError = false
-                            joinError = nil
-                        }
+                        selectedRole = role
+                        showPasswordError = false
+                        joinError = nil
                     }
                 )
             }
@@ -148,39 +229,11 @@ struct EventJoinFlowView: View {
     // MARK: - Host Password
 
     private var hostPasswordSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Host Password")
-                .font(.headline)
-
-            Text("Enter the host password to control this event")
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            SecureField("Enter password", text: $hostPassword)
-                .textFieldStyle(.roundedBorder)
-                .autocapitalization(.none)
-                .autocorrectionDisabled()
-
-            if showPasswordError {
-                HStack {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                    Text("Incorrect password")
-                }
-                .font(.caption)
-                .foregroundColor(.red)
-            }
-
-            // Test hint
-            Text("Test password: \(correctHostPassword)")
-                .font(.caption2)
-                .foregroundColor(.green)
-                .padding(8)
-                .background(.green.opacity(0.1))
-                .cornerRadius(6)
-        }
-        .padding()
-        .background(.orange.opacity(0.1))
-        .cornerRadius(12)
+        HostPasswordInput(
+            password: $hostPassword,
+            showError: showPasswordError,
+            testPassword: correctHostPassword
+        )
     }
 
     // MARK: - Join Button
@@ -227,35 +280,48 @@ struct EventJoinFlowView: View {
     // MARK: - Join Logic
 
     private func joinEvent(as role: JoinRole) async {
+        print("🟡 [Join] Starting join process as \(role.rawValue)")
         isJoining = true
         joinError = nil
         showPasswordError = false
 
         // Validate host password if joining as host
         if role == .host {
+            print("🟡 [Join] Validating host password...")
             guard hostPassword == correctHostPassword else {
                 await MainActor.run {
                     showPasswordError = true
                     isJoining = false
+                    print("❌ [Join] Invalid host password")
                 }
                 return
             }
+            print("✅ [Join] Host password validated")
         }
 
         // Join the event
+        print("🟡 [Join] Calling hostedEventManager.joinHostedEvent...")
         let result = await hostedEventManager.joinHostedEvent(event)
 
         switch result {
         case .success(let participant):
             print("✅ [Join] Successfully joined event as \(role.rawValue)")
             print("   Participant ID: \(participant.userId)")
+            print("   Event ID: \(event.id ?? "nil")")
+            print("   Setting hasJoinedSuccessfully = true")
 
             // Note: isHost is computed based on participant role, not set directly
             // The role is determined by password authentication above
 
             await MainActor.run {
-                hasJoinedSuccessfully = true
-                isJoining = false
+                // Use withTransaction to prevent animations during view transition
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    hasJoinedSuccessfully = true
+                    isJoining = false
+                }
+                print("✅ [Join] State updated - should present experience view")
             }
 
         case .failure(let error):
@@ -312,6 +378,53 @@ struct RoleCard: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Host Password Input (isolated to prevent re-renders)
+
+struct HostPasswordInput: View {
+    @Binding var password: String
+    let showError: Bool
+    let testPassword: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Host Password")
+                .font(.headline)
+
+            Text("Enter the host password to control this event")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            SecureField("Enter password", text: $password)
+                .textFieldStyle(.roundedBorder)
+                .autocapitalization(.none)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .keyboardType(.default)
+                .submitLabel(.done)
+
+            if showError {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                    Text("Incorrect password")
+                }
+                .font(.caption)
+                .foregroundColor(.red)
+            }
+
+            // Test hint
+            Text("Test password: \(testPassword)")
+                .font(.caption2)
+                .foregroundColor(.green)
+                .padding(8)
+                .background(.green.opacity(0.1))
+                .cornerRadius(6)
+        }
+        .padding()
+        .background(.orange.opacity(0.1))
+        .cornerRadius(12)
     }
 }
 

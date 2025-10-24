@@ -5,13 +5,13 @@ import FirebaseCore
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        print("🔥 [Firebase] Starting configuration...")
         let startTime = Date()
+        print("🔥 [Firebase] Starting configuration...")
 
+        // Configure Firebase synchronously but with disabled services for faster startup
         FirebaseApp.configure()
 
-        let endTime = Date()
-        let duration = endTime.timeIntervalSince(startTime)
+        let duration = Date().timeIntervalSince(startTime)
         print("✅ [Firebase] Configured in \(String(format: "%.2f", duration))s")
 
         return true
@@ -43,6 +43,7 @@ struct Movie_Theater_ExperienceApp: App {
     @StateObject private var hostedEventManager = HostedEventManager.shared
     @StateObject private var personaManager = PersonaTableManager()
     @StateObject private var triviaGameManager = TriviaGameManager.shared
+    @StateObject private var triviaImmersiveManager = TriviaImmersiveManager()
     
     // REMOVED: triviaSharePlayManager
     
@@ -71,6 +72,7 @@ struct Movie_Theater_ExperienceApp: App {
                 .environmentObject(hostedEventManager)
                 .environmentObject(personaManager)
                 .environmentObject(triviaGameManager)
+                .environmentObject(triviaImmersiveManager)
                 // REMOVED: triviaSharePlayManager
                 .onAppear {
                     HostedEventManager.shared.setPersonaManager(personaManager)
@@ -83,6 +85,7 @@ struct Movie_Theater_ExperienceApp: App {
             FirebaseDebugView()
                 .environmentObject(hostedEventManager)
                 .environmentObject(triviaGameManager)
+                .environmentObject(triviaImmersiveManager)
         }
         .defaultSize(width: 600, height: 800)
         
@@ -143,6 +146,7 @@ struct Movie_Theater_ExperienceApp: App {
                 .environmentObject(hostedEventManager)
                 .environmentObject(personaManager)
                 .environmentObject(triviaGameManager)
+                .environmentObject(triviaImmersiveManager)
                 // REMOVED: triviaSharePlayManager and task block
         }
         
@@ -323,6 +327,7 @@ struct Movie_Theater_ExperienceApp: App {
             TriviaHostControlsView()
                 .environmentObject(hostedEventManager)
                 .environmentObject(triviaGameManager)
+                .environmentObject(triviaImmersiveManager)
                 // REMOVED: triviaSharePlayManager
         }
         .defaultSize(width: 1000, height: 800)

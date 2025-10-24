@@ -17,7 +17,7 @@ This guide documents the trivia-specific host and participant experiences inside
 
 ## 2. Host Experience (Main Sheet – `HostExperienceView.swift`)
 
-The host sheet (`HostExperienceView.swift:10`) is a tabbed consolef with five segments:
+The host sheet (`HostExperienceView.swift:10`) is a tabbed console with five segments:
 
 ### 2.1 Overview Tab
 - `overviewTab` (`HostExperienceView.swift:92`) displays:
@@ -41,9 +41,10 @@ The host sheet (`HostExperienceView.swift:10`) is a tabbed consolef with five se
 
 ### 2.5 Settings Tab
 - `settingsTab` (`HostExperienceView.swift:338`) centralises:
+  - Immersive space selector presenting three curated spaces (pulled from `SpaceService.shared`). The host’s choice is written back to `Events/{id}.spaceId`, so participants always load the same environment.
   - FaceTime link setup modal toggle.
   - Placeholder for audio settings.
-  - Immersive space enter/exit controls that delegate to `SpaceService` + `AppModel` for space switching.
+  - Immersive space enter/exit controls that delegate to `SpaceService` + `AppModel` for manual re-entry.
   - Destructive “End Event” action.
 
 Other sheet behaviour:

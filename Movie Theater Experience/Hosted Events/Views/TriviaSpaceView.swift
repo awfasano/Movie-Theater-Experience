@@ -6,26 +6,36 @@
 //
 
 import SwiftUI
+import Combine
 import RealityKit
 import RealityKitContent
 
 struct TriviaSpaceView: View {
-    @EnvironmentObject private var personaManager: PersonaTableManager
     @EnvironmentObject private var hostedEventManager: HostedEventManager
+    @EnvironmentObject private var triviaGameManager: TriviaGameManager
+    @EnvironmentObject private var triviaImmersiveManager: TriviaImmersiveManager
+    @EnvironmentObject private var personaManager: PersonaTableManager
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
     @State private var showParticipantsList = false
-    @State private var isInitialized = false
+    @State private var baseSceneLoaded = false
     @State private var isConnected = false
+    @State private var immersiveRoot: Entity?
+    @State private var immersiveRootAdded = false
 
     var body: some View {
         ZStack {
             // Main RealityView
             RealityView { content in
-                setupTriviaSpace(content)
+                setupBaseEnvironment(content)
+                ensureImmersiveRoot(in: content)
             } update: { content in
+                ensureImmersiveRoot(in: content)
                 updatePersonaPositions(content)
             }
+
+            // Table overlays projected into 2D space approximation
+            overlaysLayer
 
             // UI Overlays
             VStack {
@@ -37,6 +47,11 @@ struct TriviaSpaceView: View {
         }
         .task {
             await initializeSpace()
+        }
+        .onReceive(hostedEventManager.$participants) { _ in
+            Task { @MainActor in
+                syncPersonaTablePositions()
+            }
         }
         .sheet(isPresented: $showParticipantsList) {
             ParticipantsListView()
@@ -167,34 +182,108 @@ struct TriviaSpaceView: View {
         }
     }
 
+    // MARK: - Overlays
+
+    private var overlaysLayer: some View {
+        ZStack {
+            ForEach(hostedEventManager.tables.sorted(by: { $0.tableNumber < $1.tableNumber }), id: \.tableNumber) { table in
+                tableOverlay(for: table)
+                    .frame(width: 360)
+                    .padding(.vertical, 12)
+                    .offset(overlayOffset(for: table))
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func tableOverlay(for table: EventTable) -> some View {
+        if let question = triviaGameManager.currentQuestion {
+            ImmersiveQuestionBoard(
+                question: question,
+                tableNumber: table.tableNumber,
+                timeRemaining: triviaGameManager.timeRemaining
+            )
+        } else {
+            ImmersiveWaitingBoard(tableNumber: table.tableNumber)
+        }
+    }
+
+    private func overlayOffset(for table: EventTable) -> CGSize {
+        if let tableEntity = triviaImmersiveManager.getTableEntity(tableNumber: table.tableNumber) {
+            let world = tableEntity.position(relativeTo: nil)
+            let x = CGFloat(world.x) * 110
+            let y = CGFloat(-world.z) * 90 - 140
+            return CGSize(width: x, height: y)
+        }
+
+        if let fallback = triviaImmersiveManager.tablePositions()[table.tableNumber] {
+            let x = CGFloat(fallback.x) * 110
+            let y = CGFloat(-fallback.z) * 90 - 140
+            return CGSize(width: x, height: y)
+        }
+
+        let fallback = hostedEventManager.tables
+            .first(where: { $0.tableNumber == table.tableNumber })?
+            .tablePosition.simd3 ?? SIMD3<Float>(0, 0, 0)
+
+        let x = CGFloat(fallback.x) * 110
+        let y = CGFloat(-fallback.z) * 90 - 140
+        return CGSize(width: x, height: y)
+    }
+
+    @MainActor
+    private func syncPersonaTablePositions() {
+        let positions = triviaImmersiveManager.tablePositions()
+        for (tableNumber, position) in positions {
+            personaManager.setTablePosition(position, for: tableNumber)
+            let seats = triviaImmersiveManager.seatPositions(for: tableNumber)
+            if !seats.isEmpty {
+                personaManager.setSeatPositions(seats, for: tableNumber)
+            }
+        }
+
+        let currentUserId = AppModel.shared.currentUserId
+        if !currentUserId.isEmpty,
+           let participant = hostedEventManager.participants.first(where: { $0.userId == currentUserId }),
+           let tableNumber = participant.tableNumber,
+           let seatIndex = participant.seatIndex,
+           let seatPosition = triviaImmersiveManager.seatPosition(for: tableNumber, seatIndex: seatIndex) {
+            personaManager.setCurrentUserPosition(seatPosition)
+        }
+    }
+
     // MARK: - RealityKit Setup
 
-    private func setupTriviaSpace(_ content: RealityViewContent) {
-        guard !isInitialized else { return }
+    private func setupBaseEnvironment(_ content: RealityViewContent) {
+        guard !baseSceneLoaded else { return }
+        guard immersiveRoot == nil else { return }
 
         Task {
-            // Load base environment
             do {
                 let triviaScene = try await Entity(named: "TriviaSpace", in: realityKitContentBundle)
                 await MainActor.run {
                     content.add(triviaScene)
-                    print("✅ Loaded trivia space scene")
+                    print("✅ Loaded trivia base scene")
                 }
             } catch {
-                print("❌ Failed to load trivia space: \(error)")
+                print("❌ Failed to load trivia base scene: \(error)")
             }
 
-            // Setup lighting
             await MainActor.run {
                 setupLighting(content)
+                baseSceneLoaded = true
             }
+        }
+    }
 
-            // Create table markers
-            await createTableMarkers(content)
-
-            await MainActor.run {
-                isInitialized = true
-            }
+    private func ensureImmersiveRoot(in content: RealityViewContent) {
+        guard let root = immersiveRoot, !immersiveRootAdded else { return }
+        content.add(root)
+        immersiveRootAdded = true
+        print("✅ Added trivia immersive root to scene")
+        Task { @MainActor in
+            syncPersonaTablePositions()
         }
     }
 
@@ -203,7 +292,7 @@ struct TriviaSpaceView: View {
         let directionalLight = DirectionalLight()
         directionalLight.light.color = .white
         directionalLight.light.intensity = 1000
-        directionalLight.orientation = simd_quatf(angle: .pi/4, axis: [1, 0, 0])
+        directionalLight.orientation = simd_quatf(angle: .pi / 4, axis: [1, 0, 0])
         content.add(directionalLight)
 
         // Point light for better illumination
@@ -212,36 +301,6 @@ struct TriviaSpaceView: View {
         pointLight.light.intensity = 500
         pointLight.position = [0, 3, 0]
         content.add(pointLight)
-    }
-
-    private func createTableMarkers(_ content: RealityViewContent) async {
-        await MainActor.run {
-            for table in hostedEventManager.tables {
-                Task {
-                    let tableEntity = await createTableEntity(for: table)
-                    await MainActor.run {
-                        content.add(tableEntity)
-                    }
-                }
-            }
-        }
-    }
-
-    private func createTableEntity(for table: EventTable) async -> Entity {
-        let entity = Entity()
-
-        // Create table visual
-        let mesh = MeshResource.generateBox(size: [1.5, 0.1, 1.0])
-        let material = SimpleMaterial(color: .brown, isMetallic: false)
-        let modelComponent = ModelComponent(mesh: mesh, materials: [material])
-
-        entity.components.set(modelComponent)
-        entity.position = table.tablePosition.simd3
-
-        // Add hover component for interactivity
-        entity.components.set(HoverEffectComponent())
-
-        return entity
     }
 
     private func updatePersonaPositions(_ content: RealityViewContent) {
@@ -261,21 +320,59 @@ struct TriviaSpaceView: View {
     private func initializeSpace() async {
         print("🎮 Initializing trivia space...")
 
-        // Wait for event to be loaded
-        guard hostedEventManager.currentEvent != nil else {
-            print("⚠️ No current event - waiting...")
+        guard let event = await waitForCurrentEvent() else {
+            print("⚠️ No current event available for trivia space")
             return
         }
 
-        // Setup Firebase listeners
-        setupFirebaseListeners()
-
-        // Mark as connected
-        await MainActor.run {
-            isConnected = true
+        if immersiveRoot == nil {
+            let tableNumber = currentUserTableNumber(for: event)
+            let rootEntity = await triviaImmersiveManager.setupImmersiveExperience(
+                for: event,
+                tableNumber: tableNumber
+            )
+            await MainActor.run {
+                immersiveRoot = rootEntity
+                immersiveRootAdded = false
+                isConnected = true
+                syncPersonaTablePositions()
+            }
+        } else {
+            await MainActor.run {
+                isConnected = true
+                syncPersonaTablePositions()
+            }
         }
 
+        setupFirebaseListeners()
+
         print("✅ Trivia space initialized")
+    }
+
+    private func waitForCurrentEvent() async -> CalendarEvent? {
+        for _ in 0..<25 {
+            if let event = hostedEventManager.currentEvent {
+                return event
+            }
+            try? await Task.sleep(for: .milliseconds(200))
+        }
+        return hostedEventManager.currentEvent
+    }
+
+    private func currentUserTableNumber(for event: CalendarEvent) -> Int? {
+        let currentUserId = AppModel.shared.currentUserId
+        guard !currentUserId.isEmpty else { return nil }
+
+        if let participant = hostedEventManager.participants.first(where: { $0.userId == currentUserId }),
+           let tableNumber = participant.tableNumber {
+            return tableNumber
+        }
+
+        if let table = hostedEventManager.tables.first(where: { $0.participants.contains(currentUserId) }) {
+            return table.tableNumber
+        }
+
+        return nil
     }
 
     private func setupFirebaseListeners() {
@@ -292,6 +389,13 @@ struct TriviaSpaceView: View {
 
         // Cleanup
         await hostedEventManager.cleanupAudioRooms()
+        await MainActor.run {
+            immersiveRootAdded = false
+            immersiveRoot = nil
+            triviaImmersiveManager.teardownImmersiveExperience()
+            isConnected = false
+            personaManager.setCurrentUserPosition(nil)
+        }
 
         // Dismiss immersive space
         await dismissImmersiveSpace()
@@ -432,8 +536,9 @@ struct TableRow: View {
 struct TriviaSpaceView_Previews: PreviewProvider {
     static var previews: some View {
         TriviaSpaceView()
-            .environmentObject(PersonaTableManager())
             .environmentObject(HostedEventManager.shared)
+            .environmentObject(TriviaGameManager.shared)
+            .environmentObject(TriviaImmersiveManager())
     }
 }
 #endif

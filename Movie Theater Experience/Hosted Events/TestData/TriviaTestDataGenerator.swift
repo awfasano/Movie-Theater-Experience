@@ -66,9 +66,11 @@ public class TriviaTestDataGenerator {
             layoutType: .circular
         )
 
+        let enhancedGame = EnhancedTriviaTestData.createTestGame()
+
         let gameConfig = GameConfiguration(
-            triviaGameId: "test-trivia-game-001",
-            totalRounds: 3,
+            triviaGameId: enhancedGame.id,
+            totalRounds: EnhancedTriviaTestData.testRounds.count,
             pointsPerQuestion: 10,
             questionTimeLimit: 30
         )
@@ -171,19 +173,21 @@ public class TriviaTestDataGenerator {
 
         print("📚 [TestData] Creating trivia game...")
 
-        let rounds = createTestRounds(count: gameConfig.totalRounds)
-        let totalQuestions = rounds.reduce(0) { $0 + $1.questions.count }
+        var game = EnhancedTriviaTestData.createTestGame()
 
-        let game = TriviaGame(
-            id: gameConfig.triviaGameId,
-            title: "General Knowledge Trivia",
-            description: "A mix of history, science, pop culture, and more!",
-            rounds: rounds,
-            totalQuestions: totalQuestions,
-            createdBy: "Test Data Generator",
-            createdAt: Date(),
-            currentQuestionIndex: 0
-        )
+        let configuredId = gameConfig.triviaGameId
+        if configuredId != game.id {
+            game = TriviaGame(
+                id: configuredId,
+                title: game.title,
+                description: game.description,
+                rounds: game.rounds,
+                totalQuestions: game.rounds.reduce(0) { $0 + $1.questions.count },
+                createdBy: game.createdBy,
+                createdAt: game.createdAt,
+                currentQuestionIndex: game.currentQuestionIndex
+            )
+        }
 
         do {
             try await db.collection("TriviaGames")
@@ -193,70 +197,6 @@ public class TriviaTestDataGenerator {
         } catch {
             print("❌ [TestData] Failed to create trivia game: \(error)")
         }
-    }
-
-    private func createTestRounds(count: Int) -> [TriviaRound] {
-        var rounds: [TriviaRound] = []
-
-        for roundNum in 1...count {
-            let round = TriviaRound(
-                roundNumber: roundNum,
-                title: "Round \(roundNum)",
-                questions: createTestQuestions(for: roundNum),
-                theme: roundNum == 1 ? "General Knowledge" : (roundNum == 2 ? "Science & Nature" : "Pop Culture"),
-                bonusPoints: roundNum == count ? 5 : nil
-            )
-            rounds.append(round)
-        }
-
-        return rounds
-    }
-
-    private func createTestQuestions(for round: Int) -> [TriviaQuestion] {
-        let questionsData: [[String: Any]] = [
-            [
-                "text": "What is the capital of France?",
-                "options": ["London", "Paris", "Berlin", "Madrid"],
-                "correct": 1
-            ],
-            [
-                "text": "How many planets are in our solar system?",
-                "options": ["7", "8", "9", "10"],
-                "correct": 1
-            ],
-            [
-                "text": "Who painted the Mona Lisa?",
-                "options": ["Van Gogh", "Picasso", "Da Vinci", "Monet"],
-                "correct": 2
-            ],
-            [
-                "text": "What year did World War II end?",
-                "options": ["1943", "1944", "1945", "1946"],
-                "correct": 2
-            ],
-            [
-                "text": "What is the largest ocean on Earth?",
-                "options": ["Atlantic", "Indian", "Arctic", "Pacific"],
-                "correct": 3
-            ]
-        ]
-
-        var questions: [TriviaQuestion] = []
-
-        for (index, data) in questionsData.enumerated() {
-            let question = TriviaQuestion(
-                id: "r\(round)q\(index + 1)",
-                questionText: data["text"] as! String,
-                options: data["options"] as! [String],
-                correctAnswer: data["correct"] as! Int,
-                points: 10,
-                timeLimit: 30,
-                round: round
-            )
-            questions.append(question)
-        }
-
-        return questions
     }
 
     // MARK: - Quick Test Methods
@@ -277,6 +217,7 @@ public class TriviaTestDataGenerator {
             event.id = eventRef.documentID
 
             await createTestTables(for: event, in: eventRef)
+            await createTestTriviaGame(for: event)
 
             events.append(event)
             print("✅ [TestData] Created event \(i + 1)/\(count)")

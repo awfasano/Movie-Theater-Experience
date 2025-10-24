@@ -186,88 +186,20 @@ class FirebaseTestDataSetup {
     }
     
     private func createTriviaGame() async {
-        print("Creating trivia game...")
-        
-        let questions1 = [
-            TriviaQuestion(
-                id: "question1",
-                questionText: "What is the capital of France?",
-                options: ["London", "Berlin", "Paris", "Madrid"],
-                correctAnswer: 2,
-                points: 10,
-                timeLimit: 30,
-                category: "Geography",
-                round: 1
-            ),
-            TriviaQuestion(
-                id: "question2",
-                questionText: "Which planet is known as the Red Planet?",
-                options: ["Mars", "Jupiter", "Saturn", "Venus"],
-                correctAnswer: 0,
-                points: 15,
-                timeLimit: 25,
-                category: "Science",
-                round: 1
-            )
-        ]
-        
-        let questions2 = [
-            TriviaQuestion(
-                id: "question3",
-                questionText: "Who directed the movie 'Jaws'?",
-                options: ["Steven Spielberg", "Martin Scorsese", "Alfred Hitchcock", "Stanley Kubrick"],
-                correctAnswer: 0,
-                points: 20,
-                timeLimit: 35,
-                category: "Movies",
-                round: 2
-            ),
-            TriviaQuestion(
-                id: "question4",
-                questionText: "Which Harry Potter book features the Triwizard Tournament?",
-                options: ["Philosopher's Stone", "Chamber of Secrets", "Prisoner of Azkaban", "Goblet of Fire"],
-                correctAnswer: 3,
-                points: 25,
-                timeLimit: 40,
-                category: "Literature",
-                round: 2
-            )
-        ]
-        
-        let rounds = [
-            TriviaRound(
-                roundNumber: 1,
-                title: "Warm-up Round",
-                questions: questions1,
-                theme: "General Knowledge",
-                bonusPoints: 5
-            ),
-            TriviaRound(
-                roundNumber: 2,
-                title: "Challenge Round",
-                questions: questions2,
-                theme: "Movies & Entertainment",
-                bonusPoints: 10
-            )
-        ]
-        
-        let triviaGame = TriviaGame(
-            id: "friday-night-trivia",
-            title: "Friday Night General Knowledge",
-            description: "A fun mix of general knowledge questions for everyone!",
-            rounds: rounds,
-            totalQuestions: 4,
-            createdBy: "host001",
-            createdAt: Date(),
-            currentQuestionIndex: 2
-        )
+        print("Creating trivia game using EnhancedTriviaTestData...")
+
+        // Use the enhanced test data
+        let triviaGame = EnhancedTriviaTestData.createTestGame()
         
         do {
             try await db.collection("TriviaGames")
-                .document("friday-night-trivia")
+                .document(triviaGame.id)
                 .setData(from: triviaGame)
-            
-            print("✅ Created trivia game")
+
+            print("✅ Created enhanced trivia game: \(triviaGame.title)")
+            print("   - \(triviaGame.rounds.count) rounds")
+            print("   - \(triviaGame.totalQuestions) total questions")
+            print("   - Total possible points: \(triviaGame.totalPossiblePoints)")
         } catch {
             print("❌ Error creating trivia game: \(error)")
         }

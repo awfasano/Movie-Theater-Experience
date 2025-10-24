@@ -16,12 +16,12 @@ struct EnhancedEventView: View {
         VStack(spacing: 12) {
             eventHeader
             eventTypeBadge
-            
+
             if event.isHostedEvent {
                 capacitySection
                 sharePlayStatusIndicator
             }
-            
+
             joinButton
         }
         .padding()
@@ -32,6 +32,9 @@ struct EnhancedEventView: View {
             PersonaTableSelectionView(event: event)
                 .environmentObject(hostedEventManager)
         }
+        .onChange(of: showingTableSelection) { oldValue, newValue in
+            print("🔵 Sheet state changed: \(oldValue) -> \(newValue)")
+        }
     }
 
     private var eventHeader: some View {
@@ -40,7 +43,7 @@ struct EnhancedEventView: View {
                 .font(.headline)
                 .fontWeight(.semibold)
                 .foregroundColor(.primary)
-            
+
             Text(event.description)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -57,7 +60,7 @@ struct EnhancedEventView: View {
                 .clipShape(Capsule())
                 .font(.caption)
                 .foregroundColor(.blue)
-            
+
             Spacer()
         }
     }
@@ -67,18 +70,18 @@ struct EnhancedEventView: View {
             Text("\(event.currentParticipants)/\(event.maxParticipants) joined")
                 .font(.caption)
                 .foregroundColor(.secondary)
-            
+
             if event.isFull {
                 Text("• FULL")
                     .font(.caption)
                     .foregroundColor(.red)
                     .fontWeight(.medium)
             }
-            
+
             Spacer()
         }
     }
-    
+
     private var sharePlayStatusIndicator: some View {
         HStack(spacing: 6) {
             let isActive = hostedEventManager.currentEvent?.id == event.id
@@ -114,6 +117,13 @@ struct EnhancedEventView: View {
 
     private var joinButton: some View {
         Button(action: {
+            print("🔵 Join Event button tapped!")
+            print("🔵 Event title: \(event.title)")
+            print("🔵 Event canJoin: \(event.canJoin)")
+            print("🔵 Event status: \(event.status)")
+            print("🔵 Event isFull: \(event.isFull)")
+            print("🔵 Current participants: \(event.currentParticipants)/\(event.maxParticipants)")
+            print("🔵 Setting showingTableSelection to true")
             showingTableSelection = true
         }) {
             HStack(spacing: 8) {
@@ -133,8 +143,13 @@ struct EnhancedEventView: View {
             .cornerRadius(8)
         }
         .disabled(!event.canJoin)
+        .onAppear {
+            print("🔵 Join button appeared for event: \(event.title)")
+            print("🔵 Button disabled state: \(!event.canJoin)")
+            print("🔵 Event canJoin: \(event.canJoin), status: \(event.status), isFull: \(event.isFull)")
+        }
     }
-    
+
     private var buttonBackgroundColor: Color {
         if !event.canJoin {
             return .gray
@@ -160,7 +175,7 @@ struct EnhancedEventView_Previews: PreviewProvider {
             eventType: .hostedTrivia,
             status: .scheduled
         )
-        
+
         VStack(spacing: 20) {
             EnhancedEventView(event: sampleEvent)
             EnhancedEventView(event: sampleEvent)

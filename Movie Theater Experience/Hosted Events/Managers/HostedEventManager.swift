@@ -26,6 +26,7 @@ class HostedEventManager: ObservableObject {
     private var participantsListener: ListenerRegistration?
     private var tablesListener: ListenerRegistration?
     private var gameStateListener: ListenerRegistration?
+    private var eventListener: ListenerRegistration?
     
     private init() {}
     
@@ -86,14 +87,36 @@ class HostedEventManager: ObservableObject {
     
     // MARK: - Host Controls
     
+    func updateEventSpace(to spaceId: String) async -> Result<Void, HostedEventError> {
+        guard var event = currentEvent, let eventId = event.id else {
+            return .failure(.eventNotFound)
+        }
+
+        let trimmedId = spaceId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedId.isEmpty else {
+            return .failure(.unknown)
+        }
+        
+        do {
+            try await db.collection("Events").document(eventId).setData(["spaceId": trimmedId], merge: true)
+            event.spaceId = trimmedId
+            currentEvent = event
+            print("✅ [HostedEvent] Updated event space to '\(trimmedId)'")
+            return .success(())
+        } catch {
+            print("❌ [HostedEvent] Failed to update event space: \(error)")
+            return .failure(.unknown)
+        }
+    }
+    
     func triggerNotification(_ name: String) async {
         guard let event = currentEvent, let eventId = event.id else {
             print("⚠️ [HostedEvent] No current event for notification")
             return
         }
-        
+
         print("📢 [HostedEvent] Triggering notification: \(name)")
-        
+
         // Send via Firebase
         let messageData: [String: Any] = [
             "message": name,
@@ -101,14 +124,30 @@ class HostedEventManager: ObservableObject {
             "timestamp": Date(),
             "hostId": AppModel.shared.currentUserId
         ]
-        
+
         do {
-            try await db.collection("Events")
-                .document(eventId)
-                .collection("broadcasts")
-                .addDocument(data: messageData)
-            
+            // Add timeout to prevent indefinite hanging
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                group.addTask {
+                    try await self.db.collection("Events")
+                        .document(eventId)
+                        .collection("broadcasts")
+                        .addDocument(data: messageData)
+                }
+
+                group.addTask {
+                    try await Task.sleep(for: .seconds(3))
+                    throw HostedEventError.timeout
+                }
+
+                // Wait for first to complete
+                try await group.next()
+                group.cancelAll()
+            }
+
             print("✅ [HostedEvent] Notification sent to Firebase")
+        } catch is CancellationError {
+            print("✅ [HostedEvent] Notification sent (timeout prevented)")
         } catch {
             print("❌ [HostedEvent] Failed to send notification: \(error)")
         }
@@ -288,24 +327,91 @@ class HostedEventManager: ObservableObject {
         guard let event = currentEvent, let eventId = event.id else {
             return .failure(.eventNotFound)
         }
-        
+
         let dbEventRef = db.collection("Events").document(eventId)
         guard var state = gameState else {
             return .failure(.unknown)
         }
-        
+
         state.scores["\(tableNumber)", default: 0] += points
-        
+
         do {
             try await dbEventRef.collection("gameState").document("current").setData(from: state)
             gameState = state
-            
+
             print("✅ [HostedEvent] Awarded \(points) points to table \(tableNumber)")
             return .success(())
         } catch {
             print("❌ [HostedEvent] Award points error: \(error)")
             return .failure(.unknown)
         }
+    }
+
+    // MARK: - Answer Submission Management
+
+    func submitAnswer(tableNumber: Int, answer: String? = nil) async -> Result<Void, HostedEventError> {
+        guard let event = currentEvent, let eventId = event.id else {
+            return .failure(.eventNotFound)
+        }
+
+        let dbEventRef = db.collection("Events").document(eventId)
+        guard var state = gameState else {
+            return .failure(.unknown)
+        }
+
+        // Initialize submissions dict if needed
+        if state.submissions == nil {
+            state.submissions = [:]
+        }
+
+        // Create submission
+        let submission = AnswerSubmission(
+            tableNumber: tableNumber,
+            submittedAt: Date(),
+            locked: true,
+            answer: answer
+        )
+
+        state.submissions?["\(tableNumber)"] = submission
+
+        do {
+            try await dbEventRef.collection("gameState").document("current").setData(from: state)
+            gameState = state
+
+            print("✅ [HostedEvent] Table \(tableNumber) submitted answer")
+            return .success(())
+        } catch {
+            print("❌ [HostedEvent] Submit answer error: \(error)")
+            return .failure(.unknown)
+        }
+    }
+
+    func clearSubmissions() async -> Result<Void, HostedEventError> {
+        guard let event = currentEvent, let eventId = event.id else {
+            return .failure(.eventNotFound)
+        }
+
+        let dbEventRef = db.collection("Events").document(eventId)
+        guard var state = gameState else {
+            return .failure(.unknown)
+        }
+
+        state.submissions = [:]
+
+        do {
+            try await dbEventRef.collection("gameState").document("current").setData(from: state)
+            gameState = state
+
+            print("✅ [HostedEvent] Cleared all submissions")
+            return .success(())
+        } catch {
+            print("❌ [HostedEvent] Clear submissions error: \(error)")
+            return .failure(.unknown)
+        }
+    }
+
+    func getSubmissionStatus(for tableNumber: Int) -> AnswerSubmission? {
+        return gameState?.submissions?["\(tableNumber)"]
     }
     
     func endGame() async -> Result<Void, HostedEventError> {
@@ -598,6 +704,29 @@ class HostedEventManager: ObservableObject {
     private func startListeners(for eventId: String) {
         stopListeners()
         
+        eventListener = db.collection("Events").document(eventId).addSnapshotListener { [weak self] snapshot, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                print("❌ [HostedEvent] Event listener error: \(error)")
+                return
+            }
+            
+            guard let snapshot = snapshot, snapshot.exists else {
+                print("⚠️ [HostedEvent] Event document missing for id \(eventId)")
+                return
+            }
+            
+            do {
+                let updatedEvent = try snapshot.data(as: CalendarEvent.self)
+                Task { @MainActor in
+                    self.currentEvent = updatedEvent
+                }
+            } catch {
+                print("❌ [HostedEvent] Failed to decode event update: \(error)")
+            }
+        }
+        
         participantsListener = db.collection("Events").document(eventId).collection("participants").addSnapshotListener { [weak self] snapshot, error in
             guard let self = self else { return }
             guard let docs = snapshot?.documents else {
@@ -645,9 +774,11 @@ class HostedEventManager: ObservableObject {
     }
     
     private func stopListeners() {
+        eventListener?.remove()
         participantsListener?.remove()
         tablesListener?.remove()
         gameStateListener?.remove()
+        eventListener = nil
         participantsListener = nil
         tablesListener = nil
         gameStateListener = nil
@@ -723,6 +854,7 @@ enum HostedEventError: Error {
     case joinFailed
     case tableAssignmentFailed
     case insufficientPermissions
+    case timeout
     case unknown
 }
 
@@ -734,6 +866,14 @@ struct GameState: Codable {
     var scores: [String: Int]
     var currentQuestion: Int?
     var trigger: String?
+    var submissions: [String: AnswerSubmission]? // tableNumber -> submission
+}
+
+struct AnswerSubmission: Codable {
+    var tableNumber: Int
+    var submittedAt: Date
+    var locked: Bool
+    var answer: String? // Optional: store the actual answer if needed
 }
 
 enum GameStatus: String, Codable {

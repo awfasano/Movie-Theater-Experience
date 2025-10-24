@@ -32,10 +32,13 @@ class TriviaGameManager: ObservableObject {
             if let data = doc.data() {
                 currentGame = try Firestore.Decoder().decode(TriviaGame.self, from: data)
                 print("✅ Loaded trivia game: \(currentGame?.title ?? "Unknown")")
+                return
             }
         } catch {
             print("❌ Error loading trivia game: \(error)")
         }
+
+        loadFallbackGame(for: gameId)
     }
     
     @MainActor
@@ -204,5 +207,16 @@ class TriviaGameManager: ObservableObject {
         
         let totalQuestions = game.rounds.reduce(0) { $0 + $1.questions.count }
         return (game.currentQuestionIndex, totalQuestions)
+    }
+    
+    private func loadFallbackGame(for gameId: String) {
+        guard gameId == EnhancedTriviaTestData.testGameId else {
+            print("⚠️ No fallback trivia game available for id \(gameId)")
+            return
+        }
+        
+        let fallbackGame = EnhancedTriviaTestData.createTestGame()
+        currentGame = fallbackGame
+        print("ℹ️ Loaded fallback trivia game locally: \(fallbackGame.title)")
     }
 }

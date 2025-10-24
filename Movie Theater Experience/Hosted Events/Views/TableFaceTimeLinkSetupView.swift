@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct TableFaceTimeLinkSetupView: View {
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var hostedEventManager: HostedEventManager
     @State private var linkInputs: [Int: String] = [:]
     @State private var savingStates: [Int: Bool] = [:]
@@ -30,6 +31,13 @@ struct TableFaceTimeLinkSetupView: View {
             }
             .navigationTitle("FaceTime Setup")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
         }
         .onAppear {
             loadExistingLinks()
@@ -202,7 +210,14 @@ struct TableLinkCard: View {
             HStack {
                 Button("Open FaceTime") {
                     if let url = URL(string: "facetime://") {
-                        UIApplication.shared.open(url)
+                        Task {
+                            let success = await UIApplication.shared.open(url)
+                            if success {
+                                print("✅ Opened FaceTime app")
+                            } else {
+                                print("❌ Failed to open FaceTime app")
+                            }
+                        }
                     }
                 }
                 .buttonStyle(.bordered)

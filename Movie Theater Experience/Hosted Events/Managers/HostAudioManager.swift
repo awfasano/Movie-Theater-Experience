@@ -120,18 +120,14 @@ class HostAudioManager: ObservableObject {
                 return
             }
 
-            await MainActor.run {
-                UIApplication.shared.open(url) { success in
-                    Task { @MainActor in
-                        if success {
-                            self.currentConnectedRoom = roomCode
-                            self.updateRoomConnection(roomCode, connected: true)
-                            print("✅ [Host] Connected to room \(roomCode)")
-                        } else {
-                            print("❌ [Host] Failed to open FaceTime link")
-                        }
-                    }
-                }
+            let success = await UIApplication.shared.open(url)
+
+            if success {
+                currentConnectedRoom = roomCode
+                updateRoomConnection(roomCode, connected: true)
+                print("✅ [Host] Connected to room \(roomCode)")
+            } else {
+                print("❌ [Host] Failed to open FaceTime link")
             }
         } catch {
             print("❌ [Host] Error fetching FaceTime link: \(error)")

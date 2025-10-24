@@ -27,7 +27,15 @@ private struct EditableQuestion: Identifiable {
 
     // Conversion to your immutable TriviaQuestion model
     func toModel() -> TriviaQuestion {
-        TriviaQuestion(questionText: questionText, options: options, correctAnswer: correctAnswer, points: points, timeLimit: timeLimit)
+        TriviaQuestion(
+            questionText: questionText,
+            questionType: .multipleChoice,
+            options: options,
+            correctAnswer: correctAnswer,
+            points: points,
+            timeLimit: timeLimit,
+            mediaType: .none
+        )
     }
 }
 

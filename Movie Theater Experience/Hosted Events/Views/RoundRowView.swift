@@ -43,9 +43,9 @@ struct RoundRowView: View {
 
 #Preview {
     let sampleQuestions = [
-        TriviaQuestion(questionText: "What is the capital of France?", options: ["Paris", "London", "Berlin", "Madrid"], correctAnswer: 0, points: 10, timeLimit: 15),
-        TriviaQuestion(questionText: "Who directed 'Jaws'?", options: ["Spielberg", "Scorsese", "Hitchcock", "Kubrick"], correctAnswer: 0, points: 10, timeLimit: 20),
-        TriviaQuestion(questionText: "Which planet is known as the Red Planet?", options: ["Mars", "Jupiter", "Saturn", "Venus"], correctAnswer: 0, points: 10, timeLimit: 15)
+        TriviaQuestion(questionText: "What is the capital of France?", questionType: .multipleChoice, options: ["Paris", "London", "Berlin", "Madrid"], correctAnswer: 0, points: 10, timeLimit: 15, mediaType: .none),
+        TriviaQuestion(questionText: "Who directed 'Jaws'?", questionType: .multipleChoice, options: ["Spielberg", "Scorsese", "Hitchcock", "Kubrick"], correctAnswer: 0, points: 10, timeLimit: 20, mediaType: .none),
+        TriviaQuestion(questionText: "Which planet is known as the Red Planet?", questionType: .multipleChoice, options: ["Mars", "Jupiter", "Saturn", "Venus"], correctAnswer: 0, points: 10, timeLimit: 15, mediaType: .none)
     ]
     
     let sample = TriviaRound(roundNumber: 1, title: "General Knowledge", questions: sampleQuestions, theme: "Movies", bonusPoints: 5)

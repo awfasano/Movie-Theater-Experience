@@ -93,6 +93,33 @@ class SpaceService: ObservableObject {
             }
     }
     
+    // MARK: - Single Space Fetch
+    
+    @MainActor
+    func fetchSpace(withId id: String) async throws -> SpaceData {
+        if let existing = spaces.first(where: { $0.id == id }) {
+            return existing
+        }
+        
+        let snapshot = try await db.collection("Spaces").document(id).getDocument()
+        guard snapshot.exists else {
+            throw SpaceServiceError.spaceNotFound
+        }
+        
+        var space = try snapshot.data(as: SpaceData.self)
+        if space.id == nil {
+            space.id = snapshot.documentID
+        }
+        
+        if let index = spaces.firstIndex(where: { $0.id == id }) {
+            spaces[index] = space
+        } else {
+            spaces.append(space)
+        }
+        
+        return space
+    }
+    
     func fetchUsersInSpace(spaceId: String) async {
         let usersRef = db.collection("Spaces").document(spaceId).collection("activeUsers")
         do {
@@ -538,6 +565,7 @@ enum SpaceServiceError: Error {
     case invalidURL
     case noData
     case loadingFailed
+    case spaceNotFound
 }
 
 extension SpaceServiceError: LocalizedError {
@@ -549,6 +577,8 @@ extension SpaceServiceError: LocalizedError {
             return "No data received from server"
         case .loadingFailed:
             return "Failed to load 3D content"
+        case .spaceNotFound:
+            return "The requested space could not be found."
         }
     }
 }

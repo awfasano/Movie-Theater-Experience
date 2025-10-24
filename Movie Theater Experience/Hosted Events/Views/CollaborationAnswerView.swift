@@ -257,10 +257,12 @@ struct CollaborativeAnswerView_Previews: PreviewProvider {
     static var previews: some View {
         let sampleQuestion = TriviaQuestion(
             questionText: "What is the capital of France?",
+            questionType: .multipleChoice,
             options: ["London", "Berlin", "Paris", "Madrid"],
             correctAnswer: 2,
             points: 10,
-            timeLimit: 30
+            timeLimit: 30,
+            mediaType: .none
         )
         
         CollaborativeAnswerView(

@@ -9,7 +9,7 @@ import FirebaseFirestore
 import simd
 
 // MARK: - Helper struct to avoid SIMD encoding issues
-struct Position3D: Codable {
+struct Position3D: Codable, Equatable {
     var x: Float
     var y: Float
     var z: Float
@@ -26,7 +26,7 @@ struct Position3D: Codable {
 }
 
 // MARK: - Fixed EventTable
-public struct EventTable: Identifiable, Codable {
+public struct EventTable: Identifiable, Codable, Equatable {
     @DocumentID public var id: String?
     let tableNumber: Int
     var tableName: String?

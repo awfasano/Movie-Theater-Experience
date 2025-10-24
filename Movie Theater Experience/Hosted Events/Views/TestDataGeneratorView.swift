@@ -12,6 +12,7 @@ struct TestDataGeneratorView: View {
     @State private var isGenerating = false
     @State private var generationMessage = ""
     @State private var lastCreatedEvent: CalendarEvent?
+    var onComplete: (() -> Void)? = nil
 
     var body: some View {
         NavigationStack {
@@ -174,6 +175,7 @@ struct TestDataGeneratorView: View {
             await MainActor.run {
                 lastCreatedEvent = event
                 generationMessage = "✅ Event created successfully!"
+                onComplete?()
             }
 
             // Clear message after 3 seconds
@@ -202,6 +204,7 @@ struct TestDataGeneratorView: View {
             await MainActor.run {
                 lastCreatedEvent = events.first
                 generationMessage = "✅ Created \(events.count) events successfully!"
+                onComplete?()
             }
 
             try? await Task.sleep(for: .seconds(3))
@@ -229,6 +232,7 @@ struct TestDataGeneratorView: View {
             await MainActor.run {
                 lastCreatedEvent = nil
                 generationMessage = "✅ All test events deleted"
+                onComplete?()
             }
 
             try? await Task.sleep(for: .seconds(2))

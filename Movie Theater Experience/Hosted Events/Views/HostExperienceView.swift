@@ -10,15 +10,28 @@ import SwiftUI
 struct HostExperienceView: View {
     let event: CalendarEvent
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openWindow) private var openWindow
+    @Environment(\.openImmersiveSpace) private var openImmersiveSpace
+    @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
+    @Environment(AppModel.self) private var appModel
     @EnvironmentObject private var hostedEventManager: HostedEventManager
+    @EnvironmentObject private var triviaGameManager: TriviaGameManager
+    @ObservedObject private var spaceService = SpaceService.shared
 
     @State private var selectedTab: HostTab = .overview
     @State private var showFaceTimeSetup = false
+    @State private var showImmersiveError = false
+    @State private var immersiveErrorMessage = ""
+    @State private var immersiveOperationInProgress = false
+    @State private var isUpdatingSpaceSelection = false
+    @State private var spaceSelectionInFlightId: String?
+    @State private var spaceSelectionError: String?
 
     enum HostTab: String, CaseIterable {
         case overview = "Overview"
         case tables = "Tables"
         case game = "Game"
+        case chat = "Chat"
         case settings = "Settings"
 
         var icon: String {
@@ -26,6 +39,7 @@ struct HostExperienceView: View {
             case .overview: return "chart.bar.fill"
             case .tables: return "table.furniture.fill"
             case .game: return "gamecontroller.fill"
+            case .chat: return "bubble.left.and.bubble.right.fill"
             case .settings: return "gear"
             }
         }
@@ -45,20 +59,37 @@ struct HostExperienceView: View {
                 .padding()
 
                 // Content
-                ScrollView {
-                    Group {
-                        switch selectedTab {
-                        case .overview:
+                Group {
+                    switch selectedTab {
+                    case .overview:
+                        ScrollView {
                             overviewTab
-                        case .tables:
+                                .padding()
+                        }
+                    case .tables:
+                        ScrollView {
                             tablesTab
-                        case .game:
+                                .padding()
+                        }
+                    case .game:
+                        ScrollView {
                             gameTab
-                        case .settings:
+                                .padding()
+                        }
+                    case .chat:
+                        if let eventId = hostedEventManager.currentEvent?.id {
+                            EventMessagingView(eventId: eventId)
+                                .environmentObject(hostedEventManager)
+                        } else {
+                            Text("Event not loaded")
+                                .foregroundColor(.secondary)
+                        }
+                    case .settings:
+                        ScrollView {
                             settingsTab
+                                .padding()
                         }
                     }
-                    .padding()
                 }
             }
             .navigationTitle("Host Control Panel")
@@ -74,6 +105,11 @@ struct HostExperienceView: View {
                 TableFaceTimeLinkSetupView()
                     .environmentObject(hostedEventManager)
             }
+            .alert("Unable to update immersive space", isPresented: $showImmersiveError, actions: {
+                Button("OK", role: .cancel) {}
+            }, message: {
+                Text(immersiveErrorMessage)
+            })
         }
     }
 
@@ -253,7 +289,27 @@ struct HostExperienceView: View {
 
     private var gameTab: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Game Controls")
+            // Open Full Host Controls Button
+            Button {
+                openWindow(id: "hostControls")
+            } label: {
+                HStack {
+                    Image(systemName: "macwindow.badge.plus")
+                    Text("Open Full Host Controls Window")
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                }
+                .font(.headline)
+                .padding()
+                .background(.blue.opacity(0.1))
+                .foregroundColor(.blue)
+                .cornerRadius(12)
+            }
+            .buttonStyle(.plain)
+
+            Divider()
+
+            Text("Quick Game Controls")
                 .font(.headline)
 
             if let gameState = hostedEventManager.gameState {
@@ -346,7 +402,14 @@ struct HostExperienceView: View {
 
             Button {
                 Task {
-                    await hostedEventManager.startGame()
+                    // Start the game
+                    let result = await hostedEventManager.startGame()
+
+                    // Load trivia game
+                    if case .success = result,
+                       let gameId = event.gameConfig?.triviaGameId {
+                        await triviaGameManager.loadTriviaGame(gameId)
+                    }
                 }
             } label: {
                 HStack {
@@ -365,6 +428,24 @@ struct HostExperienceView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Settings")
                 .font(.headline)
+
+            spaceSelectionSection
+
+            if let error = spaceSelectionError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundColor(.red)
+            }
+
+            if isUpdatingSpaceSelection {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Updating immersive space…")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
 
             VStack(spacing: 12) {
                 Button {
@@ -391,6 +472,35 @@ struct HostExperienceView: View {
                 }
                 .buttonStyle(.bordered)
 
+                Button {
+                    Task { await enterImmersiveSpace() }
+                } label: {
+                    HStack {
+                        Image(systemName: "visionpro.fill")
+                        Text("Enter Immersive Space")
+                        Spacer()
+                        if immersiveOperationInProgress {
+                            ProgressView()
+                        } else {
+                            Image(systemName: "chevron.right")
+                        }
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(immersiveOperationInProgress)
+
+                Button {
+                    Task { await exitImmersiveSpace() }
+                } label: {
+                    HStack {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                        Text("Exit Immersive Space")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                    }
+                }
+                .buttonStyle(.bordered)
+
                 Divider()
 
                 Button(role: .destructive) {
@@ -406,6 +516,21 @@ struct HostExperienceView: View {
                     }
                 }
                 .buttonStyle(.bordered)
+            }
+        }
+        .onAppear {
+            if spaceService.spaces.isEmpty {
+                spaceService.fetchSpaces()
+            }
+            
+            Task {
+                let needsSpaceBar = await MainActor.run {
+                    !(spaceService.spaces.contains { trimmedOrNil($0.id) == "space bar" })
+                }
+                
+                if needsSpaceBar {
+                    try? await SpaceService.shared.fetchSpace(withId: "space bar")
+                }
             }
         }
     }
@@ -464,13 +589,52 @@ struct HostTableCard: View {
                     .foregroundColor(.blue)
             }
 
-            if table.faceTimeLinkURL != nil {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text("FaceTime link configured")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+            if let faceTimeURL = table.faceTimeLinkURL {
+                VStack(spacing: 8) {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text("FaceTime configured")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+
+                    HStack(spacing: 8) {
+                        // Join as Host button
+                        Button {
+                            if let url = URL(string: faceTimeURL) {
+                                Task {
+                                    let success = await UIApplication.shared.open(url)
+                                    if success {
+                                        print("✅ [Host] Joined table \(table.tableNumber) FaceTime call")
+                                    } else {
+                                        print("❌ [Host] Failed to open FaceTime link")
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                Image(systemName: "video.fill")
+                                Text("Join as Host")
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+
+                        // Copy Link button
+                        Button {
+                            #if os(iOS)
+                            UIPasteboard.general.string = faceTimeURL
+                            #endif
+                            print("📋 [Host] Copied FaceTime link for table \(table.tableNumber)")
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
                 }
             } else {
                 HStack {
@@ -503,3 +667,286 @@ struct HostExperienceView_Previews: PreviewProvider {
     }
 }
 #endif
+
+// MARK: - Immersive helpers
+
+extension HostExperienceView {
+    private var spaceSelectionSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Immersive Space")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            Text("Choose the immersive environment for this event. Participants will join the selected space.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            if let name = currentSpaceDisplayName {
+                Text("Currently selected: \(name)")
+                    .font(.caption)
+                    .foregroundColor(.green)
+            }
+
+            if featuredSpaces.isEmpty {
+                Text(spaceService.spaces.isEmpty ? "Loading spaces…" : "No immersive spaces available.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 8)
+            } else {
+                LazyVStack(spacing: 8) {
+                    ForEach(Array(featuredSpaces.enumerated()), id: \.offset) { item in
+                        let space = item.element
+                        let spaceId = trimmedOrNil(space.id) ?? ""
+                        let isActive = currentSpaceId == spaceId
+
+                        Button {
+                            if !isActive, !spaceId.isEmpty {
+                                selectSpace(spaceId)
+                            }
+                        } label: {
+                            HStack(alignment: .top, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(space.spaceName)
+                                        .font(.headline)
+                                    Text(space.description)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(2)
+                                }
+                                Spacer()
+                                if isActive {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                } else if isUpdatingSpaceSelection,
+                                          spaceSelectionInFlightId == spaceId {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    Image(systemName: "chevron.right")
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(isActive ? Color.blue.opacity(0.12) : Color.gray.opacity(0.06))
+                            .cornerRadius(12)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(spaceId.isEmpty || isUpdatingSpaceSelection)
+                    }
+                }
+            }
+
+            Divider()
+                .padding(.top, 4)
+        }
+    }
+
+    private var featuredSpaces: [SpaceData] {
+        let preferredIds = ["space bar", "space lounge", "space plaza"]
+        let spaces = spaceService.spaces.filter { trimmedOrNil($0.id) != nil }
+
+        var ordered: [SpaceData] = []
+
+        for id in preferredIds {
+            if let match = spaces.first(where: { $0.id == id }), !ordered.contains(match) {
+                ordered.append(match)
+            }
+        }
+
+        for space in spaces where !ordered.contains(space) {
+            ordered.append(space)
+        }
+
+        return Array(ordered.prefix(3))
+    }
+
+    private var currentSpaceId: String? {
+        if let active = trimmedOrNil(hostedEventManager.currentEvent?.spaceId) {
+            return active
+        }
+        return trimmedOrNil(event.spaceId)
+    }
+    
+    private var currentSpaceDisplayName: String? {
+        guard let currentId = currentSpaceId else { return nil }
+        if let match = spaceService.spaces.first(where: { trimmedOrNil($0.id) == currentId }) {
+            return match.spaceName
+        }
+        return nil
+    }
+
+    private func selectSpace(_ spaceId: String) {
+        if isUpdatingSpaceSelection || spaceId.isEmpty {
+            return
+        }
+
+        Task {
+            await MainActor.run {
+                isUpdatingSpaceSelection = true
+                spaceSelectionError = nil
+                spaceSelectionInFlightId = spaceId
+            }
+
+            let result = await hostedEventManager.updateEventSpace(to: spaceId)
+
+            await MainActor.run {
+                isUpdatingSpaceSelection = false
+                spaceSelectionInFlightId = nil
+
+                switch result {
+                case .success:
+                    spaceSelectionError = nil
+                case .failure(let error):
+                    spaceSelectionError = hostedEventErrorDescription(error)
+                }
+            }
+        }
+    }
+
+    private func hostedEventErrorDescription(_ error: HostedEventError) -> String {
+        switch error {
+        case .eventNotFound:
+            return "Event could not be found."
+        case .joinFailed:
+            return "You do not have permission to change the immersive space."
+        case .tableAssignmentFailed:
+            return "Unable to update the immersive space right now."
+        case .insufficientPermissions:
+            return "Insufficient permissions to update the immersive space."
+        case .timeout:
+            return "Timed out while updating the immersive space."
+        case .unknown:
+            fallthrough
+        @unknown default:
+            return "An unknown error occurred when updating the immersive space."
+        }
+    }
+
+    private func trimmedOrNil(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty else {
+            return nil
+        }
+        return trimmed
+    }
+
+    private func enterImmersiveSpace() async {
+        await MainActor.run { immersiveOperationInProgress = true }
+        
+        do {
+            let (space, resolvedSpaceId) = try await loadTriviaSpace()
+            await MainActor.run {
+                appModel.selectedSpace = space
+                appModel.currentActiveSpace = resolvedSpaceId
+            }
+            
+            let canOpen = await appModel.switchToSpace(appModel.spacesID)
+            guard canOpen else {
+                throw ImmersiveLaunchError.transitionFailed
+            }
+            
+            let result = await openImmersiveSpace(id: appModel.spacesID)
+            await MainActor.run {
+                immersiveOperationInProgress = false
+                let didOpen = handleImmersiveOpenResult(result, resolvedSpaceId: resolvedSpaceId)
+                if didOpen {
+                    openHostControlsForEventIfNeeded()
+                }
+            }
+        } catch {
+            await MainActor.run {
+                immersiveOperationInProgress = false
+                immersiveErrorMessage = immersiveLaunchMessage(for: error)
+                showImmersiveError = true
+                appModel.currentActiveSpace = nil
+                appModel.selectedSpace = nil
+            }
+        }
+    }
+
+    private func exitImmersiveSpace() async {
+        await dismissImmersiveSpace()
+        await MainActor.run {
+            appModel.currentActiveSpace = nil
+            appModel.selectedSpace = nil
+        }
+    }
+
+    private func handleImmersiveOpenResult(_ result: OpenImmersiveSpaceAction.Result, resolvedSpaceId: String) -> Bool {
+        switch result {
+        case .opened:
+            print("✅ [Host] Opened immersive space '\(resolvedSpaceId)'")
+            return true
+        case .error:
+            immersiveErrorMessage = "Unable to open immersive space '\(resolvedSpaceId)'."
+            showImmersiveError = true
+            appModel.currentActiveSpace = nil
+            appModel.selectedSpace = nil
+            return false
+        @unknown default:
+            immersiveErrorMessage = "Unknown response when opening immersive space '\(resolvedSpaceId)'."
+            showImmersiveError = true
+            appModel.currentActiveSpace = nil
+            appModel.selectedSpace = nil
+            return false
+        }
+    }
+
+    private func loadTriviaSpace() async throws -> (SpaceData, String) {
+        let fallbackSpaceId = "space bar"
+        let trimmedEventSpaceId = (hostedEventManager.currentEvent?.spaceId ?? event.spaceId)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let targetId = trimmedEventSpaceId, !targetId.isEmpty {
+            do {
+                let space = try await SpaceService.shared.fetchSpace(withId: targetId)
+                return (space, space.id ?? targetId)
+            } catch {
+                print("⚠️ [Host] Failed to load event-specific space '\(targetId)': \(error)")
+                // Fall back to shared "space bar"
+            }
+        }
+
+        do {
+            let fallbackSpace = try await SpaceService.shared.fetchSpace(withId: fallbackSpaceId)
+            return (fallbackSpace, fallbackSpace.id ?? fallbackSpaceId)
+        } catch {
+            print("❌ [Host] Failed to load fallback space '\(fallbackSpaceId)': \(error)")
+            throw ImmersiveLaunchError.spaceUnavailable
+        }
+    }
+
+    private func immersiveLaunchMessage(for error: Error) -> String {
+        if let launchError = error as? ImmersiveLaunchError {
+            return launchError.localizedDescription
+        } else if let serviceError = error as? SpaceServiceError {
+            return serviceError.localizedDescription
+        } else {
+            return error.localizedDescription
+        }
+    }
+
+    private enum ImmersiveLaunchError: LocalizedError {
+        case transitionFailed
+        case spaceUnavailable
+
+        var errorDescription: String? {
+            switch self {
+            case .transitionFailed:
+                return "Unable to open the immersive experience because another space is still active."
+            case .spaceUnavailable:
+                return "Unable to load the immersive space assets right now. Please try again."
+            }
+        }
+    }
+
+    private func openHostControlsForEventIfNeeded() {
+        let activeEvent = hostedEventManager.currentEvent ?? event
+        guard activeEvent.isHostedEvent else {
+            return
+        }
+
+        openWindow(id: "hostControls")
+    }
+}
