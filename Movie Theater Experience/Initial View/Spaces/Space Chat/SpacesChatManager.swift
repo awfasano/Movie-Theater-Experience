@@ -221,7 +221,7 @@ class SpacesChatManager: ObservableObject {
             return
         }
         
-        let appModel = AppModel.shared
+        let appModel = AppModel.current
         print("DEBUG: Incoming senderId: \(senderId), Local userId: \(appModel.currentUser.id)") // DETAILED LOGGING
         guard senderId != appModel.currentUser.id else {
             print("Skipping own emoji event")

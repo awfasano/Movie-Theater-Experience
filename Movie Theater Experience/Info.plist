@@ -16,5 +16,7 @@
 		<key>UISceneConfigurations</key>
 		<dict/>
 	</dict>
+	<key>NSHandsTrackingUsageDescription</key>
+	<string>We use hand tracking so you can draw and erase volumetric strokes in the shared 3D experience.</string>
 </dict>
 </plist>

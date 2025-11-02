@@ -28,7 +28,7 @@ class SpaceService: ObservableObject {
     private var heartbeatTimers: [String: Timer] = [:]
     private var entityCache: [String: Entity] = [:]
     
-    private let appModel = AppModel.shared
+    private let appModel = AppModel.current
     
     
     private init() {

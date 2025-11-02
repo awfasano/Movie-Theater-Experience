@@ -16,6 +16,7 @@ struct SpacesView: View {
 
     // MARK: - Properties
     @StateObject private var spaceService = SpaceService.shared
+    @EnvironmentObject private var drawingViewModel: SpaceDrawingViewModel
     @EnvironmentObject private var entityWrapper: SpacesEntityWrapper // NEW
     @Environment(\.realityKitScene) private var realityKitScene
     //@EnvironmentObject var audioLoader: SpatialAudioLoader
@@ -79,6 +80,14 @@ struct SpacesView: View {
             mainRealityView
                 .overlay(sharePlayParticipantManager) // Attach manager here
 
+            // Drawing canvas overlay
+            VStack {
+                Spacer()
+                SpaceDrawingCanvasView(viewModel: drawingViewModel)
+                    .frame(maxWidth: 1500, maxHeight: 1500)
+                    .padding(.bottom, 72)
+            }
+
             // Loading and error overlays
             overlayViews
 
@@ -105,6 +114,9 @@ struct SpacesView: View {
             } else {
                 print("SharePlay: Session ended.")
             }
+        }
+        .onChange(of: selectedSpace?.id) { _, _ in
+            drawingViewModel.activateSpace(selectedSpace)
         }
         .onChange(of: entityWrapper.getSpaceEntity()?.id) { oldId, newId in
             handleEntityIdChangeForNotification(oldId: oldId, newId: newId)
@@ -497,6 +509,7 @@ struct SpacesView: View {
         // Add the main anchor to the scene
         content.add(anchorEntity)
         anchorEntity.addChild(userRotationEntity)
+        drawingViewModel.configureSceneRoot(userRotationEntity)
         
         // Set the anchor at world origin initially
         anchorEntity.position = SIMD3<Float>(0, 0, 0)
@@ -624,6 +637,7 @@ struct SpacesView: View {
                     
                     self.entityWrapper.setSpaceEntity(entity)
                     self.entityWrapper.setActiveSceneEntity(entity)
+                    self.drawingViewModel.activateSpace(space)
                     
                     ensureEntityIsParented(entity)
                     
@@ -907,6 +921,7 @@ struct SpacesView: View {
         // 1. Reset AppModel state
         appModel.currentActiveSpace = nil
         
+        drawingViewModel.cleanup()
         // 2. Clean up RealityKit content (Stop audio, remove entities, reset trackers)
         // (Keep the existing content cleanup logic here)
         if let e = entityWrapper.getSpaceEntity() {
