@@ -1,14 +1,13 @@
 import SwiftUI
-import FirebaseFirestore
 import Combine
 
 @MainActor
 class SpacesChatViewModel: ChatViewModel {
     // MARK: - Properties
     
-    private let spacesManager = SpacesChatManager.shared
+    private let spacesManager: SpacesChatManaging
+    private let currentUserProvider: @MainActor () -> SharePlayUser
     private var updateTask: Task<Void, Never>?
-    private let appModel = AppModel.shared
     
     // Shadow storage for messages
     private var spacesMessages: [ChatMessage] = []
@@ -23,20 +22,25 @@ class SpacesChatViewModel: ChatViewModel {
     
     // MARK: - Initialization
     
-    init(spaceId: String) {
-        // Create a dummy FirebaseEventManager that won't be used
-        let dummyEventManager = FirebaseEventManager.shared
+    init(
+        spaceId: String,
+        spacesManager: SpacesChatManaging = SpacesChatManager.shared,
+        currentUserProvider: @escaping @MainActor () -> SharePlayUser = { AppModel.shared.currentUser },
+        autoStartListening: Bool = true,
+        eventManager: EventManagerProtocol = FirebaseEventManager.shared
+    ) {
+        self.spacesManager = spacesManager
+        self.currentUserProvider = currentUserProvider
         
-        // Call super with empty values and the dummy event manager
-        super.init(eventId: spaceId, date: Date(), eventManager: dummyEventManager)
+        super.init(eventId: spaceId, date: Date(), eventManager: eventManager)
         
-        // Set up efficient message updates
         setupMessageUpdates()
         
-        // Start listening after a brief delay to prevent initial stuttering
-        Task {
-            try? await Task.sleep(for: .milliseconds(100))
-            await startSpacesListening(spaceId: spaceId)
+        if autoStartListening {
+            Task {
+                try? await Task.sleep(for: .milliseconds(100))
+                await startSpacesListening(spaceId: spaceId)
+            }
         }
     }
     
@@ -68,7 +72,7 @@ class SpacesChatViewModel: ChatViewModel {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
         
-        let user = appModel.currentUser
+        let user = currentUserProvider()
         
         // Validate user identity
         guard !user.id.isEmpty, !user.name.isEmpty else {
@@ -105,13 +109,12 @@ class SpacesChatViewModel: ChatViewModel {
         print("Starting spaces chat listener for space ID: \(spaceId)")
         
         // Start the spaces manager listener
-        spacesManager.startListening(spaceId: spaceId)
-        
-        // Use a more efficient update mechanism
+        updateTask?.cancel()
         updateTask = Task { [weak self] in
             guard let self = self else { return }
             
-            // Initial update
+            await spacesManager.startListening(spaceId: spaceId)
+            
             let initialMessages = await spacesManager.getMessages()
             self.messageUpdateSubject.send(initialMessages)
             

@@ -1,0 +1,30 @@
+{
+  "configurations" : [
+    {
+      "id" : "17EE51C8-F611-49A2-84C8-4AA951C39251",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:Movie Theater Experience.xcodeproj",
+      "identifier" : "C4115ECE2B994AF9007AD9B0",
+      "name" : "Movie Theater Experience"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:Movie Theater Experience.xcodeproj",
+        "identifier" : "C4115EE72B994AFA007AD9B0",
+        "name" : "Movie Theater ExperienceTests"
+      }
+    }
+  ],
+  "version" : 1
+}

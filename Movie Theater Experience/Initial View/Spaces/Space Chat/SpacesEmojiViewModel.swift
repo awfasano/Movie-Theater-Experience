@@ -9,6 +9,30 @@
 import Foundation
 import SwiftUI
 
+protocol EmojiTextureUpdating {
+    func updateTexture(name: String, isLooping: Bool) async
+}
+
+protocol SpacesEmojiSending {
+    func sendEmoji(number: Int, spaceId: String, senderId: String, senderName: String) async
+}
+
+protocol EmojiSleepClock {
+    func sleep(seconds: TimeInterval) async
+}
+
+struct SpacesEmojiEmitter: EmojiTextureUpdating {
+    func updateTexture(name: String, isLooping: Bool) async {
+        SpacesEntityWrapper.shared.updateVolumetricEmojiTexture(with: name, isLooping: isLooping)
+    }
+}
+
+struct TaskEmojiSleepClock: EmojiSleepClock {
+    func sleep(seconds: TimeInterval) async {
+        try? await Task.sleep(for: .seconds(seconds))
+    }
+}
+
 @MainActor
 class SpacesEmojiViewModel: ObservableObject {
     @Published var isOnCooldown = false
@@ -25,11 +49,12 @@ class SpacesEmojiViewModel: ObservableObject {
     ]
     
     private var spaceId: String?
-    private let emissionDuration: TimeInterval = 5.0
-    private let cooldownDuration: TimeInterval = 5.0
-    
-    // App model reference for user info
-    private let appModel = AppModel.shared
+    private let emissionDuration: TimeInterval
+    private let cooldownDuration: TimeInterval
+    private let emojiEmitter: EmojiTextureUpdating
+    private let emojiSender: SpacesEmojiSending
+    private let sleepClock: EmojiSleepClock
+    private let currentUserProvider: @MainActor () -> SharePlayUser
     
     // Emoji type definition
     struct EmojiType: Identifiable {
@@ -40,6 +65,22 @@ class SpacesEmojiViewModel: ObservableObject {
         let isLooping: Bool
     }
     
+    init(
+        emissionDuration: TimeInterval = 5.0,
+        cooldownDuration: TimeInterval = 5.0,
+        emojiEmitter: EmojiTextureUpdating = SpacesEmojiEmitter(),
+        emojiSender: SpacesEmojiSending = SpacesChatManager.shared,
+        sleepClock: EmojiSleepClock = TaskEmojiSleepClock(),
+        currentUserProvider: @escaping @MainActor () -> SharePlayUser = { AppModel.shared.currentUser }
+    ) {
+        self.emissionDuration = emissionDuration
+        self.cooldownDuration = cooldownDuration
+        self.emojiEmitter = emojiEmitter
+        self.emojiSender = emojiSender
+        self.sleepClock = sleepClock
+        self.currentUserProvider = currentUserProvider
+    }
+    
     func setSpaceId(_ spaceId: String) {
         self.spaceId = spaceId
     }
@@ -47,55 +88,48 @@ class SpacesEmojiViewModel: ObservableObject {
     func processEmojiTap(emoji: String) {
         guard !isOnCooldown, let spaceId = spaceId else { return }
         
-        // Get the emoji type
         guard let emojiType = emojiTypes.first(where: { $0.unicode == emoji }) else {
             print("Unknown emoji type: \(emoji)")
             return
         }
         
-        // Get user info from AppModel
-        let user = appModel.currentUser
+        let user = currentUserProvider()
         guard !user.id.isEmpty, !user.name.isEmpty else {
             print("❌ Cannot send emoji. User ID or Username is missing from AppModel.")
             return
         }
         
-        // Set states for emission period
-        isOnCooldown = true // Disables all buttons
+        isOnCooldown = true
         isEmitting = true
         activeEmoji = emoji
         
-        // Update visual emitter and send to Firebase
-        Task.detached(priority: .userInitiated) {
-            await SpacesEntityWrapper.shared.updateVolumetricEmojiTexture(with: emojiType.assetName, isLooping: emojiType.isLooping)
-            await SpacesChatManager.shared.sendEmoji(
-                emoji: emojiType.number,
+        Task {
+            await emojiEmitter.updateTexture(name: emojiType.assetName, isLooping: emojiType.isLooping)
+            await emojiSender.sendEmoji(
+                number: emojiType.number,
                 spaceId: spaceId,
                 senderId: user.id,
                 senderName: user.name
             )
         }
         
-        // Schedule the end of the emission and the start of the cooldown UI
-        Task { @MainActor [weak self] in
+        Task { [weak self] in
             guard let self = self else { return }
-            
-            // Wait for the emission to complete
-            try? await Task.sleep(for: .seconds(self.emissionDuration))
-            
-            // End emission state
+            await self.sleepClock.sleep(seconds: self.emissionDuration)
             self.isEmitting = false
             self.activeEmoji = nil
-            
-            // Wait for the cooldown to complete
-            try? await Task.sleep(for: .seconds(self.cooldownDuration))
-            
-            // End cooldown state
+            await self.sleepClock.sleep(seconds: self.cooldownDuration)
             self.isOnCooldown = false
         }
     }
     
     deinit {
         // No tasks to cancel as they are short-lived
+    }
+}
+
+extension SpacesChatManager: SpacesEmojiSending {
+    func sendEmoji(number: Int, spaceId: String, senderId: String, senderName: String) async {
+        await sendEmoji(emoji: number, spaceId: spaceId, senderId: senderId, senderName: senderName)
     }
 }

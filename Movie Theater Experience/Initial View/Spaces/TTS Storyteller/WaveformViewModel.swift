@@ -35,6 +35,17 @@ class WaveformViewModel: ObservableObject {
         displayLink = nil
     }
     
+    /// Applies smoothing to the provided level and shifts the sliding window.
+    func apply(level: Float) {
+        let previousLevel = audioLevels.last ?? 0
+        let smoothedLevel = previousLevel * 0.6 + level * 0.4
+        
+        if !audioLevels.isEmpty {
+            audioLevels.removeFirst()
+        }
+        audioLevels.append(smoothedLevel)
+    }
+    
     /// This function is called by the CADisplayLink every time the screen refreshes.
     @objc private func update() {
         guard let audioService = audioService else { return }
@@ -43,9 +54,6 @@ class WaveformViewModel: ObservableObject {
         let latestLevel = audioService.getCurrentLevel()
         
         // Apply some smoothing to make the waveform look less jittery.
-        let smoothedLevel = (audioLevels.last ?? 0) * 0.6 + latestLevel * 0.4
-        
-        audioLevels.removeFirst()
-        audioLevels.append(smoothedLevel)
+        apply(level: latestLevel)
     }
 }

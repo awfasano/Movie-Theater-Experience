@@ -28,7 +28,7 @@ struct SpaceBrowserIntegration: View {
 
     
     init() {
-        // Removed debug print to reduce console noise
+        print("🚨 SpaceBrowserIntegration init() started")
     }
     
     // MARK: - Card View

@@ -27,15 +27,15 @@ class SpatialAudioLoaderTests: XCTestCase {
     }
 
     func testSetSongs() {
-        let songs = [Song(id: "1", song: "Song 1", artist: "Artist 1", artworkURL: "", duration: 100, storageName: "")]
+        let songs = [Song(id: "1", song: "Song 1", artist: "Artist 1", artworkURL: "", audioURL: "", uploadedAt: nil)]
         audioLoader.setSongs(songs)
         // Can't directly access songs, but can test behavior
     }
 
     func testNextAndPreviousTrack() {
         let songs = [
-            Song(id: "1", song: "Song 1", artist: "Artist 1", artworkURL: "", duration: 100, storageName: ""),
-            Song(id: "2", song: "Song 2", artist: "Artist 2", artworkURL: "", duration: 100, storageName: "")
+            Song(id: "1", song: "Song 1", artist: "Artist 1", artworkURL: "", audioURL: "", uploadedAt: nil),
+            Song(id: "2", song: "Song 2", artist: "Artist 2", artworkURL: "", audioURL: "", uploadedAt: nil)
         ]
         audioLoader.setSongs(songs)
         

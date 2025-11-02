@@ -23,7 +23,6 @@ struct PositionedEvent: Identifiable {
 struct TimelineView: View {
     // MARK: - Environment
     @Environment(\.openImmersiveSpace) private var openImmersiveSpace
-    @EnvironmentObject private var hostedEventManager: HostedEventManager
     
     // MARK: - Bindings
     @Binding var currentDate: Date
@@ -128,32 +127,17 @@ struct TimelineView: View {
     // MARK: - Events Layer
     private var eventsLayer: some View {
         ForEach(positionedEvents()) { positionedEvent in
-            if positionedEvent.event.isHostedEvent {
-                EnhancedEventView(event: positionedEvent.event)
-                    .environmentObject(hostedEventManager)
-                    .frame(width: positionedEvent.width, height: eventHeight)
-                    .position(
-                        x: positionedEvent.xPosition + positionedEvent.width / 2,
-                        y: timeLabelHeight + dividerHeight + topPadding +
-                        (CGFloat(positionedEvent.row) * (eventHeight + verticalSpacing)) +
-                        eventHeight / 2
-                    )
-                    .onTapGesture {
-                        openImmersiveSpaceForEvent(event: positionedEvent.event)
-                    }
-            } else {
-                EventView(event: positionedEvent.event)
-                    .frame(width: positionedEvent.width, height: eventHeight)
-                    .position(
-                        x: positionedEvent.xPosition + positionedEvent.width / 2,
-                        y: timeLabelHeight + dividerHeight + topPadding +
-                        (CGFloat(positionedEvent.row) * (eventHeight + verticalSpacing)) +
-                        eventHeight / 2
-                    )
-                    .onTapGesture {
-                        openImmersiveSpaceForEvent(event: positionedEvent.event)
-                    }
-            }
+            EventView(event: positionedEvent.event)
+                .frame(width: positionedEvent.width, height: eventHeight)
+                .position(
+                    x: positionedEvent.xPosition + positionedEvent.width / 2,
+                    y: timeLabelHeight + dividerHeight + topPadding +
+                    (CGFloat(positionedEvent.row) * (eventHeight + verticalSpacing)) +
+                    eventHeight / 2
+                )
+                .onTapGesture {
+                    openImmersiveSpaceForEvent(event: positionedEvent.event)
+                }
         }
     }
     

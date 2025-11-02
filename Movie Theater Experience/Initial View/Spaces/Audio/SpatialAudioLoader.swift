@@ -432,7 +432,7 @@ final class SpatialAudioLoader: ObservableObject {
     }
 
     // In SpatialAudioLoader
-    nonisolated private func findSpeakers(in root: Entity) -> [Entity] {
+    nonisolated func findSpeakers(in root: Entity) -> [Entity] {
         var out: [Entity] = []
         if root.name.hasPrefix("speaker_") { out.append(root) }
         for child in root.children {

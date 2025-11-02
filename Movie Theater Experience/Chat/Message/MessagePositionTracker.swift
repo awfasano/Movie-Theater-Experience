@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CoreGraphics
 
 class MessagePositionTracker: ObservableObject {
     @Published private var messageFrames: [String: CGRect] = [:]
@@ -18,5 +19,4 @@ class MessagePositionTracker: ObservableObject {
         return messageFrames[messageId]
     }
 }
-
 

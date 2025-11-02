@@ -4,11 +4,19 @@ import FirebaseFirestore
 import RealityKit
 import Combine
 
+protocol SpaceFetching {
+    func fetchSpaces(completion: @escaping (Result<[SpaceData], Error>) -> Void)
+}
+
+protocol SpaceEntityLoading {
+    func loadSpaceEntity(from space: SpaceData) async throws -> Entity
+}
+
 class SpaceService: ObservableObject {
     @Published var spaces: [SpaceData] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
-    //@Published var usersInCurrentSpace: [SharePlayUser] = []
+    @Published var usersInCurrentSpace: [SharePlayUser] = []
 
     
     static let shared = SpaceService()
@@ -93,33 +101,6 @@ class SpaceService: ObservableObject {
             }
     }
     
-    // MARK: - Single Space Fetch
-    
-    @MainActor
-    func fetchSpace(withId id: String) async throws -> SpaceData {
-        if let existing = spaces.first(where: { $0.id == id }) {
-            return existing
-        }
-        
-        let snapshot = try await db.collection("Spaces").document(id).getDocument()
-        guard snapshot.exists else {
-            throw SpaceServiceError.spaceNotFound
-        }
-        
-        var space = try snapshot.data(as: SpaceData.self)
-        if space.id == nil {
-            space.id = snapshot.documentID
-        }
-        
-        if let index = spaces.firstIndex(where: { $0.id == id }) {
-            spaces[index] = space
-        } else {
-            spaces.append(space)
-        }
-        
-        return space
-    }
-    
     func fetchUsersInSpace(spaceId: String) async {
         let usersRef = db.collection("Spaces").document(spaceId).collection("activeUsers")
         do {
@@ -128,10 +109,18 @@ class SpaceService: ObservableObject {
             // MODIFIED: Get the local user's ID from the AppModel to correctly filter them out.
             let localUserId = await appModel.currentUserId
 
-
+            let users = snapshot.documents.compactMap { doc -> SharePlayUser? in
+                let data = doc.data()
+                guard let userId = data["userId"] as? String,
+                      let userName = data["userName"] as? String else { // This part is correct
+                    return nil
+                }
+                // Correctly exclude the local user from the list.
+                return userId != localUserId ? SharePlayUser(id: userId, name: userName) : nil
+            }
             await MainActor.run {
-                //self.usersInCurrentSpace = users
-                //print("Fetched \(users.count) other users in space \(spaceId)")
+                self.usersInCurrentSpace = users
+                print("Fetched \(users.count) other users in space \(spaceId)")
             }
         } catch {
             print("Error fetching users in space: \(error)")
@@ -565,7 +554,6 @@ enum SpaceServiceError: Error {
     case invalidURL
     case noData
     case loadingFailed
-    case spaceNotFound
 }
 
 extension SpaceServiceError: LocalizedError {
@@ -577,8 +565,6 @@ extension SpaceServiceError: LocalizedError {
             return "No data received from server"
         case .loadingFailed:
             return "Failed to load 3D content"
-        case .spaceNotFound:
-            return "The requested space could not be found."
         }
     }
 }

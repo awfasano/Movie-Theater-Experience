@@ -9,10 +9,16 @@ import Foundation
 import RealityKit
 import AVFAudio
 
+protocol AudioPlayerControlling: AnyObject {
+    var volume: Float { get set }
+}
+
+extension AVAudioPlayer: AudioPlayerControlling {}
+
 // Helper class to synchronize AVAudioPlayer position with RealityKit entity
 class AudioPositionSynchronizer {
     weak var entity: Entity?
-    private var player: AVAudioPlayer?
+    private var player: AudioPlayerControlling?
     private var updateTimer: Timer?
     private var relativePosition: SIMD3<Float>?
     private var baseVolume: Float = 1.0
@@ -27,7 +33,11 @@ class AudioPositionSynchronizer {
 
     
     func startTracking(player: AVAudioPlayer) {
-        self.player = player
+        startTracking(playerController: player)
+    }
+    
+    func startTracking(playerController: AudioPlayerControlling) {
+        self.player = playerController
         
         // Initial position update
         updateAudioParameters()

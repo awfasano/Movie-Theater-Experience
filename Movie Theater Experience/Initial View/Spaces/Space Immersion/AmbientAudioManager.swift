@@ -19,14 +19,9 @@ final class AmbientAudioManager {
 
     /// Returns a URL for the cached audio file if it exists.
     private func getCachedURL(for remoteURL: URL) -> URL? {
-        guard let cachesDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
-            print("❌ Could not get caches directory.")
+        guard let localURL = try? makeLocalURL(for: remoteURL) else {
             return nil
         }
-
-        // Use the lastPathComponent as the local filename
-        let fileName = remoteURL.lastPathComponent
-        let localURL = cachesDirectory.appendingPathComponent(fileName)
 
         if FileManager.default.fileExists(atPath: localURL.path) {
             print("✅ Found cached audio file at: \(localURL.path)")
@@ -37,12 +32,7 @@ final class AmbientAudioManager {
 
     /// Downloads and saves the audio file to the cache.
     private func downloadAndCacheAudio(from remoteURL: URL) async throws -> URL {
-        guard let cachesDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
-            throw AmbientAudioError.cacheError
-        }
-
-        let fileName = remoteURL.lastPathComponent
-        let localURL = cachesDirectory.appendingPathComponent(fileName)
+        let localURL = try makeLocalURL(for: remoteURL)
 
         print("🎵 Downloading audio to cache from: \(remoteURL.absoluteString)")
         let (data, _) = try await URLSession.shared.data(from: remoteURL)
@@ -208,3 +198,23 @@ enum AmbientAudioError: Error {
     case entityNotFound
     case cacheError
 }
+    /// Creates the destination URL inside the app's caches directory.
+    private func makeLocalURL(for remoteURL: URL) throws -> URL {
+        guard let cachesDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
+            throw AmbientAudioError.cacheError
+        }
+
+        let audioCacheDirectory = cachesDirectory.appendingPathComponent("Spaces/ambient_audio", isDirectory: true)
+        if !FileManager.default.fileExists(atPath: audioCacheDirectory.path) {
+            try FileManager.default.createDirectory(at: audioCacheDirectory, withIntermediateDirectories: true)
+        }
+
+        // Firebase download URLs percent-decode to include path separators (e.g. "Spaces/ambient_audio/foo.mp3")
+        // which would create unintended subdirectories. Flatten to a single filename.
+        let sanitizedName = remoteURL.lastPathComponent
+            .replacingOccurrences(of: "/", with: "_")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let fileName = sanitizedName.isEmpty ? UUID().uuidString : sanitizedName
+        return audioCacheDirectory.appendingPathComponent(fileName)
+    }
