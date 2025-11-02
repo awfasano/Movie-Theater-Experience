@@ -19,7 +19,7 @@ struct Movie_Theater_ExperienceApp: App {
     
     // AppModel: Holds shared state including userId
     // Assuming AppModel is @Observable (SwiftUI 5+)
-    @State private var appModel = AppModel.shared
+    @StateObject private var appModel = AppModel()
 
     // AppStorage for persisting userId
     @AppStorage("userId") var appStorageUserId: String = ""
@@ -52,7 +52,7 @@ struct Movie_Theater_ExperienceApp: App {
         WindowGroup(id: WindowType.mainContent.rawValue) {
             TabBarWindow()
                 // Inject all dependencies for the entire window's view hierarchy
-                .environment(appModel)
+                .environmentObject(appModel)
                 .trackWindow(type: .mainContent)
                 .environmentObject(windowManager)
                 .environmentObject(immersiveSpaceManager)
@@ -70,7 +70,7 @@ struct Movie_Theater_ExperienceApp: App {
             Group {
                 if let spaceData = appModel.selectedSpace {
                     VolumetricSpaceWrapper(space: spaceData)
-                        .environment(appModel)
+                        .environmentObject(appModel)
                         .environmentObject(ImmersiveSpaceManager.shared)
                         .environmentObject(sharedSelection)
                 } else {
@@ -97,7 +97,7 @@ struct Movie_Theater_ExperienceApp: App {
         // User List Window
         WindowGroup(id: WindowType.userListWindow.rawValue) {
             UserListView()
-                .environment(appModel)
+                .environmentObject(appModel)
                 // FIX: Added missing injection
                 .trackWindow(type: .userListWindow)  // ← This comes AFTER windowManager, which is correct
                 .environmentObject(windowManager)
@@ -108,11 +108,12 @@ struct Movie_Theater_ExperienceApp: App {
         // Immersive space window for Spaces.
         ImmersiveSpace(id: appModel.spacesID) {
             SpacesView()
-                .environment(appModel)
+                .environmentObject(appModel)
                 .environmentObject(ImmersiveSpaceManager.shared)
                 .environmentObject(spacesEntityWrapper)
                 // Ensure WindowManager is injected for SpacesView and its Attachments
                 .environmentObject(windowManager)
+                .environmentObject(appModel.drawingViewModel)
         }
         .handlesExternalEvents(
             // Use the string literals defined above
@@ -125,7 +126,7 @@ struct Movie_Theater_ExperienceApp: App {
         WindowGroup("Audio Controls", id: WindowType.audioControls.rawValue) {
             VolumeControlView()
                 .background(.clear)
-                .environment(appModel)
+                .environmentObject(appModel)
                 .environmentObject(spacesEntityWrapper)
                 .trackWindow(type: .audioControls)
                 .environmentObject(windowManager)
@@ -137,7 +138,7 @@ struct Movie_Theater_ExperienceApp: App {
         // Space Map window.
         WindowGroup("Space Map", id: WindowType.spaceMap.rawValue) {
             SpaceMapView()
-                .environment(appModel)
+                .environmentObject(appModel)
                 .environmentObject(ImmersiveSpaceManager.shared)
                 .trackWindow(type: .spaceMap)
                 .environmentObject(windowManager)
@@ -148,7 +149,7 @@ struct Movie_Theater_ExperienceApp: App {
         // Space Nav Bar window.
         WindowGroup("Space Nav Bar", id: WindowType.spaceNavBar.rawValue) {
             SpacesNavBarView()
-                .environment(appModel)
+                .environmentObject(appModel)
                 .environmentObject(ImmersiveSpaceManager.shared)
                 .environmentObject(sharedSelection)
                 .environmentObject(spacesEntityWrapper)
@@ -161,28 +162,40 @@ struct Movie_Theater_ExperienceApp: App {
         // Space Chat window.
         WindowGroup(id: WindowType.spaceChatWindow.rawValue) {
             SpacesChatWindow()
-                .environment(appModel)
+                .environmentObject(appModel)
                 .trackWindow(type: .spaceChatWindow)
                 .environmentObject(windowManager)
         }
         .defaultSize(width: 400, height: 600)
         .windowStyle(.plain)
         
-        
-        // Space Emoji window.
-        WindowGroup(id: WindowType.spaceEmojiWindow.rawValue) {
+        // Space Emoji reactions window.
+        WindowGroup("Emoji Reactions", id: WindowType.spaceEmojiWindow.rawValue) {
             SpacesEmojiWindow()
-                .environment(appModel)
+                .environmentObject(appModel)
+                .environmentObject(selectedSpace)
                 .trackWindow(type: .spaceEmojiWindow)
                 .environmentObject(windowManager)
         }
-        .defaultSize(width: 300, height: 180)
+        .defaultSize(width: 320, height: 200)
+        .windowStyle(.plain)
+        
+        
+        // Space Drawing controls window.
+        WindowGroup("Drawing Tools", id: WindowType.spaceDrawingWindow.rawValue) {
+            SpaceDrawingWindow()
+                .environmentObject(appModel)
+                .trackWindow(type: .spaceDrawingWindow)
+                .environmentObject(windowManager)
+                .environmentObject(appModel.drawingViewModel)
+        }
+        .defaultSize(width: 460, height: 560)
         .windowStyle(.plain)
         
         // Chat Settings window.
         WindowGroup("Chat Settings", id: WindowType.chatSettings.rawValue) {
             ChatSettingsNavBar()
-                .environment(appModel)
+                .environmentObject(appModel)
                 .trackWindow(type: .chatSettings)
                 .environmentObject(windowManager)
         }
@@ -198,7 +211,7 @@ struct Movie_Theater_ExperienceApp: App {
                         date: event.date,
                         eventManager: firebaseEventManager
                     ))
-                    .environment(appModel)
+                    .environmentObject(appModel)
                 } else {
                     // Provide a fallback view or EmptyView
                     EmptyView()
@@ -217,7 +230,7 @@ struct Movie_Theater_ExperienceApp: App {
         
         WindowGroup("Storyteller", id: WindowType.storytellerWindow.rawValue) {
             StoriesListView()
-                .environment(appModel)
+                .environmentObject(appModel)
                 .trackWindow(type: .storytellerWindow)
                 .environmentObject(windowManager)
         }
@@ -227,7 +240,7 @@ struct Movie_Theater_ExperienceApp: App {
         // Movement Control (Volumetric - tracking it ensures WindowManager can close it)
         WindowGroup(id: WindowType.movementControl.rawValue) {
             MovementControlView()
-                .environment(appModel)
+                .environmentObject(appModel)
                 // Added missing injection
                 .trackWindow(type: .movementControl)
                 .environmentObject(windowManager)
@@ -314,7 +327,7 @@ struct Movie_Theater_ExperienceApp: App {
             Group {
                 if let unwrappedStats = stats.wrappedValue {
                     ExitingWindow(stats: unwrappedStats)
-                        .environment(appModel)
+                        .environmentObject(appModel)
                 } else {
                     EmptyView()
                 }

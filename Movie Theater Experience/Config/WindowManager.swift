@@ -26,6 +26,7 @@ enum WindowType: String, CaseIterable {
     case audioControls = "audioControls"
     case storytellerWindow = "storytellerWindow"
     case movementControl = "movementControl"
+    case spaceDrawingWindow = "spaceDrawingWindow"
     
     // Dynamic case for multiple browser instances
     static func webBrowserInstance(_ instanceId: String) -> String {
@@ -55,7 +56,7 @@ class WindowManager: ObservableObject {
     let spaceWindowTypes: [WindowType] = [
         .spaceNavBar, .spaceMap, .spaceChatWindow, .spaceEmojiWindow,
         .audioControls, .storytellerWindow, .userListWindow,
-        .webBrowserWindow, .movementControl
+        .webBrowserWindow, .movementControl, .spaceDrawingWindow
     ]
     
     // The enum case for your main window that you want to return to

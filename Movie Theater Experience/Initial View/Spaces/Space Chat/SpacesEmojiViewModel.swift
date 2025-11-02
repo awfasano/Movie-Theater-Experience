@@ -71,7 +71,7 @@ class SpacesEmojiViewModel: ObservableObject {
         emojiEmitter: EmojiTextureUpdating = SpacesEmojiEmitter(),
         emojiSender: SpacesEmojiSending = SpacesChatManager.shared,
         sleepClock: EmojiSleepClock = TaskEmojiSleepClock(),
-        currentUserProvider: @escaping @MainActor () -> SharePlayUser = { AppModel.shared.currentUser }
+        currentUserProvider: @escaping @MainActor () -> SharePlayUser = { AppModel.current.currentUser }
     ) {
         self.emissionDuration = emissionDuration
         self.cooldownDuration = cooldownDuration

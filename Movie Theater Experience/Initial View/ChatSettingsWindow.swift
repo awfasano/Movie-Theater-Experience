@@ -151,6 +151,6 @@ struct ChatSettingsWindow: View {
 struct ChatSettingsWindow_Previews: PreviewProvider {
     static var previews: some View {
         ChatSettingsWindow()
-            .environment(AppModel.shared)
+            .environment(AppModel.current)
     }
 }

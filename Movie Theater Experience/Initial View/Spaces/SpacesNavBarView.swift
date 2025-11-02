@@ -57,6 +57,7 @@ struct SpacesNavBarView: View {
     @State private var isOpeningAudioControls = false
     @State private var isOpeningBrowser = false
     @State private var isOpeningSettings = false
+    @State private var isOpeningDrawingWindow = false
     
     // Services and Combine
     @ObservedObject private var audioService = AudioService.shared
@@ -152,6 +153,7 @@ struct SpacesNavBarView: View {
             windowOpeningButton(type: .storytellerWindow, state: $isOpeningStoryteller, systemImage: "waveform", helpText: "Open stories")
             windowOpeningButton(type: .spaceEmojiWindow, state: $isOpeningEmoji, systemImage: "face.smiling", helpText: "Send emoji reactions")
             windowOpeningButton(type: .spaceChatWindow, state: $isOpeningChat, systemImage: "message.fill", helpText: "Open chat messages")
+            windowOpeningButton(type: .spaceDrawingWindow, state: $isOpeningDrawingWindow, systemImage: "paintpalette", helpText: "Drawing tools")
             
             // --- AUDIO CONTROLS ---
             HStack(spacing: 10) {

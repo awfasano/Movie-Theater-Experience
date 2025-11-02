@@ -1,5 +1,6 @@
 
 import SwiftUI
+import Observation
 import RealityKit // Keep if other parts of AppModel use it
 import AVFoundation // For CMTime
 
@@ -19,7 +20,7 @@ struct WindowOpeningRequest: Identifiable {
 @Observable // Using Swift Observation
 class AppModel: ObservableObject { // Removed ObservableObject as @Observable is the modern approach
     // MARK: - Constants
-    static let shared = AppModel() // If you intend to use it as a singleton
+    static let current = AppModel()
     let immersiveSpaceID = "ImmersiveSpace" // Matches your ImmersiveSpace ID
     let spacesID = "Spaces" // Matches your Spaces ImmersiveSpace ID
     
@@ -48,6 +49,16 @@ class AppModel: ObservableObject { // Removed ObservableObject as @Observable is
     }
     
     var resumePlaybackAfterTransition: Bool = false
+    
+    @ObservationIgnored
+    lazy var drawingViewModel: SpaceDrawingViewModel = {
+        SpaceDrawingViewModel(
+            service: SpaceDrawingService.shared,
+            rendererFactory: { SpaceDrawingRenderer() },
+            currentUserIdProvider: { [unowned self] in self.currentUserId },
+            usernameProvider: { [unowned self] in self.username }
+        )
+    }()
     
     // Window Opening Request
     var windowToOpen: WindowOpeningRequest? = nil // Changed to optional struct

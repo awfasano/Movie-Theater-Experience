@@ -75,6 +75,7 @@
 		C45D34712E0740F0004407F4 /* InteractiveStoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C45D34702E0740F0004407F4 /* InteractiveStoryView.swift */; };
 		C45D34732E074203004407F4 /* LiveStorytellerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C45D34722E074203004407F4 /* LiveStorytellerService.swift */; };
 		C45D34772E074824004407F4 /* AudioWaveFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C45D34762E074824004407F4 /* AudioWaveFormView.swift */; };
+		C46166762EB309B800CF2372 /* SpaceDrawingWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46166752EB309B800CF2372 /* SpaceDrawingWindow.swift */; };
 		C473DCAF2D308BC7008AA51D /* FirebaseEventManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C473DCAE2D308BC7008AA51D /* FirebaseEventManager.swift */; };
 		C4790EB22DAEE35B0080BB7C /* SeatSelectionModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4790EB12DAEE35B0080BB7C /* SeatSelectionModel.swift */; };
 		C47ADCAE2E57A9DA0083B75F /* PortalConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = C47ADCAD2E57A9DA0083B75F /* PortalConfig.swift */; };
@@ -191,6 +192,12 @@
 		C4FA400C2E50050100444444 /* SeatMovementCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA400A2E50040100444444 /* SeatMovementCalculator.swift */; };
 		C4FA400E2E50060100444444 /* SpaceCardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA400D2E50060100444444 /* SpaceCardViewModel.swift */; };
 		C4FA40102E50070100444444 /* SpaceDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA400F2E50070100444444 /* SpaceDetailViewModel.swift */; };
+		C4FA41062E50100000444444 /* SpaceDrawingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA41012E50100000444444 /* SpaceDrawingModels.swift */; };
+		C4FA41072E50100000444444 /* SpaceDrawingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA41022E50100000444444 /* SpaceDrawingService.swift */; };
+		C4FA41082E50100000444444 /* SpaceDrawingRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA41032E50100000444444 /* SpaceDrawingRenderer.swift */; };
+		C4FA41092E50100000444444 /* SpaceDrawingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA41042E50100000444444 /* SpaceDrawingViewModel.swift */; };
+		C4FA41312E60A1D500444444 /* SpaceDrawingHandPoseProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA41302E60A1D500444444 /* SpaceDrawingHandPoseProvider.swift */; };
+		C4FA410A2E50100000444444 /* SpaceDrawingOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA41052E50100000444444 /* SpaceDrawingOverlay.swift */; };
 		C4FE99B52D7F8F4F008AE0D6 /* SpacesChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE99B42D7F8F4F008AE0D6 /* SpacesChatViewModel.swift */; };
 		C4FE99B92D7F9D80008AE0D6 /* SpacesChatWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE99B82D7F9D80008AE0D6 /* SpacesChatWindow.swift */; };
 		C4FE99BB2D7F9DA8008AE0D6 /* SpacesEmojiWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE99BA2D7F9DA8008AE0D6 /* SpacesEmojiWindow.swift */; };
@@ -294,6 +301,7 @@
 		C45D34702E0740F0004407F4 /* InteractiveStoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveStoryView.swift; sourceTree = "<group>"; };
 		C45D34722E074203004407F4 /* LiveStorytellerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveStorytellerService.swift; sourceTree = "<group>"; };
 		C45D34762E074824004407F4 /* AudioWaveFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioWaveFormView.swift; sourceTree = "<group>"; };
+		C46166752EB309B800CF2372 /* SpaceDrawingWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceDrawingWindow.swift; sourceTree = "<group>"; };
 		C473DCAE2D308BC7008AA51D /* FirebaseEventManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseEventManager.swift; sourceTree = "<group>"; };
 		C4790EB12DAEE35B0080BB7C /* SeatSelectionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeatSelectionModel.swift; sourceTree = "<group>"; };
 		C47ADCAD2E57A9DA0083B75F /* PortalConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortalConfig.swift; sourceTree = "<group>"; };
@@ -385,6 +393,12 @@
 		C4FA400A2E50040100444444 /* SeatMovementCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeatMovementCalculator.swift; sourceTree = "<group>"; };
 		C4FA400D2E50060100444444 /* SpaceCardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceCardViewModel.swift; sourceTree = "<group>"; };
 		C4FA400F2E50070100444444 /* SpaceDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceDetailViewModel.swift; sourceTree = "<group>"; };
+		C4FA41012E50100000444444 /* SpaceDrawingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceDrawingModels.swift; sourceTree = "<group>"; };
+		C4FA41022E50100000444444 /* SpaceDrawingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceDrawingService.swift; sourceTree = "<group>"; };
+		C4FA41032E50100000444444 /* SpaceDrawingRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceDrawingRenderer.swift; sourceTree = "<group>"; };
+		C4FA41042E50100000444444 /* SpaceDrawingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceDrawingViewModel.swift; sourceTree = "<group>"; };
+		C4FA41302E60A1D500444444 /* SpaceDrawingHandPoseProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceDrawingHandPoseProvider.swift; sourceTree = "<group>"; };
+		C4FA41052E50100000444444 /* SpaceDrawingOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceDrawingOverlay.swift; sourceTree = "<group>"; };
 		C4FE99B42D7F8F4F008AE0D6 /* SpacesChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesChatViewModel.swift; sourceTree = "<group>"; };
 		C4FE99B82D7F9D80008AE0D6 /* SpacesChatWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesChatWindow.swift; sourceTree = "<group>"; };
 		C4FE99BA2D7F9DA8008AE0D6 /* SpacesEmojiWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesEmojiWindow.swift; sourceTree = "<group>"; };
@@ -654,6 +668,7 @@
 				C4D88CA52D74F89A004F226E /* Space Tab */,
 				C4D88CA42D74F88C004F226E /* Volume */,
 				C4D88CA62D74F8C2004F226E /* Space Immersion */,
+				C4FA41002E50100000444444 /* Space Drawing */,
 				C4474F162D80BBB600DA08A1 /* Space Chat */,
 				C444C9212D53FD2C0046F92D /* Intro Volume */,
 			);
@@ -910,6 +925,20 @@
 			path = Movement;
 			sourceTree = "<group>";
 		};
+		C4FA41002E50100000444444 /* Space Drawing */ = {
+			isa = PBXGroup;
+			children = (
+				C46166752EB309B800CF2372 /* SpaceDrawingWindow.swift */,
+				C4FA41012E50100000444444 /* SpaceDrawingModels.swift */,
+				C4FA41022E50100000444444 /* SpaceDrawingService.swift */,
+				C4FA41032E50100000444444 /* SpaceDrawingRenderer.swift */,
+				C4FA41042E50100000444444 /* SpaceDrawingViewModel.swift */,
+				C4FA41302E60A1D500444444 /* SpaceDrawingHandPoseProvider.swift */,
+				C4FA41052E50100000444444 /* SpaceDrawingOverlay.swift */,
+			);
+			path = "Space Drawing";
+			sourceTree = "<group>";
+		};
 		C4FACA282BAE0D5600A08729 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
@@ -1090,6 +1119,7 @@
 				C4D88CA82D74F9BF004F226E /* SeatSelectionPanel.swift in Sources */,
 				C4D88CA32D74F86B004F226E /* SpacesEntityWrapper.swift in Sources */,
 				C4E71ACE2DC69F490017914B /* SeatOrbEntities.swift in Sources */,
+				C46166762EB309B800CF2372 /* SpaceDrawingWindow.swift in Sources */,
 				C491344B2B9C4B4800A824DF /* Extensions.swift in Sources */,
 				C4FA39F62E24B044004BB564 /* TransparencyControlView.swift in Sources */,
 				C4D88CAE2D7531AB004F226E /* EventManagerConfiguration.swift in Sources */,
@@ -1100,6 +1130,12 @@
 				C4DEA8CF2D875286008F16F3 /* SeatSelectionWindow.swift in Sources */,
 				C44919272E109B9300C4B087 /* ShareplayManager.swift in Sources */,
 				C444C9232D53FDA10046F92D /* SpaceService.swift in Sources */,
+				C4FA41062E50100000444444 /* SpaceDrawingModels.swift in Sources */,
+				C4FA41072E50100000444444 /* SpaceDrawingService.swift in Sources */,
+				C4FA41082E50100000444444 /* SpaceDrawingRenderer.swift in Sources */,
+				C4FA41092E50100000444444 /* SpaceDrawingViewModel.swift in Sources */,
+				C4FA41312E60A1D500444444 /* SpaceDrawingHandPoseProvider.swift in Sources */,
+				C4FA410A2E50100000444444 /* SpaceDrawingOverlay.swift in Sources */,
 				C459498D2E700E59004ADDF6 /* ImmersiveSpaceManager.swift in Sources */,
 				C4413F622DC40644008A7BD8 /* OrbMaterials.swift in Sources */,
 				C4413F592DC028D7008A7BD8 /* Song.swift in Sources */,

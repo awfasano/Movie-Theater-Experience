@@ -96,7 +96,7 @@ class VolumetricSpaceViewModel: ObservableObject {
     @MainActor
     func canEnterSpace() -> Bool {
         // Access the singleton directly using .shared
-        guard !AppModel.shared.username.isEmpty else {
+        guard !AppModel.current.username.isEmpty else {
             print("❌ [ViewModel] Entry check FAILED: Username is not set.")
             return false
         }

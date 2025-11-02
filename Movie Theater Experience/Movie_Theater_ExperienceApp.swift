@@ -39,6 +39,7 @@ struct Movie_Theater_ExperienceApp: App {
                 .environment(appModel)
                 .environmentObject(immersiveSpaceManager)
                 .environmentObject(sharedSpaceSeatSelection)
+                .environmentObject(appModel.drawingViewModel)
         }
         
         // Immersive spaces
@@ -49,6 +50,7 @@ struct Movie_Theater_ExperienceApp: App {
                 .environment(appModel)
                 .environmentObject(immersiveSpaceManager)
                 .environmentObject(sharedSpaceSeatSelection)
+                .environmentObject(appModel.drawingViewModel)
         }
         
         ImmersiveSpace(id: appModel.immersiveSpaceID) {

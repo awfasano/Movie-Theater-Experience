@@ -25,7 +25,7 @@ class SpacesChatViewModel: ChatViewModel {
     init(
         spaceId: String,
         spacesManager: SpacesChatManaging = SpacesChatManager.shared,
-        currentUserProvider: @escaping @MainActor () -> SharePlayUser = { AppModel.shared.currentUser },
+        currentUserProvider: @escaping @MainActor () -> SharePlayUser = { AppModel.current.currentUser },
         autoStartListening: Bool = true,
         eventManager: EventManagerProtocol = FirebaseEventManager.shared
     ) {

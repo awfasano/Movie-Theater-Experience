@@ -97,7 +97,7 @@ class SharePlayManager: ObservableObject {
         guard let spaceId = space.id else { return }
         
         // `currentUserId` is not optional, so we get it directly.
-        let localUserId = AppModel.shared.currentUserId
+        let localUserId = AppModel.current.currentUserId
         
         // Then we guard to ensure it's not an empty string.
         guard !localUserId.isEmpty else { return }

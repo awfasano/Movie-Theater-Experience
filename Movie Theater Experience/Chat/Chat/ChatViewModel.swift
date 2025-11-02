@@ -13,7 +13,7 @@ class ChatViewModel: ObservableObject {
     let eventId: String
     let date: Date
     
-    private let appModel = AppModel.shared
+    private let appModel = AppModel.current
     
     // MARK: - Initializer
     
