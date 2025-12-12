@@ -1,0 +1,360 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "Space Drawing System"
+    }
+    defaultPrim = "Root"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "Root"
+{
+    def Material "OilBrush"
+    {
+        token outputs:mtlx:surface.connect = </Root/OilBrush/PBRSurface.outputs:out>
+        token outputs:realitykit:vertex
+        token outputs:surface
+        
+        # ============================================
+        # UV AND POSITION INPUTS
+        # ============================================
+        
+        def Shader "Texcoord"
+        {
+            uniform token info:id = "ND_texcoord_vector2"
+            float2 outputs:out
+        }
+        
+        def Shader "Position"
+        {
+            uniform token info:id = "ND_position_vector3"
+            string inputs:space = "object"
+            float3 outputs:out
+        }
+        
+        def Shader "SeparateUV"
+        {
+            uniform token info:id = "ND_separate2_vector2"
+            float2 inputs:in.connect = </Root/OilBrush/Texcoord.outputs:out>
+            float outputs:outx
+            float outputs:outy
+        }
+        
+        # ============================================
+        # VERTEX COLOR (from geometry)
+        # ============================================
+        
+        def Shader "VertexColor"
+        {
+            uniform token info:id = "ND_geompropvalue_color3"
+            color3f inputs:default = (1, 1, 1)
+            string inputs:geomprop = "displayColor"
+            color3f outputs:out
+        }
+        
+        # ============================================
+        # EDGE SOFTENING (U-based ribbon falloff)
+        # ============================================
+        
+        def Shader "UCentered"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1.connect = </Root/OilBrush/SeparateUV.outputs:outx>
+            float inputs:in2 = 0.5
+            float outputs:out
+        }
+        
+        def Shader "UAbs"
+        {
+            uniform token info:id = "ND_absval_float"
+            float inputs:in.connect = </Root/OilBrush/UCentered.outputs:out>
+            float outputs:out
+        }
+        
+        def Shader "UEdgeDist"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/OilBrush/UAbs.outputs:out>
+            float inputs:in2 = 2.0
+            float outputs:out
+        }
+        
+        def Shader "EdgeSmooth"
+        {
+            uniform token info:id = "ND_smoothstep_float"
+            float inputs:in.connect = </Root/OilBrush/UEdgeDist.outputs:out>
+            float inputs:low = 0.75
+            float inputs:high = 1.0
+            float outputs:out
+        }
+        
+        def Shader "EdgeOpacity"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1 = 1.0
+            float inputs:in2.connect = </Root/OilBrush/EdgeSmooth.outputs:out>
+            float outputs:out
+        }
+        
+        # ============================================
+        # OIL STROKE MASK TEXTURE
+        # ============================================
+        
+        def Shader "StrokeMask"
+        {
+            uniform token info:id = "ND_image_float"
+            asset inputs:file = @BrushTextures/oil_stroke_1.png@
+            float2 inputs:texcoord.connect = </Root/OilBrush/Texcoord.outputs:out>
+            token inputs:uaddressmode = "clamp"
+            token inputs:vaddressmode = "clamp"
+            float outputs:out
+        }
+        
+        # ============================================
+        # BRISTLE STREAKS (tiled along stroke)
+        # ============================================
+        
+        def Shader "StreaksTileScale"
+        {
+            uniform token info:id = "ND_combine2_vector2"
+            float inputs:in1 = 1.0
+            float inputs:in2 = 12.0
+            float2 outputs:out
+        }
+        
+        def Shader "StreaksUV"
+        {
+            uniform token info:id = "ND_multiply_vector2"
+            float2 inputs:in1.connect = </Root/OilBrush/Texcoord.outputs:out>
+            float2 inputs:in2.connect = </Root/OilBrush/StreaksTileScale.outputs:out>
+            float2 outputs:out
+        }
+        
+        def Shader "BristleStreaks"
+        {
+            uniform token info:id = "ND_image_float"
+            asset inputs:file = @BrushTextures/brush_streaks.png@
+            float2 inputs:texcoord.connect = </Root/OilBrush/StreaksUV.outputs:out>
+            token inputs:uaddressmode = "clamp"
+            token inputs:vaddressmode = "periodic"
+            float outputs:out
+        }
+        
+        # ============================================
+        # FIBER NOISE (for color/roughness variation)
+        # ============================================
+        
+        def Shader "NoiseTileScale"
+        {
+            uniform token info:id = "ND_combine2_vector2"
+            float inputs:in1 = 8.0
+            float inputs:in2 = 16.0
+            float2 outputs:out
+        }
+        
+        def Shader "NoiseUV"
+        {
+            uniform token info:id = "ND_multiply_vector2"
+            float2 inputs:in1.connect = </Root/OilBrush/Texcoord.outputs:out>
+            float2 inputs:in2.connect = </Root/OilBrush/NoiseTileScale.outputs:out>
+            float2 outputs:out
+        }
+        
+        def Shader "FiberNoise"
+        {
+            uniform token info:id = "ND_image_float"
+            asset inputs:file = @BrushTextures/brush_fiber_noise.png@
+            float2 inputs:texcoord.connect = </Root/OilBrush/NoiseUV.outputs:out>
+            token inputs:uaddressmode = "periodic"
+            token inputs:vaddressmode = "periodic"
+            float outputs:out
+        }
+        
+        # ============================================
+        # COMBINED OPACITY
+        # ============================================
+        
+        def Shader "MaskWithEdge"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/OilBrush/StrokeMask.outputs:out>
+            float inputs:in2.connect = </Root/OilBrush/EdgeOpacity.outputs:out>
+            float outputs:out
+        }
+        
+        # Bristle breaks in opacity (subtle)
+        def Shader "BristleOpacityMod"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/OilBrush/BristleStreaks.outputs:out>
+            float inputs:in2 = 0.15
+            float outputs:out
+        }
+        
+        def Shader "BristleOpacityBase"
+        {
+            uniform token info:id = "ND_add_float"
+            float inputs:in1.connect = </Root/OilBrush/BristleOpacityMod.outputs:out>
+            float inputs:in2 = 0.85
+            float outputs:out
+        }
+        
+        def Shader "FinalOpacity"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/OilBrush/MaskWithEdge.outputs:out>
+            float inputs:in2.connect = </Root/OilBrush/BristleOpacityBase.outputs:out>
+            float outputs:out
+        }
+        
+        # ============================================
+        # COLOR VARIATION (impasto brightness shifts)
+        # ============================================
+        
+        # Noise creates subtle brightness variation like thick paint catching light
+        def Shader "NoiseCentered"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1.connect = </Root/OilBrush/FiberNoise.outputs:out>
+            float inputs:in2 = 0.5
+            float outputs:out
+        }
+        
+        def Shader "NoiseScaled"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/OilBrush/NoiseCentered.outputs:out>
+            float inputs:in2 = 0.2
+            float outputs:out
+        }
+        
+        def Shader "BrightnessBase"
+        {
+            uniform token info:id = "ND_add_float"
+            float inputs:in1.connect = </Root/OilBrush/NoiseScaled.outputs:out>
+            float inputs:in2 = 1.0
+            float outputs:out
+        }
+        
+        # Bristle streaks affect brightness too
+        def Shader "StreakBrightness"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/OilBrush/BristleStreaks.outputs:out>
+            float inputs:in2 = 0.12
+            float outputs:out
+        }
+        
+        def Shader "StreakBrightnessOffset"
+        {
+            uniform token info:id = "ND_add_float"
+            float inputs:in1.connect = </Root/OilBrush/StreakBrightness.outputs:out>
+            float inputs:in2 = 0.94
+            float outputs:out
+        }
+        
+        def Shader "CombinedBrightness"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/OilBrush/BrightnessBase.outputs:out>
+            float inputs:in2.connect = </Root/OilBrush/StreakBrightnessOffset.outputs:out>
+            float outputs:out
+        }
+        
+        def Shader "BrightnessColor"
+        {
+            uniform token info:id = "ND_combine3_color3"
+            float inputs:in1.connect = </Root/OilBrush/CombinedBrightness.outputs:out>
+            float inputs:in2.connect = </Root/OilBrush/CombinedBrightness.outputs:out>
+            float inputs:in3.connect = </Root/OilBrush/CombinedBrightness.outputs:out>
+            color3f outputs:out
+        }
+        
+        def Shader "FinalColor"
+        {
+            uniform token info:id = "ND_multiply_color3"
+            color3f inputs:in1.connect = </Root/OilBrush/VertexColor.outputs:out>
+            color3f inputs:in2.connect = </Root/OilBrush/BrightnessColor.outputs:out>
+            color3f outputs:out
+        }
+        
+        # ============================================
+        # ROUGHNESS (anisotropic-ish via bristle direction)
+        # ============================================
+        
+        # Higher roughness in bristle valleys, lower on ridges
+        def Shader "RoughnessFromStreaks"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/OilBrush/BristleStreaks.outputs:out>
+            float inputs:in2 = 0.25
+            float outputs:out
+        }
+        
+        def Shader "RoughnessFromNoise"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/OilBrush/NoiseCentered.outputs:out>
+            float inputs:in2 = 0.15
+            float outputs:out
+        }
+        
+        def Shader "RoughnessCombined"
+        {
+            uniform token info:id = "ND_add_float"
+            float inputs:in1.connect = </Root/OilBrush/RoughnessFromStreaks.outputs:out>
+            float inputs:in2.connect = </Root/OilBrush/RoughnessFromNoise.outputs:out>
+            float outputs:out
+        }
+        
+        def Shader "RoughnessBase"
+        {
+            uniform token info:id = "ND_add_float"
+            float inputs:in1.connect = </Root/OilBrush/RoughnessCombined.outputs:out>
+            float inputs:in2 = 0.45
+            float outputs:out
+        }
+        
+        def Shader "RoughnessClamp"
+        {
+            uniform token info:id = "ND_clamp_float"
+            float inputs:in.connect = </Root/OilBrush/RoughnessBase.outputs:out>
+            float inputs:low = 0.3
+            float inputs:high = 0.8
+            float outputs:out
+        }
+        
+        # ============================================
+        # METALLIC (slight sheen for wet paint look)
+        # ============================================
+        
+        def Shader "MetallicValue"
+        {
+            uniform token info:id = "ND_constant_float"
+            float inputs:value = 0.08
+            float outputs:out
+        }
+        
+        # ============================================
+        # PBR SURFACE OUTPUT
+        # ============================================
+        
+        def Shader "PBRSurface"
+        {
+            uniform token info:id = "ND_UsdPreviewSurface_surfaceshader"
+            float inputs:clearcoat = 0.0
+            float inputs:clearcoatRoughness = 0.0
+            color3f inputs:diffuseColor.connect = </Root/OilBrush/FinalColor.outputs:out>
+            color3f inputs:emissiveColor = (0, 0, 0)
+            float inputs:ior = 1.5
+            float inputs:metallic.connect = </Root/OilBrush/MetallicValue.outputs:out>
+            float3 inputs:normal
+            float inputs:occlusion = 1.0
+            float inputs:opacity.connect = </Root/OilBrush/FinalOpacity.outputs:out>
+            float inputs:opacityThreshold = 0.001
+            float inputs:roughness.connect = </Root/OilBrush/RoughnessClamp.outputs:out>
+            token outputs:out
+        }
+    }
+}

@@ -1,0 +1,357 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "Space Drawing System"
+    }
+    defaultPrim = "Root"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "Root"
+{
+    def Material "WatercolorBrush"
+    {
+        token outputs:mtlx:surface.connect = </Root/WatercolorBrush/PBRSurface.outputs:out>
+        token outputs:realitykit:vertex
+        token outputs:surface
+        
+        # ============================================
+        # UV INPUTS
+        # ============================================
+        
+        def Shader "Texcoord"
+        {
+            uniform token info:id = "ND_texcoord_vector2"
+            float2 outputs:out
+        }
+        
+        def Shader "SeparateUV"
+        {
+            uniform token info:id = "ND_separate2_vector2"
+            float2 inputs:in.connect = </Root/WatercolorBrush/Texcoord.outputs:out>
+            float outputs:outx
+            float outputs:outy
+        }
+        
+        # ============================================
+        # VERTEX COLOR
+        # ============================================
+        
+        def Shader "VertexColor"
+        {
+            uniform token info:id = "ND_geompropvalue_color3"
+            color3f inputs:default = (0.2, 0.4, 0.8)
+            string inputs:geomprop = "displayColor"
+            color3f outputs:out
+        }
+        
+        # ============================================
+        # EDGE DISTANCE (for darkening + soft falloff)
+        # ============================================
+        
+        def Shader "UCentered"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1.connect = </Root/WatercolorBrush/SeparateUV.outputs:outx>
+            float inputs:in2 = 0.5
+            float outputs:out
+        }
+        
+        def Shader "UAbs"
+        {
+            uniform token info:id = "ND_absval_float"
+            float inputs:in.connect = </Root/WatercolorBrush/UCentered.outputs:out>
+            float outputs:out
+        }
+        
+        def Shader "UEdgeDist"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/WatercolorBrush/UAbs.outputs:out>
+            float inputs:in2 = 2.0
+            float outputs:out
+        }
+        
+        # ============================================
+        # EDGE DARKENING (pigment pooling effect)
+        # Watercolor pigment settles at edges
+        # ============================================
+        
+        # Ramp up darkness near edges
+        def Shader "EdgeDarkenRamp"
+        {
+            uniform token info:id = "ND_smoothstep_float"
+            float inputs:in.connect = </Root/WatercolorBrush/UEdgeDist.outputs:out>
+            float inputs:low = 0.5
+            float inputs:high = 0.95
+            float outputs:out
+        }
+        
+        # Square it for more concentrated edge effect
+        def Shader "EdgeDarkenSquared"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/WatercolorBrush/EdgeDarkenRamp.outputs:out>
+            float inputs:in2.connect = </Root/WatercolorBrush/EdgeDarkenRamp.outputs:out>
+            float outputs:out
+        }
+        
+        # Scale the darkening amount
+        def Shader "EdgeDarkenAmount"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/WatercolorBrush/EdgeDarkenSquared.outputs:out>
+            float inputs:in2 = 0.45
+            float outputs:out
+        }
+        
+        # Invert for multiplying with color (1.0 in center, darker at edges)
+        def Shader "EdgeDarkenFactor"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1 = 1.0
+            float inputs:in2.connect = </Root/WatercolorBrush/EdgeDarkenAmount.outputs:out>
+            float outputs:out
+        }
+        
+        # ============================================
+        # SOFT EDGE OPACITY (bleeding watercolor edge)
+        # ============================================
+        
+        def Shader "EdgeOpacityRamp"
+        {
+            uniform token info:id = "ND_smoothstep_float"
+            float inputs:in.connect = </Root/WatercolorBrush/UEdgeDist.outputs:out>
+            float inputs:low = 0.7
+            float inputs:high = 1.0
+            float outputs:out
+        }
+        
+        def Shader "EdgeOpacity"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1 = 1.0
+            float inputs:in2.connect = </Root/WatercolorBrush/EdgeOpacityRamp.outputs:out>
+            float outputs:out
+        }
+        
+        # ============================================
+        # GRANULATION TEXTURE (pigment settling)
+        # ============================================
+        
+        def Shader "GranulationTileScale"
+        {
+            uniform token info:id = "ND_combine2_vector2"
+            float inputs:in1 = 24.0
+            float inputs:in2 = 48.0
+            float2 outputs:out
+        }
+        
+        def Shader "GranulationUV"
+        {
+            uniform token info:id = "ND_multiply_vector2"
+            float2 inputs:in1.connect = </Root/WatercolorBrush/Texcoord.outputs:out>
+            float2 inputs:in2.connect = </Root/WatercolorBrush/GranulationTileScale.outputs:out>
+            float2 outputs:out
+        }
+        
+        def Shader "GranulationTex"
+        {
+            uniform token info:id = "ND_image_float"
+            asset inputs:file = @BrushTextures/brush_fiber_noise.png@
+            float2 inputs:texcoord.connect = </Root/WatercolorBrush/GranulationUV.outputs:out>
+            token inputs:uaddressmode = "periodic"
+            token inputs:vaddressmode = "periodic"
+            float outputs:out
+        }
+        
+        # Granulation affects both color intensity and opacity
+        def Shader "GranulationCentered"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1.connect = </Root/WatercolorBrush/GranulationTex.outputs:out>
+            float inputs:in2 = 0.5
+            float outputs:out
+        }
+        
+        # Color variation from granulation (pigment density)
+        def Shader "GranulationColorMod"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/WatercolorBrush/GranulationCentered.outputs:out>
+            float inputs:in2 = 0.25
+            float outputs:out
+        }
+        
+        def Shader "GranulationColorFactor"
+        {
+            uniform token info:id = "ND_add_float"
+            float inputs:in1.connect = </Root/WatercolorBrush/GranulationColorMod.outputs:out>
+            float inputs:in2 = 1.0
+            float outputs:out
+        }
+        
+        # Opacity variation from granulation
+        def Shader "GranulationOpacityMod"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/WatercolorBrush/GranulationCentered.outputs:out>
+            float inputs:in2 = 0.2
+            float outputs:out
+        }
+        
+        def Shader "GranulationOpacityFactor"
+        {
+            uniform token info:id = "ND_add_float"
+            float inputs:in1.connect = </Root/WatercolorBrush/GranulationOpacityMod.outputs:out>
+            float inputs:in2 = 0.9
+            float outputs:out
+        }
+        
+        # ============================================
+        # STROKE MASK
+        # ============================================
+        
+        def Shader "StrokeMask"
+        {
+            uniform token info:id = "ND_image_float"
+            asset inputs:file = @BrushTextures/oil_stroke_1.png@
+            float2 inputs:texcoord.connect = </Root/WatercolorBrush/Texcoord.outputs:out>
+            token inputs:uaddressmode = "clamp"
+            token inputs:vaddressmode = "clamp"
+            float outputs:out
+        }
+        
+        # ============================================
+        # COMBINED OPACITY
+        # ============================================
+        
+        # Base opacity from mask and edge
+        def Shader "MaskWithEdge"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/WatercolorBrush/StrokeMask.outputs:out>
+            float inputs:in2.connect = </Root/WatercolorBrush/EdgeOpacity.outputs:out>
+            float outputs:out
+        }
+        
+        # Apply granulation to opacity
+        def Shader "OpacityWithGranulation"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/WatercolorBrush/MaskWithEdge.outputs:out>
+            float inputs:in2.connect = </Root/WatercolorBrush/GranulationOpacityFactor.outputs:out>
+            float outputs:out
+        }
+        
+        # Watercolor is more translucent overall
+        def Shader "FinalOpacity"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/WatercolorBrush/OpacityWithGranulation.outputs:out>
+            float inputs:in2 = 0.85
+            float outputs:out
+        }
+        
+        # ============================================
+        # COMBINED COLOR
+        # ============================================
+        
+        # Convert edge darken factor to color multiplier
+        def Shader "EdgeDarkenColor"
+        {
+            uniform token info:id = "ND_combine3_color3"
+            float inputs:in1.connect = </Root/WatercolorBrush/EdgeDarkenFactor.outputs:out>
+            float inputs:in2.connect = </Root/WatercolorBrush/EdgeDarkenFactor.outputs:out>
+            float inputs:in3.connect = </Root/WatercolorBrush/EdgeDarkenFactor.outputs:out>
+            color3f outputs:out
+        }
+        
+        # Apply edge darkening to vertex color
+        def Shader "ColorWithEdgeDarken"
+        {
+            uniform token info:id = "ND_multiply_color3"
+            color3f inputs:in1.connect = </Root/WatercolorBrush/VertexColor.outputs:out>
+            color3f inputs:in2.connect = </Root/WatercolorBrush/EdgeDarkenColor.outputs:out>
+            color3f outputs:out
+        }
+        
+        # Convert granulation to color
+        def Shader "GranulationColor"
+        {
+            uniform token info:id = "ND_combine3_color3"
+            float inputs:in1.connect = </Root/WatercolorBrush/GranulationColorFactor.outputs:out>
+            float inputs:in2.connect = </Root/WatercolorBrush/GranulationColorFactor.outputs:out>
+            float inputs:in3.connect = </Root/WatercolorBrush/GranulationColorFactor.outputs:out>
+            color3f outputs:out
+        }
+        
+        # Apply granulation variation
+        def Shader "FinalColor"
+        {
+            uniform token info:id = "ND_multiply_color3"
+            color3f inputs:in1.connect = </Root/WatercolorBrush/ColorWithEdgeDarken.outputs:out>
+            color3f inputs:in2.connect = </Root/WatercolorBrush/GranulationColor.outputs:out>
+            color3f outputs:out
+        }
+        
+        # ============================================
+        # ROUGHNESS (matte watercolor paper feel)
+        # ============================================
+        
+        def Shader "RoughnessBase"
+        {
+            uniform token info:id = "ND_constant_float"
+            float inputs:value = 0.85
+            float outputs:out
+        }
+        
+        # Slight variation from granulation
+        def Shader "RoughnessVariation"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/WatercolorBrush/GranulationCentered.outputs:out>
+            float inputs:in2 = 0.1
+            float outputs:out
+        }
+        
+        def Shader "RoughnessFinal"
+        {
+            uniform token info:id = "ND_add_float"
+            float inputs:in1.connect = </Root/WatercolorBrush/RoughnessBase.outputs:out>
+            float inputs:in2.connect = </Root/WatercolorBrush/RoughnessVariation.outputs:out>
+            float outputs:out
+        }
+        
+        def Shader "RoughnessClamp"
+        {
+            uniform token info:id = "ND_clamp_float"
+            float inputs:in.connect = </Root/WatercolorBrush/RoughnessFinal.outputs:out>
+            float inputs:low = 0.7
+            float inputs:high = 0.95
+            float outputs:out
+        }
+        
+        # ============================================
+        # PBR SURFACE OUTPUT
+        # ============================================
+        
+        def Shader "PBRSurface"
+        {
+            uniform token info:id = "ND_UsdPreviewSurface_surfaceshader"
+            float inputs:clearcoat = 0.0
+            float inputs:clearcoatRoughness = 0.0
+            color3f inputs:diffuseColor.connect = </Root/WatercolorBrush/FinalColor.outputs:out>
+            color3f inputs:emissiveColor = (0, 0, 0)
+            float inputs:ior = 1.5
+            float inputs:metallic = 0.0
+            float3 inputs:normal
+            float inputs:occlusion = 1.0
+            float inputs:opacity.connect = </Root/WatercolorBrush/FinalOpacity.outputs:out>
+            float inputs:opacityThreshold = 0.001
+            float inputs:roughness.connect = </Root/WatercolorBrush/RoughnessClamp.outputs:out>
+            token outputs:out
+        }
+    }
+}

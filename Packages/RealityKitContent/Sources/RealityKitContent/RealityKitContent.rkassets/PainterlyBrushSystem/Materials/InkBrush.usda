@@ -1,0 +1,334 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "Space Drawing System"
+    }
+    defaultPrim = "Root"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "Root"
+{
+    def Material "InkBrush"
+    {
+        token outputs:mtlx:surface.connect = </Root/InkBrush/PBRSurface.outputs:out>
+        token outputs:realitykit:vertex
+        token outputs:surface
+        
+        # ============================================
+        # UV INPUTS
+        # ============================================
+        
+        def Shader "Texcoord"
+        {
+            uniform token info:id = "ND_texcoord_vector2"
+            float2 outputs:out
+        }
+        
+        def Shader "SeparateUV"
+        {
+            uniform token info:id = "ND_separate2_vector2"
+            float2 inputs:in.connect = </Root/InkBrush/Texcoord.outputs:out>
+            float outputs:outx
+            float outputs:outy
+        }
+        
+        # ============================================
+        # VERTEX COLOR
+        # ============================================
+        
+        def Shader "VertexColor"
+        {
+            uniform token info:id = "ND_geompropvalue_color3"
+            color3f inputs:default = (0.05, 0.05, 0.08)
+            string inputs:geomprop = "displayColor"
+            color3f outputs:out
+        }
+        
+        # ============================================
+        # EDGE DISTANCE
+        # ============================================
+        
+        def Shader "UCentered"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1.connect = </Root/InkBrush/SeparateUV.outputs:outx>
+            float inputs:in2 = 0.5
+            float outputs:out
+        }
+        
+        def Shader "UAbs"
+        {
+            uniform token info:id = "ND_absval_float"
+            float inputs:in.connect = </Root/InkBrush/UCentered.outputs:out>
+            float outputs:out
+        }
+        
+        def Shader "UEdgeDist"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/InkBrush/UAbs.outputs:out>
+            float inputs:in2 = 2.0
+            float outputs:out
+        }
+        
+        # ============================================
+        # CRISP EDGE CUTOFF (sharp ink edge)
+        # ============================================
+        
+        def Shader "EdgeCutoff"
+        {
+            uniform token info:id = "ND_smoothstep_float"
+            float inputs:in.connect = </Root/InkBrush/UEdgeDist.outputs:out>
+            float inputs:low = 0.92
+            float inputs:high = 1.0
+            float outputs:out
+        }
+        
+        def Shader "EdgeOpacity"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1 = 1.0
+            float inputs:in2.connect = </Root/InkBrush/EdgeCutoff.outputs:out>
+            float outputs:out
+        }
+        
+        # ============================================
+        # DRY BRUSH TEXTURE (broken ink coverage)
+        # ============================================
+        
+        def Shader "DryBrushTileScale"
+        {
+            uniform token info:id = "ND_combine2_vector2"
+            float inputs:in1 = 2.0
+            float inputs:in2 = 16.0
+            float2 outputs:out
+        }
+        
+        def Shader "DryBrushUV"
+        {
+            uniform token info:id = "ND_multiply_vector2"
+            float2 inputs:in1.connect = </Root/InkBrush/Texcoord.outputs:out>
+            float2 inputs:in2.connect = </Root/InkBrush/DryBrushTileScale.outputs:out>
+            float2 outputs:out
+        }
+        
+        def Shader "DryBrushTex"
+        {
+            uniform token info:id = "ND_image_float"
+            asset inputs:file = @BrushTextures/brush_streaks.png@
+            float2 inputs:texcoord.connect = </Root/InkBrush/DryBrushUV.outputs:out>
+            token inputs:uaddressmode = "clamp"
+            token inputs:vaddressmode = "periodic"
+            float outputs:out
+        }
+        
+        # Dry brush breaks up the stroke
+        # This creates the "running out of ink" effect
+        def Shader "DryBrushThreshold"
+        {
+            uniform token info:id = "ND_smoothstep_float"
+            float inputs:in.connect = </Root/InkBrush/DryBrushTex.outputs:out>
+            float inputs:low = 0.15
+            float inputs:high = 0.5
+            float outputs:out
+        }
+        
+        # Blend with V coordinate - more dry brush at stroke end
+        def Shader "VDryBrushFactor"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/InkBrush/SeparateUV.outputs:outy>
+            float inputs:in2 = 0.4
+            float outputs:out
+        }
+        
+        def Shader "DryBrushMix"
+        {
+            uniform token info:id = "ND_mix_float"
+            float inputs:bg = 1.0
+            float inputs:fg.connect = </Root/InkBrush/DryBrushThreshold.outputs:out>
+            float inputs:mix.connect = </Root/InkBrush/VDryBrushFactor.outputs:out>
+            float outputs:out
+        }
+        
+        # ============================================
+        # INK POOLING (darker at stroke start/end)
+        # ============================================
+        
+        # V near 0 or 1 = ends of stroke
+        def Shader "VFromCenter"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1.connect = </Root/InkBrush/SeparateUV.outputs:outy>
+            float inputs:in2 = 0.5
+            float outputs:out
+        }
+        
+        def Shader "VAbsFromCenter"
+        {
+            uniform token info:id = "ND_absval_float"
+            float inputs:in.connect = </Root/InkBrush/VFromCenter.outputs:out>
+            float outputs:out
+        }
+        
+        def Shader "VEndDist"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/InkBrush/VAbsFromCenter.outputs:out>
+            float inputs:in2 = 2.0
+            float outputs:out
+        }
+        
+        # Darken near ends (ink pools where brush lifts)
+        def Shader "PoolingRamp"
+        {
+            uniform token info:id = "ND_smoothstep_float"
+            float inputs:in.connect = </Root/InkBrush/VEndDist.outputs:out>
+            float inputs:low = 0.7
+            float inputs:high = 1.0
+            float outputs:out
+        }
+        
+        def Shader "PoolingDarken"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/InkBrush/PoolingRamp.outputs:out>
+            float inputs:in2 = 0.2
+            float outputs:out
+        }
+        
+        def Shader "PoolingFactor"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1 = 1.0
+            float inputs:in2.connect = </Root/InkBrush/PoolingDarken.outputs:out>
+            float outputs:out
+        }
+        
+        # ============================================
+        # STROKE MASK
+        # ============================================
+        
+        def Shader "StrokeMask"
+        {
+            uniform token info:id = "ND_image_float"
+            asset inputs:file = @BrushTextures/oil_stroke_1.png@
+            float2 inputs:texcoord.connect = </Root/InkBrush/Texcoord.outputs:out>
+            token inputs:uaddressmode = "clamp"
+            token inputs:vaddressmode = "clamp"
+            float outputs:out
+        }
+        
+        # ============================================
+        # COMBINED OPACITY
+        # ============================================
+        
+        def Shader "MaskWithEdge"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/InkBrush/StrokeMask.outputs:out>
+            float inputs:in2.connect = </Root/InkBrush/EdgeOpacity.outputs:out>
+            float outputs:out
+        }
+        
+        def Shader "OpacityWithDryBrush"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/InkBrush/MaskWithEdge.outputs:out>
+            float inputs:in2.connect = </Root/InkBrush/DryBrushMix.outputs:out>
+            float outputs:out
+        }
+        
+        # Sharp threshold for ink (no soft edges)
+        def Shader "FinalOpacity"
+        {
+            uniform token info:id = "ND_smoothstep_float"
+            float inputs:in.connect = </Root/InkBrush/OpacityWithDryBrush.outputs:out>
+            float inputs:low = 0.3
+            float inputs:high = 0.5
+            float outputs:out
+        }
+        
+        # ============================================
+        # COMBINED COLOR
+        # ============================================
+        
+        def Shader "PoolingColor"
+        {
+            uniform token info:id = "ND_combine3_color3"
+            float inputs:in1.connect = </Root/InkBrush/PoolingFactor.outputs:out>
+            float inputs:in2.connect = </Root/InkBrush/PoolingFactor.outputs:out>
+            float inputs:in3.connect = </Root/InkBrush/PoolingFactor.outputs:out>
+            color3f outputs:out
+        }
+        
+        def Shader "FinalColor"
+        {
+            uniform token info:id = "ND_multiply_color3"
+            color3f inputs:in1.connect = </Root/InkBrush/VertexColor.outputs:out>
+            color3f inputs:in2.connect = </Root/InkBrush/PoolingColor.outputs:out>
+            color3f outputs:out
+        }
+        
+        # ============================================
+        # ROUGHNESS (slight sheen for wet ink)
+        # ============================================
+        
+        # Fresh ink has slight gloss
+        def Shader "BaseRoughness"
+        {
+            uniform token info:id = "ND_constant_float"
+            float inputs:value = 0.4
+            float outputs:out
+        }
+        
+        # More gloss where ink pools
+        def Shader "PoolingGloss"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/InkBrush/PoolingRamp.outputs:out>
+            float inputs:in2 = 0.15
+            float outputs:out
+        }
+        
+        def Shader "RoughnessFinal"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1.connect = </Root/InkBrush/BaseRoughness.outputs:out>
+            float inputs:in2.connect = </Root/InkBrush/PoolingGloss.outputs:out>
+            float outputs:out
+        }
+        
+        def Shader "RoughnessClamp"
+        {
+            uniform token info:id = "ND_clamp_float"
+            float inputs:in.connect = </Root/InkBrush/RoughnessFinal.outputs:out>
+            float inputs:low = 0.2
+            float inputs:high = 0.5
+            float outputs:out
+        }
+        
+        # ============================================
+        # PBR SURFACE OUTPUT
+        # ============================================
+        
+        def Shader "PBRSurface"
+        {
+            uniform token info:id = "ND_UsdPreviewSurface_surfaceshader"
+            float inputs:clearcoat = 0.0
+            float inputs:clearcoatRoughness = 0.0
+            color3f inputs:diffuseColor.connect = </Root/InkBrush/FinalColor.outputs:out>
+            color3f inputs:emissiveColor = (0, 0, 0)
+            float inputs:ior = 1.5
+            float inputs:metallic = 0.0
+            float3 inputs:normal
+            float inputs:occlusion = 1.0
+            float inputs:opacity.connect = </Root/InkBrush/FinalOpacity.outputs:out>
+            float inputs:opacityThreshold = 0.001
+            float inputs:roughness.connect = </Root/InkBrush/RoughnessClamp.outputs:out>
+            token outputs:out
+        }
+    }
+}

@@ -1,0 +1,286 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "Space Drawing System"
+    }
+    defaultPrim = "Root"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "Root"
+{
+    def Material "NeonBrush"
+    {
+        token outputs:mtlx:surface.connect = </Root/NeonBrush/PBRSurface.outputs:out>
+        token outputs:realitykit:vertex
+        token outputs:surface
+        
+        # ============================================
+        # UV INPUTS
+        # ============================================
+        
+        def Shader "Texcoord"
+        {
+            uniform token info:id = "ND_texcoord_vector2"
+            float2 outputs:out
+        }
+        
+        def Shader "SeparateUV"
+        {
+            uniform token info:id = "ND_separate2_vector2"
+            float2 inputs:in.connect = </Root/NeonBrush/Texcoord.outputs:out>
+            float outputs:outx
+            float outputs:outy
+        }
+        
+        # ============================================
+        # TIME FOR ANIMATION
+        # ============================================
+        
+        def Shader "Time"
+        {
+            uniform token info:id = "ND_time_float"
+            float outputs:out
+        }
+        
+        # ============================================
+        # VERTEX COLOR (glow color)
+        # ============================================
+        
+        def Shader "VertexColor"
+        {
+            uniform token info:id = "ND_geompropvalue_color3"
+            color3f inputs:default = (0.4, 0.1, 1.0)
+            string inputs:geomprop = "displayColor"
+            color3f outputs:out
+        }
+        
+        # ============================================
+        # EDGE DISTANCE (for glow falloff)
+        # ============================================
+        
+        def Shader "UCentered"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1.connect = </Root/NeonBrush/SeparateUV.outputs:outx>
+            float inputs:in2 = 0.5
+            float outputs:out
+        }
+        
+        def Shader "UAbs"
+        {
+            uniform token info:id = "ND_absval_float"
+            float inputs:in.connect = </Root/NeonBrush/UCentered.outputs:out>
+            float outputs:out
+        }
+        
+        def Shader "UEdgeDist"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/NeonBrush/UAbs.outputs:out>
+            float inputs:in2 = 2.0
+            float outputs:out
+        }
+        
+        # ============================================
+        # CORE GLOW (bright center)
+        # ============================================
+        
+        # Inner bright core
+        def Shader "CoreRamp"
+        {
+            uniform token info:id = "ND_smoothstep_float"
+            float inputs:in.connect = </Root/NeonBrush/UEdgeDist.outputs:out>
+            float inputs:low = 0.0
+            float inputs:high = 0.4
+            float outputs:out
+        }
+        
+        def Shader "CoreInvert"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1 = 1.0
+            float inputs:in2.connect = </Root/NeonBrush/CoreRamp.outputs:out>
+            float outputs:out
+        }
+        
+        # ============================================
+        # OUTER GLOW (soft falloff - fake bloom)
+        # ============================================
+        
+        def Shader "GlowRamp"
+        {
+            uniform token info:id = "ND_smoothstep_float"
+            float inputs:in.connect = </Root/NeonBrush/UEdgeDist.outputs:out>
+            float inputs:low = 0.3
+            float inputs:high = 1.0
+            float outputs:out
+        }
+        
+        def Shader "GlowInvert"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1 = 1.0
+            float inputs:in2.connect = </Root/NeonBrush/GlowRamp.outputs:out>
+            float outputs:out
+        }
+        
+        # ============================================
+        # ANIMATED PULSE
+        # ============================================
+        
+        # Pulse speed
+        def Shader "TimeScaled"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/NeonBrush/Time.outputs:out>
+            float inputs:in2 = 3.0
+            float outputs:out
+        }
+        
+        def Shader "PulseSin"
+        {
+            uniform token info:id = "ND_sin_float"
+            float inputs:in.connect = </Root/NeonBrush/TimeScaled.outputs:out>
+            float outputs:out
+        }
+        
+        # Map sine [-1,1] to pulse range [0.85, 1.15]
+        def Shader "PulseScaled"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/NeonBrush/PulseSin.outputs:out>
+            float inputs:in2 = 0.15
+            float outputs:out
+        }
+        
+        def Shader "PulseFinal"
+        {
+            uniform token info:id = "ND_add_float"
+            float inputs:in1.connect = </Root/NeonBrush/PulseScaled.outputs:out>
+            float inputs:in2 = 1.0
+            float outputs:out
+        }
+        
+        # ============================================
+        # COMBINED OPACITY
+        # ============================================
+        
+        # Core is fully opaque, glow fades
+        def Shader "OpacityBase"
+        {
+            uniform token info:id = "ND_max_float"
+            float inputs:in1.connect = </Root/NeonBrush/CoreInvert.outputs:out>
+            float inputs:in2.connect = </Root/NeonBrush/GlowInvert.outputs:out>
+            float outputs:out
+        }
+        
+        # Soften the outer glow more
+        def Shader "GlowOpacityMod"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/NeonBrush/GlowInvert.outputs:out>
+            float inputs:in2 = 0.5
+            float outputs:out
+        }
+        
+        def Shader "FinalOpacity"
+        {
+            uniform token info:id = "ND_add_float"
+            float inputs:in1.connect = </Root/NeonBrush/CoreInvert.outputs:out>
+            float inputs:in2.connect = </Root/NeonBrush/GlowOpacityMod.outputs:out>
+            float outputs:out
+        }
+        
+        def Shader "OpacityClamp"
+        {
+            uniform token info:id = "ND_clamp_float"
+            float inputs:in.connect = </Root/NeonBrush/FinalOpacity.outputs:out>
+            float inputs:low = 0.0
+            float inputs:high = 1.0
+            float outputs:out
+        }
+        
+        # ============================================
+        # EMISSION COLOR (the actual glow)
+        # ============================================
+        
+        # Core is brighter (white-ish), outer is colored
+        def Shader "WhiteCore"
+        {
+            uniform token info:id = "ND_constant_color3"
+            color3f inputs:value = (1.0, 1.0, 1.0)
+            color3f outputs:out
+        }
+        
+        # Mix between white core and vertex color
+        def Shader "CoreColorMix"
+        {
+            uniform token info:id = "ND_mix_color3"
+            color3f inputs:bg.connect = </Root/NeonBrush/VertexColor.outputs:out>
+            color3f inputs:fg.connect = </Root/NeonBrush/WhiteCore.outputs:out>
+            float inputs:mix.connect = </Root/NeonBrush/CoreInvert.outputs:out>
+            color3f outputs:out
+        }
+        
+        # Apply pulse to emission
+        def Shader "PulseColor"
+        {
+            uniform token info:id = "ND_combine3_color3"
+            float inputs:in1.connect = </Root/NeonBrush/PulseFinal.outputs:out>
+            float inputs:in2.connect = </Root/NeonBrush/PulseFinal.outputs:out>
+            float inputs:in3.connect = </Root/NeonBrush/PulseFinal.outputs:out>
+            color3f outputs:out
+        }
+        
+        def Shader "EmissiveColor"
+        {
+            uniform token info:id = "ND_multiply_color3"
+            color3f inputs:in1.connect = </Root/NeonBrush/CoreColorMix.outputs:out>
+            color3f inputs:in2.connect = </Root/NeonBrush/PulseColor.outputs:out>
+            color3f outputs:out
+        }
+        
+        # ============================================
+        # DIFFUSE (dark base, emission does the work)
+        # ============================================
+        
+        def Shader "DarkBase"
+        {
+            uniform token info:id = "ND_constant_color3"
+            color3f inputs:value = (0.02, 0.02, 0.02)
+            color3f outputs:out
+        }
+        
+        # Slight tint from vertex color
+        def Shader "DiffuseColor"
+        {
+            uniform token info:id = "ND_multiply_color3"
+            color3f inputs:in1.connect = </Root/NeonBrush/DarkBase.outputs:out>
+            color3f inputs:in2.connect = </Root/NeonBrush/VertexColor.outputs:out>
+            color3f outputs:out
+        }
+        
+        # ============================================
+        # PBR SURFACE OUTPUT
+        # ============================================
+        
+        def Shader "PBRSurface"
+        {
+            uniform token info:id = "ND_UsdPreviewSurface_surfaceshader"
+            float inputs:clearcoat = 0.0
+            float inputs:clearcoatRoughness = 0.0
+            color3f inputs:diffuseColor.connect = </Root/NeonBrush/DiffuseColor.outputs:out>
+            color3f inputs:emissiveColor.connect = </Root/NeonBrush/EmissiveColor.outputs:out>
+            float inputs:ior = 1.5
+            float inputs:metallic = 0.0
+            float3 inputs:normal
+            float inputs:occlusion = 1.0
+            float inputs:opacity.connect = </Root/NeonBrush/OpacityClamp.outputs:out>
+            float inputs:opacityThreshold = 0.01
+            float inputs:roughness = 0.3
+            token outputs:out
+        }
+    }
+}
