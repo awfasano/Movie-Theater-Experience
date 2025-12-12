@@ -41,6 +41,7 @@
 		C41976572E53D2C4006816BE /* CardHoverEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41976562E53D2C4006816BE /* CardHoverEffect.swift */; };
 		C41976592E54355D006816BE /* EnhancedCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41976582E54355D006816BE /* EnhancedCardView.swift */; };
 		C41C81622E093B970050BCB3 /* InteractiveStoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41C81612E093B970050BCB3 /* InteractiveStoryViewModel.swift */; };
+		C42AC1CA2EECBCF300997D3D /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = C42AC1C92EECBCF300997D3D /* README.md */; };
 		C4413F592DC028D7008A7BD8 /* Song.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4413F582DC028D7008A7BD8 /* Song.swift */; };
 		C4413F5B2DC028EE008A7BD8 /* SongService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4413F5A2DC028EE008A7BD8 /* SongService.swift */; };
 		C4413F5D2DC0611B008A7BD8 /* VolumeControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4413F5C2DC0611A008A7BD8 /* VolumeControlView.swift */; };
@@ -196,8 +197,8 @@
 		C4FA41072E50100000444444 /* SpaceDrawingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA41022E50100000444444 /* SpaceDrawingService.swift */; };
 		C4FA41082E50100000444444 /* SpaceDrawingRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA41032E50100000444444 /* SpaceDrawingRenderer.swift */; };
 		C4FA41092E50100000444444 /* SpaceDrawingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA41042E50100000444444 /* SpaceDrawingViewModel.swift */; };
-		C4FA41312E60A1D500444444 /* SpaceDrawingHandPoseProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA41302E60A1D500444444 /* SpaceDrawingHandPoseProvider.swift */; };
 		C4FA410A2E50100000444444 /* SpaceDrawingOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA41052E50100000444444 /* SpaceDrawingOverlay.swift */; };
+		C4FA41312E60A1D500444444 /* SpaceDrawingHandPoseProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FA41302E60A1D500444444 /* SpaceDrawingHandPoseProvider.swift */; };
 		C4FE99B52D7F8F4F008AE0D6 /* SpacesChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE99B42D7F8F4F008AE0D6 /* SpacesChatViewModel.swift */; };
 		C4FE99B92D7F9D80008AE0D6 /* SpacesChatWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE99B82D7F9D80008AE0D6 /* SpacesChatWindow.swift */; };
 		C4FE99BB2D7F9DA8008AE0D6 /* SpacesEmojiWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE99BA2D7F9DA8008AE0D6 /* SpacesEmojiWindow.swift */; };
@@ -266,6 +267,7 @@
 		C41976562E53D2C4006816BE /* CardHoverEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardHoverEffect.swift; sourceTree = "<group>"; };
 		C41976582E54355D006816BE /* EnhancedCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedCardView.swift; sourceTree = "<group>"; };
 		C41C81612E093B970050BCB3 /* InteractiveStoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveStoryViewModel.swift; sourceTree = "<group>"; };
+		C42AC1C92EECBCF300997D3D /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		C4413F582DC028D7008A7BD8 /* Song.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Song.swift; sourceTree = "<group>"; };
 		C4413F5A2DC028EE008A7BD8 /* SongService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongService.swift; sourceTree = "<group>"; };
 		C4413F5C2DC0611A008A7BD8 /* VolumeControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeControlView.swift; sourceTree = "<group>"; };
@@ -397,8 +399,8 @@
 		C4FA41022E50100000444444 /* SpaceDrawingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceDrawingService.swift; sourceTree = "<group>"; };
 		C4FA41032E50100000444444 /* SpaceDrawingRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceDrawingRenderer.swift; sourceTree = "<group>"; };
 		C4FA41042E50100000444444 /* SpaceDrawingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceDrawingViewModel.swift; sourceTree = "<group>"; };
-		C4FA41302E60A1D500444444 /* SpaceDrawingHandPoseProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceDrawingHandPoseProvider.swift; sourceTree = "<group>"; };
 		C4FA41052E50100000444444 /* SpaceDrawingOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceDrawingOverlay.swift; sourceTree = "<group>"; };
+		C4FA41302E60A1D500444444 /* SpaceDrawingHandPoseProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceDrawingHandPoseProvider.swift; sourceTree = "<group>"; };
 		C4FE99B42D7F8F4F008AE0D6 /* SpacesChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesChatViewModel.swift; sourceTree = "<group>"; };
 		C4FE99B82D7F9D80008AE0D6 /* SpacesChatWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesChatWindow.swift; sourceTree = "<group>"; };
 		C4FE99BA2D7F9DA8008AE0D6 /* SpacesEmojiWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesEmojiWindow.swift; sourceTree = "<group>"; };
@@ -928,6 +930,7 @@
 		C4FA41002E50100000444444 /* Space Drawing */ = {
 			isa = PBXGroup;
 			children = (
+				C42AC1C92EECBCF300997D3D /* README.md */,
 				C46166752EB309B800CF2372 /* SpaceDrawingWindow.swift */,
 				C4FA41012E50100000444444 /* SpaceDrawingModels.swift */,
 				C4FA41022E50100000444444 /* SpaceDrawingService.swift */,
@@ -1071,6 +1074,7 @@
 			files = (
 				C4115EDF2B994AFA007AD9B0 /* Assets.xcassets in Resources */,
 				C4F478BD2CEBD46300965502 /* GoogleService-Info.plist in Resources */,
+				C42AC1CA2EECBCF300997D3D /* README.md in Resources */,
 				C4115EE22B994AFA007AD9B0 /* Preview Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

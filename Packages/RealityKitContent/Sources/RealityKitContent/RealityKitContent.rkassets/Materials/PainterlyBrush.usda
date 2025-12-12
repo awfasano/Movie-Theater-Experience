@@ -1,0 +1,258 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "Codex CLI"
+    }
+    defaultPrim = "Root"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "Root"
+{
+    def Material "PainterlyBrush"
+    {
+        token outputs:mtlx:surface.connect = </Root/PainterlyBrush/MaterialXPreviewSurface.outputs:out>
+        token outputs:realitykit:vertex
+        token outputs:surface
+
+        def Shader "MaterialXPreviewSurface"
+        {
+            uniform token info:id = "ND_UsdPreviewSurface_surfaceshader"
+            float inputs:clearcoat
+            float inputs:clearcoatRoughness
+            color3f inputs:diffuseColor.connect = </Root/PainterlyBrush/VariedColor.outputs:out>
+            color3f inputs:emissiveColor
+            float inputs:ior
+            float inputs:metallic = 0.0
+            float3 inputs:normal
+            float inputs:occlusion
+            float inputs:opacity.connect = </Root/PainterlyBrush/OpacityFinal.outputs:out>
+            float inputs:opacityThreshold
+            float inputs:roughness.connect = </Root/PainterlyBrush/RoughnessClamp.outputs:out>
+            token outputs:out
+        }
+
+        def Shader "Texcoord"
+        {
+            uniform token info:id = "ND_texcoord_vector2"
+            float2 outputs:out
+        }
+
+        def Shader "SeparateUV"
+        {
+            uniform token info:id = "ND_separate2_vector2"
+            float2 inputs:in.connect = </Root/PainterlyBrush/Texcoord.outputs:out>
+            float outputs:outx
+            float outputs:outy
+        }
+
+        def Shader "UCentered"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1.connect = </Root/PainterlyBrush/SeparateUV.outputs:outx>
+            float inputs:in2 = 0.5
+            float outputs:out
+        }
+
+        def Shader "UAbs"
+        {
+            uniform token info:id = "ND_absval_float"
+            float inputs:in.connect = </Root/PainterlyBrush/UCentered.outputs:out>
+            float outputs:out
+        }
+
+        def Shader "UEdgeDist"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/PainterlyBrush/UAbs.outputs:out>
+            float inputs:in2 = 2.0
+            float outputs:out
+        }
+
+        def Shader "EdgeSmooth"
+        {
+            uniform token info:id = "ND_smoothstep_float"
+            float inputs:in.connect = </Root/PainterlyBrush/UEdgeDist.outputs:out>
+            float inputs:low = 0.85
+            float inputs:high = 1.0
+            float outputs:out
+        }
+
+        def Shader "EdgeOpacity"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1 = 1.0
+            float inputs:in2.connect = </Root/PainterlyBrush/EdgeSmooth.outputs:out>
+            float outputs:out
+        }
+
+        def Shader "Mask"
+        {
+            uniform token info:id = "ND_image_float"
+            asset inputs:file = @BrushTextures/oil_stroke_1.png@
+            float2 inputs:texcoord.connect = </Root/PainterlyBrush/Texcoord.outputs:out>
+            token inputs:uaddressmode = "clamp"
+            token inputs:vaddressmode = "clamp"
+            float outputs:out
+        }
+
+        def Shader "OpacityMasked"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/PainterlyBrush/Mask.outputs:out>
+            float inputs:in2.connect = </Root/PainterlyBrush/EdgeOpacity.outputs:out>
+            float outputs:out
+        }
+
+        def Shader "StreaksScale"
+        {
+            uniform token info:id = "ND_combine2_vector2"
+            float inputs:in1 = 8.0
+            float inputs:in2 = 8.0
+            float2 outputs:out
+        }
+
+        def Shader "StreaksUV"
+        {
+            uniform token info:id = "ND_multiply_vector2"
+            float2 inputs:in1.connect = </Root/PainterlyBrush/Texcoord.outputs:out>
+            float2 inputs:in2.connect = </Root/PainterlyBrush/StreaksScale.outputs:out>
+            float2 outputs:out
+        }
+
+        def Shader "Streaks"
+        {
+            uniform token info:id = "ND_image_float"
+            asset inputs:file = @BrushTextures/brush_streaks.png@
+            float2 inputs:texcoord.connect = </Root/PainterlyBrush/StreaksUV.outputs:out>
+            token inputs:uaddressmode = "periodic"
+            token inputs:vaddressmode = "periodic"
+            float outputs:out
+        }
+
+        def Shader "StreaksOpacityMul"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/PainterlyBrush/Streaks.outputs:out>
+            float inputs:in2 = 0.45
+            float outputs:out
+        }
+
+        def Shader "StreaksOpacityAdd"
+        {
+            uniform token info:id = "ND_add_float"
+            float inputs:in1.connect = </Root/PainterlyBrush/StreaksOpacityMul.outputs:out>
+            float inputs:in2 = 0.55
+            float outputs:out
+        }
+
+        def Shader "OpacityFinal"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/PainterlyBrush/OpacityMasked.outputs:out>
+            float inputs:in2.connect = </Root/PainterlyBrush/StreaksOpacityAdd.outputs:out>
+            float outputs:out
+        }
+
+        def Shader "NoiseScale"
+        {
+            uniform token info:id = "ND_combine2_vector2"
+            float inputs:in1 = 14.0
+            float inputs:in2 = 14.0
+            float2 outputs:out
+        }
+
+        def Shader "NoiseUV"
+        {
+            uniform token info:id = "ND_multiply_vector2"
+            float2 inputs:in1.connect = </Root/PainterlyBrush/Texcoord.outputs:out>
+            float2 inputs:in2.connect = </Root/PainterlyBrush/NoiseScale.outputs:out>
+            float2 outputs:out
+        }
+
+        def Shader "Noise"
+        {
+            uniform token info:id = "ND_image_float"
+            asset inputs:file = @BrushTextures/brush_fiber_noise.png@
+            float2 inputs:texcoord.connect = </Root/PainterlyBrush/NoiseUV.outputs:out>
+            token inputs:uaddressmode = "periodic"
+            token inputs:vaddressmode = "periodic"
+            float outputs:out
+        }
+
+        def Shader "BrightnessMul"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/PainterlyBrush/Noise.outputs:out>
+            float inputs:in2 = 0.25
+            float outputs:out
+        }
+
+        def Shader "BrightnessAdd"
+        {
+            uniform token info:id = "ND_add_float"
+            float inputs:in1.connect = </Root/PainterlyBrush/BrightnessMul.outputs:out>
+            float inputs:in2 = 0.875
+            float outputs:out
+        }
+
+        def Shader "BrightnessColor"
+        {
+            uniform token info:id = "ND_combine3_color3"
+            float inputs:in1.connect = </Root/PainterlyBrush/BrightnessAdd.outputs:out>
+            float inputs:in2.connect = </Root/PainterlyBrush/BrightnessAdd.outputs:out>
+            float inputs:in3.connect = </Root/PainterlyBrush/BrightnessAdd.outputs:out>
+            color3f outputs:out
+        }
+
+        def Shader "VertexColor"
+        {
+            uniform token info:id = "ND_geompropvalue_color3"
+            color3f inputs:default = (1, 1, 1)
+            string inputs:geomprop = "displayColor"
+            color3f outputs:out
+        }
+
+        def Shader "VariedColor"
+        {
+            uniform token info:id = "ND_multiply_color3"
+            color3f inputs:in1.connect = </Root/PainterlyBrush/VertexColor.outputs:out>
+            color3f inputs:in2.connect = </Root/PainterlyBrush/BrightnessColor.outputs:out>
+            color3f outputs:out
+        }
+
+        def Shader "RoughnessNoiseCentered"
+        {
+            uniform token info:id = "ND_subtract_float"
+            float inputs:in1.connect = </Root/PainterlyBrush/Noise.outputs:out>
+            float inputs:in2 = 0.5
+            float outputs:out
+        }
+
+        def Shader "RoughnessNoiseScaled"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/PainterlyBrush/RoughnessNoiseCentered.outputs:out>
+            float inputs:in2 = 0.35
+            float outputs:out
+        }
+
+        def Shader "RoughnessBaseAdd"
+        {
+            uniform token info:id = "ND_add_float"
+            float inputs:in1.connect = </Root/PainterlyBrush/RoughnessNoiseScaled.outputs:out>
+            float inputs:in2 = 0.6
+            float outputs:out
+        }
+
+        def Shader "RoughnessClamp"
+        {
+            uniform token info:id = "ND_clamp_float"
+            float inputs:in.connect = </Root/PainterlyBrush/RoughnessBaseAdd.outputs:out>
+            float inputs:low = 0.3
+            float inputs:high = 0.9
+            float outputs:out
+        }
+    }
+}

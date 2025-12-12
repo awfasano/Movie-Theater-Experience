@@ -7,6 +7,7 @@
 
 import Foundation
 import RealityKit
+import RealityKitContent
 import SwiftUI
 import simd
 #if os(visionOS)
@@ -30,6 +31,10 @@ final class SpaceDrawingRenderer {
     private var strokeSignatures: [String: StrokeSignature] = [:]
     private var fingerPreviewEntity: ModelEntity?
     private let circleSegmentCount = 14
+#if os(visionOS)
+    private var painterlyBrushMaterial: ShaderGraphMaterial?
+    private var painterlyBrushMaterialLoadTask: Task<Void, Never>?
+#endif
     
     private struct StrokeTipTrail {
         let entity: ModelEntity
@@ -96,6 +101,9 @@ final class SpaceDrawingRenderer {
             rootAnchor = entity
         }
         ensureVolumeGuide()
+#if os(visionOS)
+        ensurePainterlyBrushMaterialLoaded()
+#endif
     }
     
     func setVisibility(_ isVisible: Bool) {
@@ -153,8 +161,18 @@ final class SpaceDrawingRenderer {
                 strokeContainer.addChild(entity)
                 strokeEntities[stroke.strokeId] = entity
                 strokeSignatures[stroke.strokeId] = signature
-            } else if strokeEntities[stroke.strokeId]?.parent == nil, let entity = strokeEntities[stroke.strokeId] {
-                strokeContainer.addChild(entity)
+            } else if let entity = strokeEntities[stroke.strokeId] {
+                if entity.parent == nil {
+                    strokeContainer.addChild(entity)
+                }
+#if os(visionOS)
+                if (stroke.style == .flat || stroke.style == .ribbon),
+                   let painterlyBrushMaterial,
+                   var modelEntity = entity as? ModelEntity,
+                   modelEntity.model != nil {
+                    modelEntity.model?.materials = [painterlyBrushMaterial]
+                }
+#endif
             }
         }
     }
@@ -527,12 +545,15 @@ final class SpaceDrawingRenderer {
         points = laplacianSmooth(points, iterations: lapIterations, smoothingFactor: lapFactor)
         guard let first = points.first else { return nil }
         let strokeMaterial = material(for: stroke)
+        let entityMaterial: any Material = materialForEntity(for: stroke, fallback: strokeMaterial)
+        let rgba = stroke.color.rgbaComponents
+        let strokeVertexColor = SIMD4<Float>(Float(rgba.r), Float(rgba.g), Float(rgba.b), Float(rgba.a))
 
         if points.count == 1 {
             return makeSinglePointEntity(style: stroke.style,
                                          point: first,
                                          radius: radius,
-                                         material: strokeMaterial,
+                                         material: entityMaterial,
                                          anchor: anchor,
                                          strokeId: stroke.strokeId)
         }
@@ -546,16 +567,19 @@ final class SpaceDrawingRenderer {
         case .flat:
             guard let mesh = makeFlatMesh(points: points,
                                           halfWidth: radius * 1.4,
+                                          strokeId: stroke.strokeId,
+                                          strokeColor: strokeVertexColor,
                                           normal: flatNormal(for: anchor)) else { return nil }
-            let entity = ModelEntity(mesh: mesh, materials: [strokeMaterial])
+            let entity = ModelEntity(mesh: mesh, materials: [entityMaterial])
             entity.name = "Stroke-\(stroke.strokeId)"
             return entity
         case .ribbon:
             guard let mesh = makeRibbonMesh(points: points,
                                             baseRadius: radius,
                                             strokeId: stroke.strokeId,
+                                            strokeColor: strokeVertexColor,
                                             normal: flatNormal(for: anchor)) else { return nil }
-            let entity = ModelEntity(mesh: mesh, materials: [strokeMaterial])
+            let entity = ModelEntity(mesh: mesh, materials: [entityMaterial])
             entity.name = "Stroke-\(stroke.strokeId)"
             return entity
         case .classicCylinder:
@@ -573,7 +597,17 @@ final class SpaceDrawingRenderer {
                                        strokeId: stroke.strokeId)
         }
     }
-    
+
+    private func materialForEntity(for stroke: SpaceStroke,
+                                   fallback: PhysicallyBasedMaterial) -> any Material {
+#if os(visionOS)
+        if (stroke.style == .flat || stroke.style == .ribbon), let painterlyBrushMaterial {
+            return painterlyBrushMaterial
+        }
+#endif
+        return fallback
+    }
+
     private func material(for stroke: SpaceStroke) -> PhysicallyBasedMaterial {
         let color = stroke.color
         let rgba = color.rgbaComponents
@@ -663,7 +697,7 @@ final class SpaceDrawingRenderer {
     private func makeSinglePointEntity(style: SpaceStroke.Style,
                                        point: SIMD3<Float>,
                                        radius: Float,
-                                       material: PhysicallyBasedMaterial,
+                                       material: any Material,
                                        anchor: Entity,
                                        strokeId: String) -> Entity? {
         switch style {
@@ -688,6 +722,36 @@ final class SpaceDrawingRenderer {
             return entity
         }
     }
+
+#if os(visionOS)
+    private func ensurePainterlyBrushMaterialLoaded() {
+        guard painterlyBrushMaterial == nil else { return }
+        guard painterlyBrushMaterialLoadTask == nil else { return }
+        painterlyBrushMaterialLoadTask = Task { @MainActor in
+            defer { painterlyBrushMaterialLoadTask = nil }
+            do {
+                guard let url = realityKitContentBundle.url(
+                    forResource: "PainterlyBrush",
+                    withExtension: "usda",
+                    subdirectory: "RealityKitContent.rkassets/Materials"
+                ) else {
+                    print("⚠️ PainterlyBrush.usda not found in RealityKitContent bundle resources.")
+                    return
+                }
+                var material = try await ShaderGraphMaterial(named: "PainterlyBrush", from: url)
+                if #available(visionOS 2.0, *) {
+                    material.faceCulling = .none
+                    material.writesDepth = false
+                    material.readsDepth = false
+                }
+                painterlyBrushMaterial = material
+                print("🎨 Loaded painterly brush ShaderGraphMaterial")
+            } catch {
+                print("⚠️ Failed to load PainterlyBrush ShaderGraphMaterial: \(error)")
+            }
+        }
+    }
+#endif
     
     private func prepareStrokePoints(_ points: [SIMD3<Float>],
                                      radius: Float,
@@ -780,12 +844,16 @@ final class SpaceDrawingRenderer {
     
     private func makeFlatMesh(points: [SIMD3<Float>],
                               halfWidth: Float,
+                              strokeId: String,
+                              strokeColor: SIMD4<Float>,
                               normal: SIMD3<Float>) -> MeshResource? {
         guard points.count >= 2 else { return nil }
         var descriptor = MeshDescriptor()
         var positions: [SIMD3<Float>] = []
         var normals: [SIMD3<Float>] = []
         var texCoords: [SIMD2<Float>] = []
+        var colors: [SIMD4<Float>] = []
+        let vFractions = arcLengthFractions(points)
         
         let normalizedNormal = simd_normalize(normal)
         
@@ -802,15 +870,24 @@ final class SpaceDrawingRenderer {
                 right = SIMD3<Float>(1, 0, 0)
             }
             right = simd_normalize(right)
-            
-            positions.append(point + right * halfWidth)
-            positions.append(point - right * halfWidth)
+
+            let t = vFractions[index]
+            let taperIn = smoothstep(0, 0.1, t)
+            let taperOut = smoothstep(0, 0.15, 1 - t)
+            let taper = min(taperIn, taperOut)
+            let jitter = pseudoRandom(for: strokeId, index: index)
+            let widthMultiplier = 0.88 + 0.12 * sin(Float(index) * 0.55 + jitter * Float.pi * 2)
+            let width = max(halfWidth * widthMultiplier * taper, halfWidth * 0.35)
+            positions.append(point + right * width)
+            positions.append(point - right * width)
             normals.append(normalizedNormal)
             normals.append(normalizedNormal)
             
-            let v = Float(index) / Float(points.count - 1)
+            let v = t
             texCoords.append(SIMD2<Float>(0, v))
             texCoords.append(SIMD2<Float>(1, v))
+            colors.append(strokeColor)
+            colors.append(strokeColor)
         }
         
         var indices: [UInt32] = []
@@ -828,6 +905,7 @@ final class SpaceDrawingRenderer {
         descriptor.positions = MeshBuffer(positions)
         descriptor.normals = MeshBuffer(normals)
         descriptor.textureCoordinates = MeshBuffer(texCoords)
+        descriptor.colors = MeshBuffer(colors)
         descriptor.primitives = .triangles(indices)
         
         return try? MeshResource.generate(from: [descriptor])
@@ -836,6 +914,7 @@ final class SpaceDrawingRenderer {
     private func makeRibbonMesh(points: [SIMD3<Float>],
                                 baseRadius: Float,
                                 strokeId: String,
+                                strokeColor: SIMD4<Float>,
                                 normal: SIMD3<Float>) -> MeshResource? {
         guard points.count >= 2 else { return nil }
         
@@ -843,41 +922,50 @@ final class SpaceDrawingRenderer {
         var positions: [SIMD3<Float>] = []
         var normals: [SIMD3<Float>] = []
         var texCoords: [SIMD2<Float>] = []
-        let normalizedNormal = simd_normalize(normal)
+        var colors: [SIMD4<Float>] = []
+        let vFractions = arcLengthFractions(points)
+        let frames = computeBishopFrames(points: points, referenceNormal: normal)
         
         for (index, point) in points.enumerated() {
-            let prev = index == 0 ? point : points[index - 1]
-            let next = index == points.count - 1 ? point : points[index + 1]
-            var tangent = next - prev
+            let frame = frames[min(index, frames.count - 1)]
+            var tangent = frame.tangent
             if simd_length_squared(tangent) < 1e-8 {
                 tangent = SIMD3<Float>(0, 0, 1)
             }
             tangent = simd_normalize(tangent)
-            
-            var right = simd_cross(normalizedNormal, tangent)
-            if simd_length_squared(right) < 1e-8 {
-                right = SIMD3<Float>(1, 0, 0)
-            }
-            right = simd_normalize(right)
-            var up = simd_normalize(simd_cross(tangent, right))
-            
+
+            var widthDirection = simd_normalize(frame.binormal)
+            var surfaceNormal = simd_normalize(frame.normal)
+
+            let t = vFractions[index]
+            let taperIn = smoothstep(0, 0.1, t)
+            let taperOut = smoothstep(0, 0.15, 1 - t)
+            let taper = min(taperIn, taperOut)
             let jitter = pseudoRandom(for: strokeId, index: index)
-            let widthMultiplier = 0.75 + 0.35 * sin(Float(index) * 0.6 + jitter * Float.pi * 2)
+            let widthMultiplier = 0.76 + 0.34 * sin(Float(index) * 0.6 + jitter * Float.pi * 2)
+
+            let segmentLength = segmentLengthProxy(points: points, index: index)
+            let maxVelocitySegment: Float = 0.03
+            let velocityFactor = 1 - min(max(segmentLength / maxVelocitySegment, 0), 1) * 0.4
+            let halfWidth = max(baseRadius * 1.8 * widthMultiplier * taper * velocityFactor, baseRadius * 0.65)
+
             let twist = (jitter - 0.5) * 0.35
-            let cosTwist = cos(twist)
-            let sinTwist = sin(twist)
-            let twistedRight = right * cosTwist + up * sinTwist
-            up = simd_normalize(simd_cross(tangent, twistedRight))
-            let halfWidth = baseRadius * 1.8 * widthMultiplier
-            
-            positions.append(point + twistedRight * halfWidth)
-            positions.append(point - twistedRight * halfWidth)
-            normals.append(up)
-            normals.append(up)
-            
-            let v = Float(index) / Float(points.count - 1)
+            if abs(twist) > 0.0001 {
+                let rotation = simd_quatf(angle: twist, axis: tangent)
+                widthDirection = simd_normalize(rotation.act(widthDirection))
+                surfaceNormal = simd_normalize(rotation.act(surfaceNormal))
+            }
+
+            positions.append(point + widthDirection * halfWidth)
+            positions.append(point - widthDirection * halfWidth)
+            normals.append(surfaceNormal)
+            normals.append(surfaceNormal)
+
+            let v = t
             texCoords.append(SIMD2<Float>(0, v))
             texCoords.append(SIMD2<Float>(1, v))
+            colors.append(strokeColor)
+            colors.append(strokeColor)
         }
         
         var indices: [UInt32] = []
@@ -895,6 +983,7 @@ final class SpaceDrawingRenderer {
         descriptor.positions = MeshBuffer(positions)
         descriptor.normals = MeshBuffer(normals)
         descriptor.textureCoordinates = MeshBuffer(texCoords)
+        descriptor.colors = MeshBuffer(colors)
         descriptor.primitives = .triangles(indices)
         
         return try? MeshResource.generate(from: [descriptor])
@@ -1021,7 +1110,112 @@ final class SpaceDrawingRenderer {
         }
         return current
     }
-    
+
+    private func arcLengthFractions(_ points: [SIMD3<Float>]) -> [Float] {
+        guard points.count >= 2 else { return Array(repeating: 0, count: points.count) }
+        var cumulative: [Float] = Array(repeating: 0, count: points.count)
+        var total: Float = 0
+        for i in 1..<points.count {
+            total += simd_distance(points[i], points[i - 1])
+            cumulative[i] = total
+        }
+        guard total > .leastNonzeroMagnitude else {
+            return Array(repeating: 0, count: points.count)
+        }
+        return cumulative.map { $0 / total }
+    }
+
+    private func smoothstep(_ edge0: Float, _ edge1: Float, _ x: Float) -> Float {
+        guard edge1 != edge0 else { return x < edge0 ? 0 : 1 }
+        let t = min(max((x - edge0) / (edge1 - edge0), 0), 1)
+        return t * t * (3 - 2 * t)
+    }
+
+    private func segmentLengthProxy(points: [SIMD3<Float>], index: Int) -> Float {
+        guard points.count >= 2 else { return 0 }
+        if index <= 0 {
+            return simd_distance(points[1], points[0])
+        }
+        if index >= points.count - 1 {
+            return simd_distance(points[points.count - 1], points[points.count - 2])
+        }
+        return 0.5 * (simd_distance(points[index], points[index - 1]) + simd_distance(points[index + 1], points[index]))
+    }
+
+    private func computeBishopFrames(points: [SIMD3<Float>],
+                                     referenceNormal: SIMD3<Float>) -> [(tangent: SIMD3<Float>, normal: SIMD3<Float>, binormal: SIMD3<Float>)] {
+        let count = points.count
+        guard count >= 2 else { return [] }
+
+        var tangents: [SIMD3<Float>] = []
+        tangents.reserveCapacity(count)
+        for i in 0..<count {
+            let prev = points[max(0, i - 1)]
+            let next = points[min(count - 1, i + 1)]
+            var tangent = next - prev
+            if simd_length_squared(tangent) < 1e-10 {
+                tangent = SIMD3<Float>(0, 0, 1)
+            }
+            tangents.append(simd_normalize(tangent))
+        }
+
+        var normals: [SIMD3<Float>] = Array(repeating: SIMD3<Float>(0, 1, 0), count: count)
+        var n0 = simd_normalize(referenceNormal)
+        n0 -= simd_dot(n0, tangents[0]) * tangents[0]
+        if simd_length_squared(n0) < 1e-10 {
+            n0 = perpendicularTo(tangents[0])
+        }
+        normals[0] = simd_normalize(n0)
+
+        for i in 1..<count {
+            let axis = simd_cross(tangents[i - 1], tangents[i])
+            if simd_length_squared(axis) < 1e-10 {
+                normals[i] = normals[i - 1]
+            } else {
+                let axisUnit = simd_normalize(axis)
+                let dotClamped = min(max(simd_dot(tangents[i - 1], tangents[i]), -1), 1)
+                let angle = acos(dotClamped)
+                let rotation = simd_quatf(angle: angle, axis: axisUnit)
+                var normal = rotation.act(normals[i - 1])
+                normal -= simd_dot(normal, tangents[i]) * tangents[i]
+                if simd_length_squared(normal) < 1e-10 {
+                    normal = perpendicularTo(tangents[i])
+                }
+                normals[i] = simd_normalize(normal)
+            }
+        }
+
+        var frames: [(tangent: SIMD3<Float>, normal: SIMD3<Float>, binormal: SIMD3<Float>)] = []
+        frames.reserveCapacity(count)
+        for i in 0..<count {
+            let tangent = tangents[i]
+            let normal = normals[i]
+            let binormal = simd_normalize(simd_cross(tangent, normal))
+            frames.append((tangent: tangent, normal: normal, binormal: binormal))
+        }
+        return frames
+    }
+
+    private func perpendicularTo(_ vector: SIMD3<Float>) -> SIMD3<Float> {
+        let ax = abs(vector.x)
+        let ay = abs(vector.y)
+        let az = abs(vector.z)
+
+        let basis: SIMD3<Float>
+        if ax <= ay && ax <= az {
+            basis = SIMD3<Float>(1, 0, 0)
+        } else if ay <= ax && ay <= az {
+            basis = SIMD3<Float>(0, 1, 0)
+        } else {
+            basis = SIMD3<Float>(0, 0, 1)
+        }
+        let perpendicular = simd_cross(vector, basis)
+        if simd_length_squared(perpendicular) < 1e-10 {
+            return SIMD3<Float>(0, 1, 0)
+        }
+        return simd_normalize(perpendicular)
+    }
+
     private func densifyPoints(_ points: [SIMD3<Float>], maxSegmentLength: Float) -> [SIMD3<Float>] {
         guard points.count >= 2 else { return points }
         let threshold = max(maxSegmentLength, 0.005)
