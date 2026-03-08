@@ -51,6 +51,16 @@ final class LiveStorytellerService: ObservableObject {
     private let playbackQueue = DispatchQueue(label: "com.storyteller.playback.convert", qos: .userInitiated)
     private var isShuttingDown = false
 
+    // MARK: - Reconnection Backoff
+
+    private var reconnectAttempts: Int = 0
+    private static let maxBackoffSeconds: Double = 30.0
+
+    /// Returns the backoff delay in seconds using exponential backoff: 1, 2, 4, 8, ... capped at 30s.
+    private var reconnectBackoffDelay: Double {
+        min(pow(2.0, Double(reconnectAttempts)), Self.maxBackoffSeconds)
+    }
+
     // MARK: - Config
 
     private var voice: String = "Puck"
@@ -84,8 +94,23 @@ final class LiveStorytellerService: ObservableObject {
              disconnect(silent: true)
         }
         
-        // Proceed with connection logic.
+        // Apply exponential backoff on retries
+        if reconnectAttempts > 0 {
+            let delay = reconnectBackoffDelay
+            status = .connecting
+            Task {
+                try? await Task.sleep(for: .seconds(delay))
+                await self.performConnect(urlString: urlString)
+            }
+            return
+        }
+
         status = .connecting
+        performConnect(urlString: urlString)
+    }
+
+    private func performConnect(urlString: String) {
+        reconnectAttempts += 1
 
         checkMicrophonePermission { [weak self] granted in
             guard let self else { return }
@@ -145,16 +170,14 @@ final class LiveStorytellerService: ObservableObject {
     }
 
     func disconnect(silent: Bool = false) {
-        // Network
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
 
-        // Audio (cleanupAudioEngine handles AVAudioSession deactivation)
         cleanupAudioEngine()
 
-        // UI state
         if !silent {
             transcripts.removeAll()
+            reconnectAttempts = 0
             status = .idle
         }
         isSendingAudio = false
@@ -238,8 +261,8 @@ final class LiveStorytellerService: ObservableObject {
                     }
                 } else {
                     print("[Live] config sent.")
-                    // If status was connecting, move to connected. If permissionDenied, keep it.
                     if self.status == .connecting {
+                        self.reconnectAttempts = 0
                         self.status = .connected
                     }
                 }

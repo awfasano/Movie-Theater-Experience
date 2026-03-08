@@ -165,7 +165,7 @@ class TheatreEntityWrapper: ObservableObject {
         }
         
         guard let emojiEntity = entity.findEntity(named: "VolumetericEmoji") else {
-            print("❌ Could not find VolumetericEmoji entity")
+            print("❌ Could not find VolumetricEmoji entity")
             return
         }
         
@@ -183,7 +183,7 @@ class TheatreEntityWrapper: ObservableObject {
             try await MainActor.run {
                 // 1) Check if an old emitter exists
                 guard let oldEmitter = emojiEntity.components[ParticleEmitterComponent.self] else {
-                    print("❌ No ParticleEmitterComponent found on VolumetericEmoji")
+                    print("❌ No ParticleEmitterComponent found on VolumetricEmoji")
                     return
                 }
                 

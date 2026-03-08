@@ -1,6 +1,5 @@
 import Foundation
 import SwiftUI
-import RealityKit
 
 struct TabBarWindow: View {
     @State private var selectedTab: Int = 0

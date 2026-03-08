@@ -8,6 +8,11 @@
 import Foundation
 import Firebase
 
+enum FirebaseConfig {
+    static let databaseID = "movieexperiencedb"
+    static let uploadsDatabaseID = "uploads"
+}
+
 struct EventManagerConfiguration {
     /// The root collection for this event manager.
     /// For example, for movie experience you might use "Public Rooms",

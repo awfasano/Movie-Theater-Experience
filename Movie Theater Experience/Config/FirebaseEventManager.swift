@@ -13,7 +13,7 @@ final class FirebaseEventManager: ObservableObject {
     private var listenerStartTime: Date?
     private let emojiAgeThreshold: TimeInterval = 45.0
     
-    private var db = Firestore.firestore(database: "movieexperiencedb")
+    private var db = Firestore.firestore(database: FirebaseConfig.databaseID)
     private var listener: ListenerRegistration?
     
     // Default configuration for movie experience.
@@ -179,20 +179,20 @@ final class FirebaseEventManager: ObservableObject {
     
     // MARK: - Emoji Operations
     
-    func sendEmoji(emoji: Int, eventId: String, date: Date, seatOrTheatre: Bool) {
+    func sendEmoji(emoji: Int, eventId: String, date: Date, seatOrTheatre: Bool, senderId: String, senderName: String) {
         let formatter = DateFormatter()
         formatter.dateFormat = "MM-dd-yyyy"
         let dateString = formatter.string(from: date)
-        
+
         let emojiData: [String: Any] = [
             "timestamp": Timestamp(date: Date()),
-            "senderId": "currentUserId",
-            "senderName": "Anthony",
+            "senderId": senderId,
+            "senderName": senderName,
             "emoji": emoji,
             "seatOrTheatre": seatOrTheatre,
             "type": false // false for emoji
         ]
-        
+
         sendToFirebase(data: emojiData, eventId: eventId, dateString: dateString)
     }
     

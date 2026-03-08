@@ -9,6 +9,17 @@ import SwiftUI
 import AVKit
 import Accelerate
 
+private enum StoryError {
+    static let highDemand = "high demand"
+    static let internalError = "internal error"
+    static let serviceUnavailable = "service is temporarily unavailable"
+    static let aiServiceUnavailable = "AI storyteller service is temporarily unavailable"
+    static let serviceUnavailableTitle = "Service Temporarily Unavailable"
+    static let connectionLostTitle = "Connection Lost"
+    static let tryAgain = "Try Again"
+    static let retry = "Retry"
+}
+
 struct InteractiveStoryView: View {
 
     @StateObject private var viewModel: InteractiveStoryViewModel
@@ -193,10 +204,10 @@ struct InteractiveStoryView: View {
     }
 
     private func isServiceUnavailable() -> Bool {
-        return viewModel.errorMessage.contains("service is temporarily unavailable") ||
-               viewModel.errorMessage.contains("internal error") ||
-               viewModel.errorMessage.contains("AI storyteller service is temporarily unavailable") ||
-               viewModel.errorMessage.contains("high demand")
+        return viewModel.errorMessage.contains(StoryError.serviceUnavailable) ||
+               viewModel.errorMessage.contains(StoryError.internalError) ||
+               viewModel.errorMessage.contains(StoryError.aiServiceUnavailable) ||
+               viewModel.errorMessage.contains(StoryError.highDemand)
     }
 
     private func getErrorIcon() -> String {
@@ -215,16 +226,16 @@ struct InteractiveStoryView: View {
 
     private func getErrorTitle() -> String {
         if isServiceUnavailable() {
-            return "Service Temporarily Unavailable"
+            return StoryError.serviceUnavailableTitle
         }
-        return "Connection Lost"
+        return StoryError.connectionLostTitle
     }
 
     private func getRetryButtonText() -> String {
         if isServiceUnavailable() {
-            return "Try Again"
+            return StoryError.tryAgain
         }
-        return "Retry"
+        return StoryError.retry
     }
 
     // MARK: - Bottom AUDIO overlay

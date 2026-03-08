@@ -1,5 +1,4 @@
 import SwiftUI
-import RealityKit
 
 // MARK: - Supporting Types
 struct TimeSlot: Identifiable, Hashable {

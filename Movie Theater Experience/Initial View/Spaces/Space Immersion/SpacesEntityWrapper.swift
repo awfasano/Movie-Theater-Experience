@@ -38,11 +38,9 @@ class SpacesEntityWrapper: ObservableObject {
     // This method already accepts Entity? - No change needed here
     func setEntity(_ newEntity: Entity?) {
         DispatchQueue.main.async { // Ensure main thread for @Published update
-            if self.entity?.id != newEntity?.id { // Avoid redundant updates
+            if self.entity?.id != newEntity?.id {
                  self.entity = newEntity
                  print("🔄 Wrapper: Main entity set to \(newEntity?.name ?? "nil")")
-                // Optional: If setting the general entity should trigger emitter prop capture:
-                // Task { await self.captureOriginalEmitterProps() }
             }
         }
     }
@@ -56,9 +54,6 @@ class SpacesEntityWrapper: ObservableObject {
                 // Trigger property capture only if entity is not nil
                 if newEntity != nil {
                     Task { await self.captureOriginalEmitterProps() }
-                } else {
-                    // Optional: Reset original props if space entity is cleared?
-                    // self.resetOriginalEmitterProps()
                 }
             }
         }
@@ -73,8 +68,7 @@ class SpacesEntityWrapper: ObservableObject {
 
                 // --- CORRECTED: Handle potential nil ---
                 if let entity = newEntity {
-                    // Check scene connection only if entity exists
-                     Task { @MainActor in // Still good practice to ensure main actor for scene checks
+                     Task { @MainActor in
                         if entity.scene != nil {
                             print("✅ Active entity '\(entity.name)' is connected to scene")
                         } else if entity.parent != nil {
@@ -82,14 +76,10 @@ class SpacesEntityWrapper: ObservableObject {
                         } else {
                             print("⚠️ Active entity '\(entity.name)' is not connected to scene or parent")
                         }
-                        // Capture props only if entity is not nil
                         await self.captureOriginalEmitterProps()
                     }
                 } else {
-                    // Active entity is nil, no scene connection to check
                     print("ℹ️ Active scene entity is now nil.")
-                     // Optional: Reset original props if active entity is cleared?
-                     // self.resetOriginalEmitterProps()
                 }
             }
         }
@@ -106,18 +96,13 @@ class SpacesEntityWrapper: ObservableObject {
 
 
     private func captureOriginalEmitterProps() async {
-        // Only capture once unless explicitly reset
         if haveOriginalProps {
-            // print("🔄 Already captured original emitter properties") // Reduce log noise
             return
         }
 
-        // Use await MainActor.run to ensure UI thread access
         await MainActor.run {
-            // Prioritize activeSceneEntity, then spaceEntity, then general entity
             let targetEntity = activeSceneEntity ?? spaceEntity ?? entity
             guard let targetEntity = targetEntity else {
-                 // print("ℹ️ captureOriginalEmitterProps: No target entity available.") // Log if needed
                 return
             }
 
@@ -193,7 +178,6 @@ class SpacesEntityWrapper: ObservableObject {
 
     func dumpEntityHierarchy(_ targetEntity: Entity?, level: Int = 0) {
         guard let currentEntity = targetEntity else {
-            // print("Entity is nil at level \(level)") // Optional log
             return
         }
 
@@ -258,15 +242,12 @@ class SpacesEntityWrapper: ObservableObject {
 
     private func findEmojiEntity(in parent: Entity?) -> Entity? {
         guard let parent = parent else {
-            // print("❌ Parent entity is nil when searching for emoji entity") // Optional log
             return nil
         }
-        // Use RealityKit's built-in recursive search
         if let found = parent.findEntity(named: "VolumetericEmoji") {
             print("✅ Found emoji entity: \(found.name) in parent \(parent.name)")
             return found
         }
-        // print("❌ Could not find 'VolumetericEmoji' entity within \(parent.name)") // Optional log
         return nil
     }
 
@@ -405,8 +386,6 @@ class SpacesEntityWrapper: ObservableObject {
 
         } catch {
              print("❌ proceedWithEmission: Failed to load TextureResource: \(error)")
-             // Maybe set isEmitting false here too?
-             // self.isEmitting = false
         }
     } // End of proceedWithEmission
 
@@ -447,11 +426,12 @@ class SpacesEntityWrapper: ObservableObject {
     }
 
 
-    // MARK: - Diagnostics (Unchanged - but ensure it uses MainActor for checks)
+    // MARK: - Diagnostics
 
+    #if DEBUG
     func runDiagnostics() {
-         print("--- 🔍 Running SpacesEntityWrapper Diagnostics ---")
-         Task { @MainActor in // Run checks on MainActor
+         print("--- Running SpacesEntityWrapper Diagnostics ---")
+         Task { @MainActor in
              let currentEntity = self.entity
              let currentSpaceEntity = self.spaceEntity
              let currentActiveSceneEntity = self.activeSceneEntity
@@ -511,16 +491,12 @@ class SpacesEntityWrapper: ObservableObject {
               print("--- Diagnostics Complete ---")
          }
     }
+    #endif
 
 
     deinit {
         print("♻️ SpacesEntityWrapper deinit")
-        resetTask?.cancel() // Cancel task on deinit
+        resetTask?.cancel()
         resetTask = nil
-        // You generally shouldn't call async code directly from deinit.
-        // If cleanup needs to happen, it should be triggered externally before
-        // the wrapper is deallocated, or use Task.detached if absolutely necessary
-        // (but be very careful with detached tasks).
-        // Task { await cleanup() } // Avoid this pattern in deinit if possible.
     }
 }

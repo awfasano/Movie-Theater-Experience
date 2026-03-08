@@ -84,7 +84,6 @@ struct SpacesView: View {
             }
         }
         .onAppear {
-            print("📱 SpacesView appeared")
             initializeSpace()
         }
         .onChange(of: entityWrapper.getSpaceEntity()?.id) { oldId, newId in
@@ -262,16 +261,7 @@ struct SpacesView: View {
         anchorEntity.addChild(entity)
     }
 
-    
-    private func debugPrintAllTransforms(of entity: Entity, level: Int = 0) {
-        let indent = String(repeating: "  ", count: level)
-        let q = entity.orientation.vector
-        print("\(indent)\(entity.name): orientation = \(q), position = \(entity.position)")
-        for child in entity.children {
-            debugPrintAllTransforms(of: child, level: level+1)
-        }
-    }
-    
+
     private func loadSpaceEntity(for space: SpaceData) {
         isLoading = true
         
@@ -542,60 +532,5 @@ struct SpacesView: View {
     private func openWindowsIfNeeded() {
         openWindow(id: "spaceNavBar")
         openWindow(id: "spaceMap")
-    }
-    
-    // MARK: - Sphere Markers
-    /// Adds large sphere markers at seat_1 and seat_2 positions.
-    private func addSphereMarkers(to spaceEntity: Entity) {
-        print("🔍 Starting to add sphere markers to \(spaceEntity.name)")
-        
-        let seatNames = ["seat_1", "seat_2"]
-        for seatName in seatNames {
-            // Remove any existing markers first
-            if let existingMarker = findEntityDeep(named: "\(seatName)_marker", in: spaceEntity) {
-                print("🗑️ Removing existing marker for \(seatName)")
-                existingMarker.removeFromParent()
-            }
-            
-            if let seatEntity = findEntityDeep(named: seatName, in: spaceEntity) {
-                // Create a visible sphere
-                let sphereMesh = MeshResource.generateSphere(radius: 10)
-                
-                // Create a material with the Metal API
-                var material = SimpleMaterial()
-                material.baseColor = MaterialColorParameter.color(.red)
-                material.roughness = MaterialScalarParameter(1.0)
-                material.metallic = MaterialScalarParameter(0.0)
-                
-                let sphereEntity = ModelEntity(mesh: sphereMesh, materials: [material])
-                sphereEntity.name = "\(seatName)_marker"
-                
-                // Position slightly above the seat to ensure visibility
-                sphereEntity.position = SIMD3<Float>(0, 0, 0)
-                
-                seatEntity.addChild(sphereEntity)
-                print("✅ Added visible sphere for \(seatName) at position \(sphereEntity.position) relative to seat")
-            } else {
-                print("⚠️ Could not find entity for \(seatName) in \(spaceEntity.name)")
-                // Print all entities at the first level for debugging
-                print("📋 Available entities at root level:")
-                for (index, child) in spaceEntity.children.enumerated() {
-                    print("  \(index): \(child.name)")
-                }
-                
-                // Print full hierarchy for more detailed debugging
-                print("📊 Full entity hierarchy:")
-                printEntityHierarchy(spaceEntity, level: 0)
-            }
-        }
-    }
-
-    // Helper function to print the entire entity hierarchy
-    private func printEntityHierarchy(_ entity: Entity, level: Int) {
-        let indent = String(repeating: "  ", count: level)
-        print("\(indent)- \(entity.name) (type: \(type(of: entity)))")
-        for child in entity.children {
-            printEntityHierarchy(child, level: level + 1)
-        }
     }
 }

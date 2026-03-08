@@ -1,14 +1,17 @@
 import SwiftUI
 import WebKit
 
+// MARK: - Default URL
+private let defaultURL = "https://google.com"
+
 // MARK: - Web View Navigation State (unchanged)
 class WebViewNavigationState: ObservableObject {
     @Published var canGoBack: Bool = false
     @Published var canGoForward: Bool = false
     @Published var isLoading: Bool = false
-    @Published var urlString: String = "https://google.com"
+    @Published var urlString: String = defaultURL
     @Published var pendingRequest: URLRequest? = nil
-    let homeURLString: String = "https://google.com"
+    let homeURLString: String = defaultURL
 }
 
 // MARK: - Web Browser View
@@ -17,7 +20,7 @@ struct WebBrowserView: View {
 
     @StateObject private var navigationState = WebViewNavigationState()
     @State private var webView = WKWebView()
-    @State private var urlFieldText: String = "https://google.com"
+    @State private var urlFieldText: String = defaultURL
     @StateObject private var bookmarkManager = BookmarkManager()
     @State private var showingBookmarks = false
 
@@ -400,25 +403,21 @@ private struct WebViewRepresentable: UIViewRepresentable {
     }
 }
 
-// MARK: - Legacy Button Style (kept for compatibility)
-struct BrowserButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
-            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
-    }
-}
-
 extension String {
     func trimmed() -> String? {
         let t = trimmingCharacters(in: .whitespacesAndNewlines)
         return t.isEmpty ? nil : t
     }
     var isValidURL: Bool {
-        let detector = try! NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
-        if let match = detector.firstMatch(in: self, options: [], range: NSRange(location: 0, length: utf16.count)) {
-            return match.range.length == utf16.count
-        } else { return false }
+        do {
+            let detector = try NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+            if let match = detector.firstMatch(in: self, options: [], range: NSRange(location: 0, length: utf16.count)) {
+                return match.range.length == utf16.count
+            }
+            return false
+        } catch {
+            return false
+        }
     }
 }
 

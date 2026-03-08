@@ -85,19 +85,6 @@ class SpaceService: ObservableObject {
     }
     
     // MARK: - Entity Loading
-    
-    /// Helper method to extract the child entity named "Root" (if available)
-    private func extractRootEntity(from entity: Entity) -> Entity {
-        if let rootEntity = entity.findEntity(named: "Root") {
-            print("✅ Found root entity: \(rootEntity.name)")
-            return rootEntity
-        } else {
-            print("⚠️ No 'Root' entity found; using loaded entity as root.")
-            return entity
-        }
-    }
-    
-    // MARK: - Entity Loading
 
     // Publisher-based version
     func loadSpace(from space: SpaceData) -> AnyPublisher<Entity, Error> {
@@ -277,14 +264,6 @@ class SpaceService: ObservableObject {
         }.resume()
     }
 
-    // Helper method to find the Root entity (keep this for debugging)
-    func findRootEntity(in entity: Entity) -> Entity? {
-        if entity.name == "Root" {
-            return entity
-        }
-        
-        return entity.findEntity(named: "Root")
-    }
     // MARK: - User Count Management
     
     private func setupUserCountObservers() {

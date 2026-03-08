@@ -111,7 +111,7 @@ class VideoSyncService {
         // settings.isPersistenceEnabled = false // Keep as false per original code
         settings.isSSLEnabled = true
 
-        self.db = Firestore.firestore(database: "movieexperiencedb") // Replace with your actual DB ID if needed
+        self.db = Firestore.firestore(database: FirebaseConfig.databaseID)
         self.db.settings = settings
         print("🔥 Firestore Initialized")
 

@@ -18,13 +18,13 @@ struct ChatView: View {
             inputArea
         }
         .task {
-            // Update opacities periodically
+            // Update opacities periodically (every 500ms is sufficient for fade effects)
             while !Task.isCancelled {
                 for message in viewModel.messages {
                     let opacity = await viewModel.getOpacity(for: message.id)
                     messageOpacities[message.id] = opacity
                 }
-                try? await Task.sleep(for: .milliseconds(16)) // ~60fps
+                try? await Task.sleep(for: .milliseconds(500))
             }
         }
     }

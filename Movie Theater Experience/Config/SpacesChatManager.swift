@@ -20,7 +20,7 @@ class SpacesChatManager: ObservableObject {
     private var listenerStartTime: Date?
     private let emojiAgeThreshold: TimeInterval = 45.0
     
-    private var db = Firestore.firestore(database: "uploads") // Use spaces database
+    private var db = Firestore.firestore(database: FirebaseConfig.uploadsDatabaseID)
     private var listener: ListenerRegistration?
     
     private init() {}

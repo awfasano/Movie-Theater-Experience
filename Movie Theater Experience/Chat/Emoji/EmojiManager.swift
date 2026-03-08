@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import FirebaseFirestore
 
 /// Configuration struct for building the Firestore path.
@@ -29,6 +30,10 @@ final class EmojiManager: ObservableObject {
     
     @MainActor var isOnCooldown = false
     private let cooldownDuration: TimeInterval = 2.0
+
+    // User information
+    @AppStorage("username") private var currentUsername: String = "User"
+    @AppStorage("userId") private var currentUserId: String = ""
     
     struct EmojiType {
         let unicode: String
@@ -87,10 +92,16 @@ final class EmojiManager: ObservableObject {
     
     /// Sends the emoji data to Firebase using the configured Firestore path.
     private func sendToFirebase(emojiNumber: Int, eventId: String, date: Date) async {
+        var userId = currentUserId
+        if userId.isEmpty {
+            userId = UUID().uuidString
+            currentUserId = userId
+        }
+
         let emojiData: [String: Any] = [
             "timestamp": Timestamp(date: Date()),
-            "senderId": "currentUserId",
-            "senderName": "Anthony",
+            "senderId": userId,
+            "senderName": currentUsername,
             "emoji": emojiNumber,
             "seatOrTheatre": false,
             "type": false

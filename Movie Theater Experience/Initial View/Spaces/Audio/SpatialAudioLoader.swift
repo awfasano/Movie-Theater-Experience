@@ -45,14 +45,12 @@ final class SpatialAudioLoader: ObservableObject {
     // Used to prevent infinite loops if all songs are broken
     private var failedTrackIndices = Set<Int>()
 
-    // NEW: Persistent cache directory
+    private static let maxPersistentCacheEntries = 20
+
     private lazy var persistentCacheDirectory: URL = {
         let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
         let audioCache = cacheDir.appendingPathComponent("AudioCache", isDirectory: true)
-        
-        // Create the directory if it doesn't exist
         try? FileManager.default.createDirectory(at: audioCache, withIntermediateDirectories: true)
-        
         return audioCache
     }()
 
@@ -329,11 +327,11 @@ final class SpatialAudioLoader: ObservableObject {
             configuration: .init(shouldLoop: false)
         )
         
-        // Store the persistent file path for cleanup later
         await MainActor.run {
             self.persistentFilePaths[audioURL] = localURL
+            self.evictOldestCacheEntriesIfNeeded()
         }
-        
+
         return resource
     }
 
@@ -406,7 +404,27 @@ final class SpatialAudioLoader: ObservableObject {
     }
     
     // MARK: - Cache Management
-    
+
+    /// Removes the oldest persistent cache entries when the cache exceeds the size limit.
+    private func evictOldestCacheEntriesIfNeeded() {
+        guard persistentFilePaths.count > Self.maxPersistentCacheEntries else { return }
+
+        let fm = FileManager.default
+        // Sort by file modification date (oldest first)
+        let sorted = persistentFilePaths.sorted { lhs, rhs in
+            let lhsDate = (try? fm.attributesOfItem(atPath: lhs.value.path)[.modificationDate] as? Date) ?? .distantPast
+            let rhsDate = (try? fm.attributesOfItem(atPath: rhs.value.path)[.modificationDate] as? Date) ?? .distantPast
+            return lhsDate < rhsDate
+        }
+
+        let toRemove = sorted.prefix(persistentFilePaths.count - Self.maxPersistentCacheEntries)
+        for (key, fileURL) in toRemove {
+            try? fm.removeItem(at: fileURL)
+            persistentFilePaths.removeValue(forKey: key)
+            resourceCache.removeValue(forKey: key)
+        }
+    }
+
     /// Clears the resource cache and optionally deletes persistent files
     private func clearCache(deletePersistentFiles: Bool = false) {
         resourceCache.removeAll()
