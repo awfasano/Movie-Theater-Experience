@@ -4,7 +4,7 @@ import AVFoundation
 
 @MainActor
 @Observable
-class AppModel: ObservableObject {
+class AppModel {
     // MARK: - Constants
     static let shared = AppModel()
     let immersiveSpaceID = "ImmersiveSpace"

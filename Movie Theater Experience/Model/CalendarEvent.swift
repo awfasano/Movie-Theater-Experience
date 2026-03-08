@@ -38,7 +38,7 @@ struct CalendarEvent: Identifiable, Codable {
     }
     
     var videoURLObject: URL {
-        URL(string: videoURL) ?? URL(string: "about:blank")!
+        URL(string: videoURL) ?? URL(string: "about:blank") ?? URL(fileURLWithPath: "")
     }
     
     enum CodingKeys: String, CodingKey {

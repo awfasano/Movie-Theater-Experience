@@ -1,14 +1,6 @@
 import SwiftUI
 import RealityKit
-import RealityKitContent // Ensure this is imported
-import SwiftUI
-
-
-// MARK: - Seat Map View (Main View Structure)
-
-import SwiftUI
-import RealityKit
-import RealityKitContent // Ensure this is imported
+import RealityKitContent
 
 // MARK: - Seat Map View (Main View Structure)
 struct SpaceMapView: View {

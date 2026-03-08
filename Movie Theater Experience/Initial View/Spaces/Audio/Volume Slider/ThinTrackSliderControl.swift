@@ -3,6 +3,7 @@
 //  Movie Theater Experience
 //
 //  Created by Anthony Fasano on 4/29/25.
+//  Updated by Gemini on 6/24/25
 //
 
 import Foundation
@@ -19,7 +20,6 @@ class ThinTrackSliderControl: UISlider {
     }
 }
 
-// 2) Wrap it in UIViewRepresentable
 struct ThinTrackSlider: UIViewRepresentable {
     @Binding var value: Double
     let range: ClosedRange<Double>
@@ -27,47 +27,73 @@ struct ThinTrackSlider: UIViewRepresentable {
 
     func makeUIView(context: Context) -> ThinTrackSliderControl {
         let slider = ThinTrackSliderControl(frame: .zero)
-        slider.minimumValue = Float(range.lowerBound)
-        slider.maximumValue = Float(range.upperBound)
-        slider.value = Float(value)
+
+        // —— appearance ——
         slider.minimumTrackTintColor = .purple
         slider.maximumTrackTintColor = UIColor.purple.withAlphaComponent(0.3)
-        slider.thumbTintColor = .white
-        // keep the thumb a circle
+        slider.thumbTintColor       = .white
         slider.setThumbImage(UIImage(systemName: "circle.fill"), for: .normal)
-        slider.setThumbImage(UIImage(systemName: "circle.fill"), for: .highlighted)
 
-        slider.addTarget(
-            context.coordinator,
-            action: #selector(Coordinator.valueChanged(_:)),
-            for: .valueChanged
-        )
-        slider.addTarget(
-            context.coordinator,
-            action: #selector(Coordinator.touchUp(_:)),
-            for: [.touchUpInside, .touchUpOutside, .touchCancel]
-        )
+        // —— value & bounds ——
+        slider.isContinuous = true                     // updates while dragging
+        slider.minimumValue  = Float(range.lowerBound)
+        slider.maximumValue  = Float(range.upperBound)
+        slider.value         = Float(value)
+
+        // —— events ——
+        slider.addTarget(context.coordinator,
+                         action: #selector(Coordinator.valueChanged(_:)),
+                         for: .valueChanged)
+
+        // **BEGIN scrubbing**
+        slider.addTarget(context.coordinator,
+                         action: #selector(Coordinator.didBeginScrubbing(_:)),
+                         for: .touchDown)
+
+        // **END scrubbing**
+        slider.addTarget(context.coordinator,
+                         action: #selector(Coordinator.didEndScrubbing(_:)),
+                         for: [.touchUpInside, .touchUpOutside, .touchCancel])
+
         return slider
     }
 
     func updateUIView(_ uiView: ThinTrackSliderControl, context: Context) {
-        uiView.value = Float(value)
+        // Update rail bounds ONLY when they actually change,
+        // and never while the user is still dragging.
+        if !uiView.isTracking &&
+           (uiView.maximumValue != Float(range.upperBound) ||
+            uiView.minimumValue != Float(range.lowerBound)) {
+
+            uiView.minimumValue = Float(range.lowerBound)
+            uiView.maximumValue = Float(range.upperBound)
+        }
+
+        // Keep the thumb in sync when *we’re* driving it.
+        if !uiView.isTracking {
+            uiView.setValue(Float(value), animated: false)
+        }
     }
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     class Coordinator: NSObject {
         var parent: ThinTrackSlider
         init(_ parent: ThinTrackSlider) { self.parent = parent }
 
+        // Slider moved → update binding
         @objc func valueChanged(_ sender: UISlider) {
             parent.value = Double(sender.value)
-            parent.onEditingChanged(true)
         }
-        @objc func touchUp(_ sender: UISlider) {
-            parent.onEditingChanged(false)
+
+        // Finger down
+        @objc func didBeginScrubbing(_ sender: UISlider) {
+            parent.onEditingChanged(true)          // tells the VM: “pause & remember state”
+        }
+
+        // Finger up / cancelled
+        @objc func didEndScrubbing(_ sender: UISlider) {
+            parent.onEditingChanged(false)         // VM seeks & (optionally) resumes play
         }
     }
 }

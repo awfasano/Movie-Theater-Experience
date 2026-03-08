@@ -105,7 +105,9 @@ struct SeatOrbEntity: View {
             if isSelected && !haloVisible {                 // became selected
                 halo.isEnabled = true
                 halo.stopAllAnimations(recursive: false)
-                playBounce(on: sphere as! ModelEntity)
+                if let modelEntity = sphere as? ModelEntity {
+                    playBounce(on: modelEntity)
+                }
 
             } else if !isSelected && haloVisible {          // became deselected
                 sphere.stopAllAnimations(recursive: false)

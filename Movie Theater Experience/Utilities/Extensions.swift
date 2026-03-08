@@ -40,7 +40,7 @@ extension float4x4 {
 
 extension Date {
     var startOfMonth: Date {
-        Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: self))!
+        Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: self)) ?? self
     }
 
     var monthAndYear: String {
@@ -66,7 +66,7 @@ extension Date {
     }
 
     func daysInMonth() -> [Date] {
-        let range = Calendar.current.range(of: .day, in: .month, for: self)!
+        guard let range = Calendar.current.range(of: .day, in: .month, for: self) else { return [] }
         let components = Calendar.current.dateComponents([.year, .month], from: self)
         return range.compactMap { day -> Date? in
             var dateComponents = components

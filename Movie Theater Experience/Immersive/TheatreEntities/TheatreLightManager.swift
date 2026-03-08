@@ -240,7 +240,13 @@ class TheatreLightingManager: ObservableObject {
         meshDescriptor.textureCoordinates = MeshBuffer(uvs)
         meshDescriptor.primitives = .triangles(triangles)
         
-        let beamMesh = try! MeshResource.generate(from: [meshDescriptor])
+        let beamMesh: MeshResource
+        do {
+            beamMesh = try MeshResource.generate(from: [meshDescriptor])
+        } catch {
+            print("Failed to generate beam mesh: \(error)")
+            return
+        }
         var material = UnlitMaterial()
         material.faceCulling = .none
         

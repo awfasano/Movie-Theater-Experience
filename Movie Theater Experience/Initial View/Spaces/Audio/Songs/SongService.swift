@@ -1,41 +1,36 @@
-//
-//  SongService.swift
-//  Movie Theater Experience
-//
-//  Created by Anthony Fasano on 4/28/25.
-//
+
+// In SongService.swift
 
 import Foundation
-import Combine
 import FirebaseFirestore
 
-final class SongService: ObservableObject {
-    @Published var songs: [Song] = []
+final class SongService {
     private let db = Firestore.firestore(database: "uploads")
     
-    init() {
-        fetchSongs()
-    }
-    
-    func fetchSongs() {
-        db.collection("Music").getDocuments { [weak self] snapshot, error in
-            if let error = error {
-                print("❌ Failed to fetch songs:", error)
-                return
+    func fetchSongs(for spaceName: String) async -> [Song] {
+        // special-case fix for the trailing-space document
+        let docID: String = {
+            let lower = spaceName.lowercased()
+            if lower == "synthwave" {
+                return "synthwave "    // the actual doc ID in Firestore
             }
+            return lower
+        }()
+        
+        print("⏳ Fetching songs for space '\(spaceName)' (using docID: '\(docID)')…")
+        do {
+            let snapshot = try await db.collection("Spaces")
+                .document(docID)
+                .collection("music")
+                .getDocuments()
             
-            guard let documents = snapshot?.documents else {
-                print("❌ No documents found")
-                return
-            }
-            
-            let songs = documents.compactMap { document in
-                try? document.data(as: Song.self)
-            }
-            
-            DispatchQueue.main.async {
-                self?.songs = songs
-            }
+            let fetchedSongs = snapshot.documents.compactMap { try? $0.data(as: Song.self) }
+            print("✅ Loaded \(fetchedSongs.count) songs for space '\(spaceName)'")
+            return fetchedSongs
+        } catch {
+            print("❌ Failed to fetch songs for space '\(spaceName)':", error)
+            return []
         }
     }
 }
+

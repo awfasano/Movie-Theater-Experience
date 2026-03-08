@@ -171,7 +171,9 @@ struct SpacesView: View {
 
         // Ensure the current seat is always set to "seat_1" for a new space
         if let currentSpace = appModel.selectedSpace {
-            if currentSpace.currentSeat == nil || currentSpace.currentSeat!.isEmpty {
+            if let seat = currentSpace.currentSeat, !seat.isEmpty {
+                // Seat is already set, nothing to do
+            } else {
                 appModel.updateSelectedSpaceSeat(to: "seat_1")
             }
         }
@@ -333,7 +335,9 @@ struct SpacesView: View {
         // Don't set position here, will be handled in updateEntityInAnchor.
         // Just make sure a seat is selected.
         // Default to seat_1 if no seat is selected.
-        if space.currentSeat == nil || space.currentSeat!.isEmpty {
+        if let seat = space.currentSeat, !seat.isEmpty {
+            // Seat is already set, nothing to do
+        } else {
             appModel.updateSelectedSpaceSeat(to: "seat_1")
         }
     }

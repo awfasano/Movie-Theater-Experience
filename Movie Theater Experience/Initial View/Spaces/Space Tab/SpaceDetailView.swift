@@ -65,11 +65,12 @@ struct SpaceDetailView: View {
                             
                             Spacer()
                             
-                            Link(destination: URL(string: space.usdzURL)!) {
-                                Label("View Original", systemImage: "arrow.up.right.square")
+                            if let url = URL(string: space.usdzURL) {
+                                Link(destination: url) {
+                                    Label("View Original", systemImage: "arrow.up.right.square")
+                                }
+                                .buttonStyle(.bordered)
                             }
-                            .buttonStyle(.bordered)
-                            .disabled(URL(string: space.usdzURL) == nil)
                         }
                     }
                     .padding()

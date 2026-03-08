@@ -10,14 +10,13 @@ import FirebaseFirestore
 import Combine
 
 /// A service for handling chat and emoji functionality specifically for Spaces
-@Observable
-class SpacesChatManager:ObservableObject {
+class SpacesChatManager: ObservableObject {
     // MARK: - Properties
-    
+
     static let shared = SpacesChatManager()
-    
-    @MainActor private(set) var messages: [ChatMessage] = []
-    @MainActor private(set) var messageOpacities: [String: Double] = [:]
+
+    @MainActor @Published private(set) var messages: [ChatMessage] = []
+    @MainActor @Published private(set) var messageOpacities: [String: Double] = [:]
     private var listenerStartTime: Date?
     private let emojiAgeThreshold: TimeInterval = 45.0
     
