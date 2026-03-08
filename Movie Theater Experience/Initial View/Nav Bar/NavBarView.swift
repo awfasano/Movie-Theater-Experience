@@ -49,6 +49,7 @@ struct NavBarView: View {
                 .resizable()
                 .frame(width: 30, height: 30)
         }
+        .accessibilityLabel("Open chat")
     }
 
     // MARK: - Emoji Button
@@ -64,6 +65,7 @@ struct NavBarView: View {
                 .frame(width: 30, height: 30)
         }
         .disabled(spaceManager.state != .open)
+        .accessibilityLabel("Open emoji reactions")
     }
 
     // MARK: - Emoji Visibility Button
@@ -82,6 +84,7 @@ struct NavBarView: View {
                         .offset(x: 8, y: 8)
                 )
         }
+        .accessibilityLabel(showEmojis ? "Hide emoji reactions" : "Show emoji reactions")
     }
 
     // MARK: - Movie Window Button
@@ -104,6 +107,7 @@ struct NavBarView: View {
                 .frame(width: 30, height: 30)
         }
         .disabled(appModel.selectedVideoURL == nil)
+        .accessibilityLabel("Open movie in separate window")
     }
 
     // MARK: - Seat Map Button
@@ -118,6 +122,7 @@ struct NavBarView: View {
                 .resizable()
                 .frame(width: 30, height: 30)
         }
+        .accessibilityLabel("Open seat map")
     }
 
     // MARK: - Chat Settings Button
@@ -132,6 +137,7 @@ struct NavBarView: View {
                 .resizable()
                 .frame(width: 30, height: 30)
         }
+        .accessibilityLabel("Open chat appearance settings")
     }
 
     // MARK: - Full Exit Button
@@ -146,6 +152,7 @@ struct NavBarView: View {
                 .frame(width: 30, height: 30)
                 .foregroundStyle(.red)
         }
+        .accessibilityLabel("Exit theater experience")
     }
 
     // MARK: - Full Exit Handler

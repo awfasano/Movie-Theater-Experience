@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import UIKit  // Needed for UIColor
+import os
 
 // MARK: - Color Definitions
 
@@ -109,5 +110,18 @@ extension Color {
             lroundf(Float(blue * 255))
         )
     }
+}
+
+// MARK: - Logger Convenience
+
+extension Logger {
+    /// General application-level logging.
+    static let app = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.waitedco.spiera", category: "app")
+    /// Audio-related logging.
+    static let audio = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.waitedco.spiera", category: "audio")
+    /// Firebase / Firestore logging.
+    static let firebase = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.waitedco.spiera", category: "firebase")
+    /// Immersive-space logging.
+    static let immersive = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.waitedco.spiera", category: "immersive")
 }
 

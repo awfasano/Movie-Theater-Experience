@@ -81,10 +81,22 @@ struct StoriesListView: View {
             Image(systemName: firebaseService.error != nil ? "wifi.exclamationmark" : "book.closed")
                 .font(.system(size: 40))
                 .foregroundStyle(.secondary)
-            
+
             Text(firebaseService.error != nil ? "Failed to Load Stories" : "No Stories Found")
                 .font(.title3)
                 .foregroundStyle(.secondary)
+
+            if firebaseService.error != nil, let space = appModel.selectedSpace, let spaceId = space.id {
+                Button {
+                    Task {
+                        await loadStories(for: spaceId)
+                    }
+                } label: {
+                    Label("Retry", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(.bordered)
+                .padding(.top, 4)
+            }
         }
         .transition(.opacity)
     }

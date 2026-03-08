@@ -6,48 +6,63 @@ import Combine
 @MainActor
 class ChatViewModel: ObservableObject {
     @Published private(set) var messages: [ChatMessage] = []
-    
+
     // Use dependency injection for the event manager.
     private let eventManager: FirebaseEventManager
-    
+
+    /// Task that polls for message updates; tracked so we can cancel it on cleanup.
+    private var pollingTask: Task<Void, Never>?
+
     let eventId: String
     let date: Date
-    
+
     // Retrieve the current user's name from user settings.
     @AppStorage("username") var currentUsername: String = "User"
     // Persist the userId using AppStorage.
     @AppStorage("userId") var currentUserId: String = ""
-    
+
     // MARK: - Initializer
-    
+
     /// Injects an instance of FirebaseEventManager.
     /// You can supply one that's preconfigured for your context.
     init(eventId: String, date: Date, eventManager: FirebaseEventManager = FirebaseEventManager.shared) {
         self.eventId = eventId
         self.date = date
         self.eventManager = eventManager
-        
+
         Task {
             await startListening()
         }
     }
-    
+
+    deinit {
+        stopListening()
+    }
+
     // MARK: - Listener and Message Updates
-    
+
     private func startListening() async {
+        // Guard against duplicate polling tasks.
+        guard pollingTask == nil else { return }
+
         // Start the event manager listener.
         await eventManager.startListening(eventId: eventId, date: date)
-        
+
         // Initialize messages and observe changes.
         await updateMessages()
-        
+
         // Start continuous updates.
-        Task {
+        pollingTask = Task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(100))
                 await updateMessages()
             }
         }
+    }
+
+    func stopListening() {
+        pollingTask?.cancel()
+        pollingTask = nil
     }
     
     private func updateMessages() async {

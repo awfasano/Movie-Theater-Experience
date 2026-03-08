@@ -18,6 +18,10 @@ struct CalendarView: View {
     
     // MARK: - Computed
     var events: [CalendarEvent] { calendarService.events }
+
+    var eventsForCurrentDay: [CalendarEvent] {
+        events.filter { Calendar.current.isDate($0.date, inSameDayAs: currentDate) }
+    }
     
     // MARK: - Layout
     let hourWidth: CGFloat = 200
@@ -57,21 +61,40 @@ struct CalendarView: View {
                     .padding(.horizontal)
                 
                 // 3) Timeline - Fixed parameter order and types
-                TimelineView(
-                    currentDate: $currentDate,
-                    scrollToToday: $scrollToToday,
-                    maxRow: $maxRow,
-                    events: events,
-                    appModel: appModel,
-                    calendarService: calendarService,
-                    hourWidth: hourWidth,
-                    eventHeight: eventHeight,
-                    verticalSpacing: verticalSpacing,
-                    timeLabelHeight: timeLabelHeight,
-                    dividerHeight: dividerHeight,
-                    topPadding: topPadding,
-                    minimumRows: minimumRows
-                )
+                if eventsForCurrentDay.isEmpty {
+                    VStack(spacing: 12) {
+                        Spacer()
+                        Image(systemName: "calendar.badge.exclamationmark")
+                            .font(.system(size: 40))
+                            .foregroundStyle(.secondary)
+                        Text("No showings today")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                        Text("Select another date or check back later.")
+                            .font(.subheadline)
+                            .foregroundStyle(.tertiary)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("No showings scheduled for the selected day")
+                } else {
+                    TimelineView(
+                        currentDate: $currentDate,
+                        scrollToToday: $scrollToToday,
+                        maxRow: $maxRow,
+                        events: events,
+                        appModel: appModel,
+                        calendarService: calendarService,
+                        hourWidth: hourWidth,
+                        eventHeight: eventHeight,
+                        verticalSpacing: verticalSpacing,
+                        timeLabelHeight: timeLabelHeight,
+                        dividerHeight: dividerHeight,
+                        topPadding: topPadding,
+                        minimumRows: minimumRows
+                    )
+                }
             }
             
             // 4) Floating "Today" button

@@ -16,10 +16,9 @@ class FirestoreManager: ObservableObject {
     let movieExperienceDB: Firestore
 
     init() {
-        // Initialize both Firestore databases with the desired configuration.
-        // Note: Adjust these initializers if you have custom settings.
-        self.uploadsDB = Firestore.firestore(database: "uploads")
-        self.movieExperienceDB = Firestore.firestore(database: "movieexperiencedb")
+        // Initialize both Firestore databases using centralized config constants.
+        self.uploadsDB = Firestore.firestore(database: FirebaseConfig.uploadsDatabaseID)
+        self.movieExperienceDB = Firestore.firestore(database: FirebaseConfig.databaseID)
     }
     
     // You could add helper methods here for reading/writing documents,

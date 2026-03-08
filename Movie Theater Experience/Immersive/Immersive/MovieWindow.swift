@@ -189,7 +189,8 @@ struct VideoPlayerView: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: UIView, context: Context) {
-        (uiView as! PlayerView).playerLayer.videoGravity = videoGravity
+        guard let playerView = uiView as? PlayerView else { return }
+        playerView.playerLayer.videoGravity = videoGravity
     }
 }
 

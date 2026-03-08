@@ -11,8 +11,26 @@ struct ChatView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Messages list
-            ChatScrollView(messages: viewModel.messages, viewModel: viewModel)
-                .padding(.bottom, 8)
+            Group {
+                if viewModel.messages.isEmpty {
+                    VStack(spacing: 10) {
+                        Spacer()
+                        Image(systemName: "bubble.left.and.bubble.right")
+                            .font(.system(size: 36))
+                            .foregroundStyle(.tertiary)
+                        Text("No messages yet")
+                            .font(.subheadline)
+                            .foregroundStyle(.tertiary)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("No messages yet. Type a message below to start the conversation.")
+                } else {
+                    ChatScrollView(messages: viewModel.messages, viewModel: viewModel)
+                }
+            }
+            .padding(.bottom, 8)
             
             // Input area
             inputArea
@@ -72,6 +90,7 @@ struct ChatView: View {
         .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         .buttonStyle(.plain)
         .glassBackgroundEffect()
+        .accessibilityLabel("Send message")
     }
     
     private func sendMessage() {

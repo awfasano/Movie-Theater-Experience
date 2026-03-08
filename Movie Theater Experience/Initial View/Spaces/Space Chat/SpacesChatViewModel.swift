@@ -76,8 +76,11 @@ class SpacesChatViewModel: ChatViewModel {
     
     // Custom listening method for spaces
     private func startSpacesListening(spaceId: String) async {
+        // Guard against duplicate listeners
+        guard updateTask == nil else { return }
+
         print("Starting spaces chat listener for space ID: \(spaceId)")
-        
+
         // Start the spaces manager listener
         await spacesManager.startListening(spaceId: spaceId)
         
@@ -115,10 +118,16 @@ class SpacesChatViewModel: ChatViewModel {
     }
     
     // MARK: - Deinitializer
-    
+
     deinit {
         // Cancel update task
         updateTask?.cancel()
+        updateTask = nil
+        // Stop the Firestore listener to prevent leaks.
+        // Note: spacesManager.stopListening() is @MainActor, so we dispatch it.
+        Task { @MainActor [spacesManager] in
+            spacesManager.stopListening()
+        }
         print("SpacesChatViewModel deinit")
     }
 }
