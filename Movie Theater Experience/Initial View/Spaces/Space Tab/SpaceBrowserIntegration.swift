@@ -8,10 +8,32 @@ struct SpaceBrowserIntegration: View {
 
     @EnvironmentObject private var windowManager: WindowManager
     @Environment(\.openWindow) private var openWindow
-    
+
     @ObservedObject private var service = SpaceService.shared
 
-    
+    @State private var spaceFilter: SpaceFilter = .all
+
+    private enum SpaceFilter: String, CaseIterable {
+        case all = "All"
+        case theaters = "Theaters"
+        case ambient = "Ambient"
+    }
+
+    private var filteredSpaces: [SpaceData] {
+        switch spaceFilter {
+        case .all:
+            return service.spaces
+        case .theaters:
+            return service.spaces.filter { space in
+                !(space.tags?.contains("ambient") == true)
+            }
+        case .ambient:
+            return service.spaces.filter { space in
+                space.tags?.contains("ambient") == true
+            }
+        }
+    }
+
     var body: some View {
         VStack {
             if service.isLoading {
@@ -43,17 +65,51 @@ struct SpaceBrowserIntegration: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                ScrollView {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 250))], spacing: 16) {
-                        ForEach(service.spaces) { space in
-                            SpaceCard(space: space)
-                                .onTapGesture {
-                                    appModel.selectedSpace = space
-                                    openVolumetricView()
-                                }
+                VStack(spacing: 0) {
+                    Picker("Filter", selection: $spaceFilter) {
+                        ForEach(SpaceFilter.allCases, id: \.self) { filter in
+                            Text(filter.rawValue).tag(filter)
                         }
                     }
-                    .padding()
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+
+                    if filteredSpaces.isEmpty {
+                        VStack(spacing: 16) {
+                            Image(systemName: spaceFilter == .ambient ? "sparkles" : "cube.transparent")
+                                .font(.system(size: 40))
+                                .foregroundColor(.secondary)
+                            Text("No \(spaceFilter.rawValue) Spaces")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                            Text("No spaces match this filter.")
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        ScrollView {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 250))], spacing: 16) {
+                                ForEach(filteredSpaces) { space in
+                                    if space.tags?.contains("ambient") == true {
+                                        AmbientSpaceCard(space: space)
+                                            .onTapGesture {
+                                                appModel.selectedSpace = space
+                                                openVolumetricView()
+                                            }
+                                    } else {
+                                        SpaceCard(space: space)
+                                            .onTapGesture {
+                                                appModel.selectedSpace = space
+                                                openVolumetricView()
+                                            }
+                                    }
+                                }
+                            }
+                            .padding()
+                        }
+                    }
                 }
             }
         }

@@ -54,6 +54,10 @@ class AppModel {
     var selectedDate: Date {
         currentEvent?.date ?? Date()
     }
+
+    var isInAmbientMode: Bool {
+        selectedSpace?.tags?.contains("ambient") == true
+    }
     
     // MARK: - Public Methods
     func cleanupImmersiveSpace() async {

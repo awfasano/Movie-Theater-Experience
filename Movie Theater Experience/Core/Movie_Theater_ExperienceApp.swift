@@ -32,6 +32,10 @@ struct Movie_Theater_ExperienceApp: App {
     // Space-related managers.
     @StateObject private var spacesChatManager = SpacesChatManager.shared
 
+    // Ambient Focus Rooms managers.
+    @StateObject private var focusTimerManager = FocusTimerManager.shared
+    @StateObject private var moodController = AmbientMoodController()
+
     @Environment(\.openWindow) var openWindow
     @Environment(\.scenePhase) private var scenePhase
 
@@ -48,6 +52,7 @@ struct Movie_Theater_ExperienceApp: App {
                 .environmentObject(theatreEntityWrapper)
                 .environmentObject(firebaseEventManager)
                 .environmentObject(windowManager)
+                .environmentObject(focusTimerManager)
                 .trackWindow(type: .mainContent)
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .background {
@@ -269,6 +274,28 @@ struct Movie_Theater_ExperienceApp: App {
         }
         .windowStyle(.volumetric)
         .defaultSize(width: 0.4, height: 0.4, depth: 0.4, in: .meters)
+
+        // Focus Timer window.
+        WindowGroup("Focus Timer", id: WindowType.focusTimer.rawValue) {
+            FocusTimerView()
+                .environment(appModel)
+                .environmentObject(focusTimerManager)
+                .trackWindow(type: .focusTimer)
+                .environmentObject(windowManager)
+        }
+        .defaultSize(width: 350, height: 500)
+        .windowStyle(.plain)
+
+        // Mood Controls window.
+        WindowGroup("Mood Controls", id: WindowType.moodControls.rawValue) {
+            MoodControlsView()
+                .environment(appModel)
+                .environmentObject(moodController)
+                .trackWindow(type: .moodControls)
+                .environmentObject(windowManager)
+        }
+        .defaultSize(width: 400, height: 350)
+        .windowStyle(.plain)
 
         // Browser Window 1
         WindowGroup("Web Browser 1", id: "webBrowser_1") {

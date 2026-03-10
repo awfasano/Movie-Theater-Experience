@@ -3,6 +3,7 @@ import SwiftUI
 struct SpacesNavBarView: View {
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
     @Environment(\.openWindow) private var openWindow
+    @Environment(AppModel.self) private var appModel
 
     // Local state for toggling hide/show immersive view.
     @State private var isContentHidden: Bool = false
@@ -31,14 +32,38 @@ struct SpacesNavBarView: View {
             .buttonStyle(.bordered)
             .accessibilityLabel(isContentHidden ? "Show immersive content" : "Hide immersive content")
 
-            // Seat Selection Button
-            Button(action: {
-                openWindow(id: "spaceMap")
-            }) {
-                Label("Change Seat", systemImage: "chair.lounge")
+            // Seat Selection Button — hidden in ambient mode
+            if !appModel.isInAmbientMode {
+                Button(action: {
+                    openWindow(id: "spaceMap")
+                }) {
+                    Label("Change Seat", systemImage: "chair.lounge")
+                }
+                .buttonStyle(.bordered)
+                .accessibilityLabel("Change seat position")
             }
-            .buttonStyle(.bordered)
-            .accessibilityLabel("Change seat position")
+
+            // Ambient mode: Focus Timer button
+            if appModel.isInAmbientMode {
+                Button(action: {
+                    openWindow(id: WindowType.focusTimer.rawValue)
+                }) {
+                    Label("Timer", systemImage: "clock.fill")
+                }
+                .buttonStyle(.bordered)
+                .accessibilityLabel("Open focus timer")
+            }
+
+            // Ambient mode: Mood Controls button
+            if appModel.isInAmbientMode {
+                Button(action: {
+                    openWindow(id: WindowType.moodControls.rawValue)
+                }) {
+                    Label("Mood", systemImage: "paintpalette.fill")
+                }
+                .buttonStyle(.bordered)
+                .accessibilityLabel("Open mood controls")
+            }
 
             // Open Emoji Buttons Window
             Button(action: {

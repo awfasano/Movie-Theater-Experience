@@ -191,6 +191,18 @@ final class AmbientAudioManager {
         return isPlaying[entity] ?? false
     }
 
+    /// Switch the soundscape for an entity by stopping current audio and starting a new one.
+    /// - Parameters:
+    ///   - entity: The entity to switch audio on.
+    ///   - newAudioURLString: The URL string for the new audio file.
+    ///   - volume: Optional volume in percentage (0-100). If nil, defaults to 50%.
+    func switchSoundscape(for entity: Entity, newAudioURLString: String, volume: Float? = nil) async throws {
+        stop(entity: entity)
+        let vol = volume ?? 50
+        try await setupAmbientAudio(for: entity, audioURLString: newAudioURLString, defaultVolumePercent: vol)
+        play(entity: entity)
+    }
+
     // MARK: - Helpers
 
     static func percentageToDecibels(_ percentage: Float) -> Float {
