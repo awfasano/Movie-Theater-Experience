@@ -25,7 +25,6 @@
 		C405E58B2D4CACE900681E60 /* PositionedEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C405E58A2D4CACE900681E60 /* PositionedEvents.swift */; };
 		C405E58D2D4CAD2B00681E60 /* TimeLineline.swift in Sources */ = {isa = PBXBuildFile; fileRef = C405E58C2D4CAD2B00681E60 /* TimeLineline.swift */; };
 		C40693EA2D36F9F000072767 /* TabBarWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40693E92D36F9F000072767 /* TabBarWindow.swift */; };
-		C40AE3D42D5164020075914F /* WindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40AE3D32D5164020075914F /* WindowManager.swift */; };
 		C40AE3D62D516C070075914F /* ChatSettingsNavBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40AE3D52D516C070075914F /* ChatSettingsNavBar.swift */; };
 		C4115ED52B994AF9007AD9B0 /* RealityKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = C4115ED42B994AF9007AD9B0 /* RealityKitContent */; };
 		C4115ED72B994AF9007AD9B0 /* Movie_Theater_ExperienceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4115ED62B994AF9007AD9B0 /* Movie_Theater_ExperienceApp.swift */; };
@@ -129,6 +128,34 @@
 		C4FE99B92D7F9D80008AE0D6 /* SpacesChatWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE99B82D7F9D80008AE0D6 /* SpacesChatWindow.swift */; };
 		C4FE99BB2D7F9DA8008AE0D6 /* SpacesEmojiWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE99BA2D7F9DA8008AE0D6 /* SpacesEmojiWindow.swift */; };
 		C4FE99BD2D7F9DEE008AE0D6 /* SpacesEmojiViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE99BC2D7F9DEE008AE0D6 /* SpacesEmojiViewModel.swift */; };
+		AA10000100000000000000B1 /* AmbientSoundscape.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000100000000000000F1 /* AmbientSoundscape.swift */; };
+		AA10000200000000000000B2 /* AmbientSpaceCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000200000000000000F2 /* AmbientSpaceCard.swift */; };
+		AA10000300000000000000B3 /* AmbientMoodController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000300000000000000F3 /* AmbientMoodController.swift */; };
+		AA10000400000000000000B4 /* FocusSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000400000000000000F4 /* FocusSession.swift */; };
+		AA10000500000000000000B5 /* FocusTimerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000500000000000000F5 /* FocusTimerManager.swift */; };
+		AA10000600000000000000B6 /* FocusTimerMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000600000000000000F6 /* FocusTimerMode.swift */; };
+		AA10000700000000000000B7 /* FocusTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000700000000000000F7 /* FocusTimerView.swift */; };
+		AA10000800000000000000B8 /* MoodControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000800000000000000F8 /* MoodControlsView.swift */; };
+		AA10000900000000000000B9 /* AmbientSpaceSeeder.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000900000000000000F9 /* AmbientSpaceSeeder.swift */; };
+		AA20000100000000000000B1 /* WindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA20000100000000000000F1 /* WindowManager.swift */; };
+		AA20000200000000000000B2 /* AudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA20000200000000000000F2 /* AudioService.swift */; };
+		AA20000300000000000000B3 /* MovementControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA20000300000000000000F3 /* MovementControlView.swift */; };
+		AA20000400000000000000B4 /* AmbientAudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA20000400000000000000F4 /* AmbientAudioManager.swift */; };
+		BB10000100000000000000B1 /* AudioWaveFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB10000100000000000000F1 /* AudioWaveFormView.swift */; };
+		BB10000200000000000000B2 /* BarePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB10000200000000000000F2 /* BarePlayerView.swift */; };
+		BB10000300000000000000B3 /* InteractiveStoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB10000300000000000000F3 /* InteractiveStoryView.swift */; };
+		BB10000400000000000000B4 /* InteractiveStoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB10000400000000000000F4 /* InteractiveStoryViewModel.swift */; };
+		BB10000500000000000000B5 /* LiveStorytellerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB10000500000000000000F5 /* LiveStorytellerService.swift */; };
+		BB10000600000000000000B6 /* Story.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB10000600000000000000F6 /* Story.swift */; };
+		BB10000700000000000000B7 /* StoryTellerAudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB10000700000000000000F7 /* StoryTellerAudioService.swift */; };
+		BB10000800000000000000B8 /* Transcripts.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB10000800000000000000F8 /* Transcripts.swift */; };
+		BB10000900000000000000B9 /* WaveformViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB10000900000000000000F9 /* WaveformViewModel.swift */; };
+		BB20000100000000000000B1 /* FirebaseStoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB20000100000000000000F1 /* FirebaseStoryService.swift */; };
+		BB20000200000000000000B2 /* StoriesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB20000200000000000000F2 /* StoriesListView.swift */; };
+		BB20000300000000000000B3 /* StoryRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB20000300000000000000F3 /* StoryRowView.swift */; };
+		CC10000100000000000000B1 /* BookmarkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC10000100000000000000F1 /* BookmarkManager.swift */; };
+		CC10000200000000000000B2 /* BookmarksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC10000200000000000000F2 /* BookmarksView.swift */; };
+		CC10000300000000000000B3 /* WebBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC10000300000000000000F3 /* WebBrowserView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -173,7 +200,6 @@
 		C405E58A2D4CACE900681E60 /* PositionedEvents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PositionedEvents.swift; sourceTree = "<group>"; };
 		C405E58C2D4CAD2B00681E60 /* TimeLineline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeLineline.swift; sourceTree = "<group>"; };
 		C40693E92D36F9F000072767 /* TabBarWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarWindow.swift; sourceTree = "<group>"; };
-		C40AE3D32D5164020075914F /* WindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManager.swift; sourceTree = "<group>"; };
 		C40AE3D52D516C070075914F /* ChatSettingsNavBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSettingsNavBar.swift; sourceTree = "<group>"; };
 		C4115ECF2B994AF9007AD9B0 /* Movie Theater Experience.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Movie Theater Experience.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C4115ED32B994AF9007AD9B0 /* RealityKitContent */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = RealityKitContent; sourceTree = "<group>"; };
@@ -256,6 +282,34 @@
 		C4FE99B82D7F9D80008AE0D6 /* SpacesChatWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesChatWindow.swift; sourceTree = "<group>"; };
 		C4FE99BA2D7F9DA8008AE0D6 /* SpacesEmojiWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesEmojiWindow.swift; sourceTree = "<group>"; };
 		C4FE99BC2D7F9DEE008AE0D6 /* SpacesEmojiViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesEmojiViewModel.swift; sourceTree = "<group>"; };
+		AA10000100000000000000F1 /* AmbientSoundscape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmbientSoundscape.swift; sourceTree = "<group>"; };
+		AA10000200000000000000F2 /* AmbientSpaceCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmbientSpaceCard.swift; sourceTree = "<group>"; };
+		AA10000300000000000000F3 /* AmbientMoodController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmbientMoodController.swift; sourceTree = "<group>"; };
+		AA10000400000000000000F4 /* FocusSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusSession.swift; sourceTree = "<group>"; };
+		AA10000500000000000000F5 /* FocusTimerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusTimerManager.swift; sourceTree = "<group>"; };
+		AA10000600000000000000F6 /* FocusTimerMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusTimerMode.swift; sourceTree = "<group>"; };
+		AA10000700000000000000F7 /* FocusTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusTimerView.swift; sourceTree = "<group>"; };
+		AA10000800000000000000F8 /* MoodControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoodControlsView.swift; sourceTree = "<group>"; };
+		AA10000900000000000000F9 /* AmbientSpaceSeeder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmbientSpaceSeeder.swift; sourceTree = "<group>"; };
+		AA20000100000000000000F1 /* WindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManager.swift; sourceTree = "<group>"; };
+		AA20000200000000000000F2 /* AudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioService.swift; sourceTree = "<group>"; };
+		AA20000300000000000000F3 /* MovementControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementControlView.swift; sourceTree = "<group>"; };
+		AA20000400000000000000F4 /* AmbientAudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmbientAudioManager.swift; sourceTree = "<group>"; };
+		BB10000100000000000000F1 /* AudioWaveFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioWaveFormView.swift; sourceTree = "<group>"; };
+		BB10000200000000000000F2 /* BarePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarePlayerView.swift; sourceTree = "<group>"; };
+		BB10000300000000000000F3 /* InteractiveStoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveStoryView.swift; sourceTree = "<group>"; };
+		BB10000400000000000000F4 /* InteractiveStoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveStoryViewModel.swift; sourceTree = "<group>"; };
+		BB10000500000000000000F5 /* LiveStorytellerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveStorytellerService.swift; sourceTree = "<group>"; };
+		BB10000600000000000000F6 /* Story.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Story.swift; sourceTree = "<group>"; };
+		BB10000700000000000000F7 /* StoryTellerAudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryTellerAudioService.swift; sourceTree = "<group>"; };
+		BB10000800000000000000F8 /* Transcripts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transcripts.swift; sourceTree = "<group>"; };
+		BB10000900000000000000F9 /* WaveformViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformViewModel.swift; sourceTree = "<group>"; };
+		BB20000100000000000000F1 /* FirebaseStoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseStoryService.swift; sourceTree = "<group>"; };
+		BB20000200000000000000F2 /* StoriesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoriesListView.swift; sourceTree = "<group>"; };
+		BB20000300000000000000F3 /* StoryRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryRowView.swift; sourceTree = "<group>"; };
+		CC10000100000000000000F1 /* BookmarkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkManager.swift; sourceTree = "<group>"; };
+		CC10000200000000000000F2 /* BookmarksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarksView.swift; sourceTree = "<group>"; };
+		CC10000300000000000000F3 /* WebBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebBrowserView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -401,6 +455,7 @@
 		C413FA4D2DBC2E27008FABEB /* Audio */ = {
 			isa = PBXGroup;
 			children = (
+				AA20000200000000000000F2 /* AudioService.swift */,
 				C413FA4B2DBC2E0D008FABEB /* SpatialAudioLoader.swift */,
 				C413FA4E2DBC2E41008FABEB /* AudioPositionSynchronizer.swift */,
 				C4413F552DBF0763008A7BD8 /* VolumeControl.swift */,
@@ -472,6 +527,10 @@
 				C4D88CA62D74F8C2004F226E /* Space Immersion */,
 				C4474F162D80BBB600DA08A1 /* Space Chat */,
 				C444C9212D53FD2C0046F92D /* Intro Volume */,
+				AA00000100000000000000A1 /* Ambient */,
+				AA00000200000000000000A2 /* Movement */,
+				AA00000300000000000000A3 /* TTS Storyteller */,
+				AA00000500000000000000A5 /* Web Browser */,
 			);
 			path = Spaces;
 			sourceTree = "<group>";
@@ -539,7 +598,6 @@
 			children = (
 				C4DAB7EE2B9FF77500852029 /* CustomTextInput.swift */,
 				C41817C72CBE319F00A94ADF /* Emitters.swift */,
-				C40AE3D32D5164020075914F /* WindowManager.swift */,
 				C4DAB7EC2B9FE98800852029 /* ExpandingTextView.swift */,
 				C404A80E2D46CE8F000450D4 /* Emoji */,
 				C404A80D2D46CD0C000450D4 /* Chat */,
@@ -568,6 +626,7 @@
 				C473DCAE2D308BC7008AA51D /* FirebaseEventManager.swift */,
 				C4D88CAD2D7531AB004F226E /* EventManagerConfiguration.swift */,
 				C4FE99B22D7F8E5F008AE0D6 /* SpacesChatManager.swift */,
+				AA20000100000000000000F1 /* WindowManager.swift */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -626,6 +685,7 @@
 		C4D88CA62D74F8C2004F226E /* Space Immersion */ = {
 			isa = PBXGroup;
 			children = (
+				AA20000400000000000000F4 /* AmbientAudioManager.swift */,
 				C4DEA8CD2D87526F008F16F3 /* Seat Selection */,
 				C4E815572D55C982007FE604 /* SpacesView.swift */,
 				C4D88CA92D752B87004F226E /* SpacesNavBarView.swift */,
@@ -670,6 +730,67 @@
 				C405E57E2D498D2400681E60 /* VideoPlayerManager.swift */,
 			);
 			path = Immersive;
+			sourceTree = "<group>";
+		};
+		AA00000100000000000000A1 /* Ambient */ = {
+			isa = PBXGroup;
+			children = (
+				AA10000100000000000000F1 /* AmbientSoundscape.swift */,
+				AA10000200000000000000F2 /* AmbientSpaceCard.swift */,
+				AA10000300000000000000F3 /* AmbientMoodController.swift */,
+				AA10000400000000000000F4 /* FocusSession.swift */,
+				AA10000500000000000000F5 /* FocusTimerManager.swift */,
+				AA10000600000000000000F6 /* FocusTimerMode.swift */,
+				AA10000700000000000000F7 /* FocusTimerView.swift */,
+				AA10000800000000000000F8 /* MoodControlsView.swift */,
+				AA10000900000000000000F9 /* AmbientSpaceSeeder.swift */,
+			);
+			path = Ambient;
+			sourceTree = "<group>";
+		};
+		AA00000200000000000000A2 /* Movement */ = {
+			isa = PBXGroup;
+			children = (
+				AA20000300000000000000F3 /* MovementControlView.swift */,
+			);
+			path = Movement;
+			sourceTree = "<group>";
+		};
+		AA00000300000000000000A3 /* TTS Storyteller */ = {
+			isa = PBXGroup;
+			children = (
+				BB10000100000000000000F1 /* AudioWaveFormView.swift */,
+				BB10000200000000000000F2 /* BarePlayerView.swift */,
+				BB10000300000000000000F3 /* InteractiveStoryView.swift */,
+				BB10000400000000000000F4 /* InteractiveStoryViewModel.swift */,
+				BB10000500000000000000F5 /* LiveStorytellerService.swift */,
+				BB10000600000000000000F6 /* Story.swift */,
+				BB10000700000000000000F7 /* StoryTellerAudioService.swift */,
+				BB10000800000000000000F8 /* Transcripts.swift */,
+				BB10000900000000000000F9 /* WaveformViewModel.swift */,
+				AA00000400000000000000A4 /* Stories View */,
+			);
+			path = "TTS Storyteller";
+			sourceTree = "<group>";
+		};
+		AA00000400000000000000A4 /* Stories View */ = {
+			isa = PBXGroup;
+			children = (
+				BB20000100000000000000F1 /* FirebaseStoryService.swift */,
+				BB20000200000000000000F2 /* StoriesListView.swift */,
+				BB20000300000000000000F3 /* StoryRowView.swift */,
+			);
+			path = "Stories View";
+			sourceTree = "<group>";
+		};
+		AA00000500000000000000A5 /* Web Browser */ = {
+			isa = PBXGroup;
+			children = (
+				CC10000100000000000000F1 /* BookmarkManager.swift */,
+				CC10000200000000000000F2 /* BookmarksView.swift */,
+				CC10000300000000000000F3 /* WebBrowserView.swift */,
+			);
+			path = "Web Browser";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -847,7 +968,6 @@
 				C404A7F52D3B7038000450D4 /* TimeoutError.swift in Sources */,
 				C404A7FF2D41D325000450D4 /* WatchStats.swift in Sources */,
 				C4C43A042CA364BB001AC733 /* VideoPicker.swift in Sources */,
-				C40AE3D42D5164020075914F /* WindowManager.swift in Sources */,
 				C4FE99BB2D7F9DA8008AE0D6 /* SpacesEmojiWindow.swift in Sources */,
 				C4BFD5BE2CA5F664007D20BE /* EventView.swift in Sources */,
 				C4D88C9D2D74E529004F226E /* FlowLayout.swift in Sources */,
@@ -897,6 +1017,34 @@
 				C405E57D2D498CE800681E60 /* VideoSyncService.swift in Sources */,
 				C444C91D2D53FC8E0046F92D /* OccupancyView.swift in Sources */,
 				C4CEBBC42DA3309000731652 /* SeatPosition.swift in Sources */,
+				AA10000100000000000000B1 /* AmbientSoundscape.swift in Sources */,
+				AA10000200000000000000B2 /* AmbientSpaceCard.swift in Sources */,
+				AA10000300000000000000B3 /* AmbientMoodController.swift in Sources */,
+				AA10000400000000000000B4 /* FocusSession.swift in Sources */,
+				AA10000500000000000000B5 /* FocusTimerManager.swift in Sources */,
+				AA10000600000000000000B6 /* FocusTimerMode.swift in Sources */,
+				AA10000700000000000000B7 /* FocusTimerView.swift in Sources */,
+				AA10000800000000000000B8 /* MoodControlsView.swift in Sources */,
+				AA10000900000000000000B9 /* AmbientSpaceSeeder.swift in Sources */,
+				AA20000100000000000000B1 /* WindowManager.swift in Sources */,
+				AA20000200000000000000B2 /* AudioService.swift in Sources */,
+				AA20000300000000000000B3 /* MovementControlView.swift in Sources */,
+				AA20000400000000000000B4 /* AmbientAudioManager.swift in Sources */,
+				BB10000100000000000000B1 /* AudioWaveFormView.swift in Sources */,
+				BB10000200000000000000B2 /* BarePlayerView.swift in Sources */,
+				BB10000300000000000000B3 /* InteractiveStoryView.swift in Sources */,
+				BB10000400000000000000B4 /* InteractiveStoryViewModel.swift in Sources */,
+				BB10000500000000000000B5 /* LiveStorytellerService.swift in Sources */,
+				BB10000600000000000000B6 /* Story.swift in Sources */,
+				BB10000700000000000000B7 /* StoryTellerAudioService.swift in Sources */,
+				BB10000800000000000000B8 /* Transcripts.swift in Sources */,
+				BB10000900000000000000B9 /* WaveformViewModel.swift in Sources */,
+				BB20000100000000000000B1 /* FirebaseStoryService.swift in Sources */,
+				BB20000200000000000000B2 /* StoriesListView.swift in Sources */,
+				BB20000300000000000000B3 /* StoryRowView.swift in Sources */,
+				CC10000100000000000000B1 /* BookmarkManager.swift in Sources */,
+				CC10000200000000000000B2 /* BookmarksView.swift in Sources */,
+				CC10000300000000000000B3 /* WebBrowserView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

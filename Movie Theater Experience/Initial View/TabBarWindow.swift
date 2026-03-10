@@ -6,6 +6,7 @@ struct TabBarWindow: View {
         case showings = 0
         case spaces = 1
         case settings = 2
+        case setup = 3
     }
 
     @State private var selectedTab: Tab = .showings
@@ -38,6 +39,13 @@ struct TabBarWindow: View {
                     Label("Chat Settings", systemImage: "gear")
                 }
                 .tag(Tab.settings)
+
+            // Admin/Setup Tab (for seeding ambient spaces)
+            AmbientSetupView()
+                .tabItem {
+                    Label("Setup", systemImage: "wrench.and.screwdriver")
+                }
+                .tag(Tab.setup)
         }
         .onAppear {
             calendarService.fetchAllEvents()
